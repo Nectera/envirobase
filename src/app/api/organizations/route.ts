@@ -10,7 +10,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// Only ADMIN users of the root Xtract org can manage organizations
+// Only ADMIN users of the root EnviroBase org can manage organizations
 async function requireSuperAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;

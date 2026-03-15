@@ -195,7 +195,7 @@ export async function qbUploadReceipt(
   const metadataObj = {
     FileName: fileName,
     ContentType: mimeType,
-    Note: note || `Receipt uploaded from Xtract chat`,
+    Note: note || `Receipt uploaded from EnviroBase chat`,
   };
   const metadataJson = JSON.stringify(metadataObj);
 

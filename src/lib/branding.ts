@@ -14,9 +14,9 @@
 
 // ── Client-safe branding (NEXT_PUBLIC_ prefix) ──
 
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Xtract";
-export const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || "Xtract Environmental Services";
-export const COMPANY_SHORT = process.env.NEXT_PUBLIC_COMPANY_SHORT || "Xtract Environmental";
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase";
+export const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || "EnviroBase Environmental Services";
+export const COMPANY_SHORT = process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase";
 export const BRAND_COLOR = process.env.NEXT_PUBLIC_BRAND_COLOR || "#7BC143";
 export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "info@xtractes.com";
 export const COMPANY_LOCATION = process.env.NEXT_PUBLIC_COMPANY_LOCATION || "Fort Collins, CO";

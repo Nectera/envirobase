@@ -17,7 +17,7 @@ type NotificationType =
 
 /**
  * Build branded notification email HTML.
- * Reuses the same Xtract Environmental branding as other emails.
+ * Reuses the same EnviroBase branding as other emails.
  */
 function buildNotificationHtml(subject: string, bodyContent: string): string {
   return `<!DOCTYPE html>

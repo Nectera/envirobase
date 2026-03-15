@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       scope: scope || ce.scopeOfWork || "",
       notes: notes || "",
       internalNotes: "",
-      paymentInstructions: "Please make checks payable to Xtract Environmental Services.\n903 5th St, Greeley, CO 80631",
+      paymentInstructions: "Please make checks payable to EnviroBase Environmental Services.\n903 5th St, Greeley, CO 80631",
       createdBy: null,
       sentDate: null,
       paidDate: null,

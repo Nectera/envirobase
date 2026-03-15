@@ -1,5 +1,5 @@
 // PSI / JHA / SPA hazard checklist definitions
-// Optimized for Xtract Environmental Services — asbestos, lead, and meth lab remediation
+// Optimized for EnviroBase Environmental Services — asbestos, lead, and meth lab remediation
 
 export const ENVIRONMENT_HAZARDS = [
   { key: "acm_present", label: "ACM (Asbestos-Containing Material) Present" },

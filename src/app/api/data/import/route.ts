@@ -99,8 +99,8 @@ async function parseExcel(buffer: ArrayBuffer): Promise<Record<string, any>[]> {
   return rows;
 }
 
-// Map external data formats (like Copper CRM) to Xtract fields
-function mapToXtractSchema(rows: Record<string, any>[], type: CrmType): Record<string, any>[] {
+// Map external data formats (like Copper CRM) to EnviroBase fields
+function mapToEnviroBaseSchema(rows: Record<string, any>[], type: CrmType): Record<string, any>[] {
   return rows.map((row) => {
     const mapped: Record<string, any> = {};
 
@@ -194,14 +194,14 @@ function mapToXtractSchema(rows: Record<string, any>[], type: CrmType): Record<s
       // Lead-specific fields
       mapped.description = lowerRow["description"] || lowerRow["details"] || lowerRow["scope of project cf_563194"] || lowerRow["project notes cf_563193"] || lowerRow["notes"] || "";
       const rawStatus = lowerRow["status"] || lowerRow["active/closed cf_489379"] || "new";
-      // Map Copper CRM statuses to Xtract pipeline stages
+      // Map Copper CRM statuses to EnviroBase pipeline stages
       const statusLower = String(rawStatus).toLowerCase().replace(/\s+/g, "_");
       const STATUS_MAP: Record<string, string> = {
         // Copper CRM closed/inactive statuses → lost
         closed: "lost",
         unqualified: "lost",
         referred: "lost",
-        // Copper CRM active statuses → Xtract pipeline stages
+        // Copper CRM active statuses → EnviroBase pipeline stages
         active: "new",
         open: "new",
         new: "new",
@@ -224,7 +224,7 @@ function mapToXtractSchema(rows: Record<string, any>[], type: CrmType): Record<s
       const companyName = lowerRow["company"] || lowerRow["company name"] || "";
       if (companyName) mapped.companyName = companyName;
 
-      // Insurance fields (common in Xtract's industry)
+      // Insurance fields (common in EnviroBase's industry)
       if (lowerRow["insurance carrier cf_469166"]) mapped.insuranceCarrier = lowerRow["insurance carrier cf_469166"];
       if (lowerRow["adjuster name cf_469167"]) mapped.adjusterName = lowerRow["adjuster name cf_469167"];
       if (lowerRow["adjuster phone number cf_469168"]) mapped.adjusterPhone = lowerRow["adjuster phone number cf_469168"];
@@ -390,14 +390,14 @@ export async function POST(req: NextRequest) {
         return mapped;
       });
     } else {
-      // Fallback: check if data already matches Xtract schema or needs auto-mapping
+      // Fallback: check if data already matches EnviroBase schema or needs auto-mapping
       const firstRow = rawRows[0];
       const hasNativeFields = REQUIRED_FIELDS[type as CrmType].some((f) => f in firstRow);
 
       if (hasNativeFields) {
         rows = rawRows;
       } else {
-        rows = mapToXtractSchema(rawRows, type as CrmType);
+        rows = mapToEnviroBaseSchema(rawRows, type as CrmType);
       }
     }
 

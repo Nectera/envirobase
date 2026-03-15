@@ -51,7 +51,7 @@ export async function PUT(req: NextRequest) {
         { key: "western_slope", name: "Western Slope", reviewUrl: "" },
       ],
       autoSendEnabled: body.autoSendEnabled !== undefined ? body.autoSendEnabled : true,
-      emailSubject: body.emailSubject || "How was your experience with Xtract Environmental?",
+      emailSubject: body.emailSubject || "How was your experience with EnviroBase?",
       smsBody: body.smsBody || "",
       defaultMethod: body.defaultMethod || "both",
       sequence: Array.isArray(body.sequence) ? body.sequence : DRIP_SEQUENCE,

@@ -17,7 +17,7 @@ export const DRIP_SEQUENCE = [
     delayDays: 0,
     channel: "sms" as const,
     smsTemplate:
-      "Hi {clientName}, this is Xtract Environmental! Thank you for trusting us with your recent project. We'd love to hear how it went — it takes less than 30 seconds: {surveyUrl}",
+      "Hi {clientName}, this is EnviroBase! Thank you for trusting us with your recent project. We'd love to hear how it went — it takes less than 30 seconds: {surveyUrl}",
     emailSubject: "",
     emailTemplate: "",
   },
@@ -26,7 +26,7 @@ export const DRIP_SEQUENCE = [
     delayDays: 2,
     channel: "email" as const,
     smsTemplate: "",
-    emailSubject: "How was your experience with Xtract Environmental?",
+    emailSubject: "How was your experience with EnviroBase?",
     emailTemplate:
       "Hi {clientName},\n\nWe recently completed work at your property and wanted to check in. Your feedback helps us maintain the high standards our customers expect.\n\nWould you take 30 seconds to let us know how we did? Just click the link below.\n\nWe truly appreciate your time.",
   },
@@ -35,7 +35,7 @@ export const DRIP_SEQUENCE = [
     delayDays: 5,
     channel: "sms" as const,
     smsTemplate:
-      "Hi {clientName}, just a quick follow-up from Xtract Environmental. If you have a moment, we'd really appreciate your feedback on our recent work: {surveyUrl} Thanks!",
+      "Hi {clientName}, just a quick follow-up from EnviroBase. If you have a moment, we'd really appreciate your feedback on our recent work: {surveyUrl} Thanks!",
     emailSubject: "",
     emailTemplate: "",
   },
@@ -51,9 +51,9 @@ export const REVIEW_CONFIG_DEFAULTS = {
   // Drip sequence config
   sequence: DRIP_SEQUENCE,
   // Legacy single-send templates (kept for manual sends / fallback)
-  emailSubject: "How was your experience with Xtract Environmental?",
+  emailSubject: "How was your experience with EnviroBase?",
   smsBody:
-    "Hi {clientName}, thank you for choosing Xtract Environmental! We'd love your feedback on your recent project. Please tap the link to share your experience: {surveyUrl}",
+    "Hi {clientName}, thank you for choosing EnviroBase! We'd love your feedback on your recent project. Please tap the link to share your experience: {surveyUrl}",
 };
 
 export type ReviewConfig = typeof REVIEW_CONFIG_DEFAULTS;

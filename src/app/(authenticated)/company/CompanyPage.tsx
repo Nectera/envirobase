@@ -218,7 +218,7 @@ export default function CompanyPage({
         <Building2 size={24} className="text-indigo-600" />
         <div>
           <h1 className="text-xl font-bold text-slate-900">Company Information</h1>
-          <p className="text-sm text-slate-500">Manage Xtract&apos;s company profile, licenses, and insurance</p>
+          <p className="text-sm text-slate-500">Manage EnviroBase&apos;s company profile, licenses, and insurance</p>
         </div>
       </div>
 

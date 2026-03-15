@@ -202,7 +202,7 @@ export default function PublicReviewPage({ params }: { params: { token: string }
       {/* Header */}
       <div className="bg-[#1B3A2D] text-white">
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <p className="text-[#7BC143] text-xs font-medium tracking-wide uppercase mb-1">{process.env.NEXT_PUBLIC_COMPANY_SHORT || "Xtract Environmental"}</p>
+          <p className="text-[#7BC143] text-xs font-medium tracking-wide uppercase mb-1">{process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}</p>
           <h1 className="text-lg font-bold">{data.project.name}</h1>
           {data.project.address && (
             <p className="text-slate-300 text-sm mt-1">{data.project.address}</p>

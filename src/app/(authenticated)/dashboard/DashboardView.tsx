@@ -107,7 +107,7 @@ export default function DashboardView({
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900">{t("dashboard.title")}</h1>
-        <p className="text-sm text-slate-500">Xtract Environmental Services — {formatDate(new Date())}</p>
+        <p className="text-sm text-slate-500">EnviroBase Environmental Services — {formatDate(new Date())}</p>
       </div>
 
       {/* === ROW 1: Key Stats === */}

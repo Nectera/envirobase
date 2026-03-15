@@ -24,7 +24,7 @@ export default function OfflinePage() {
           <RefreshCw size={16} />
           {t("offline.tryAgain")}
         </button>
-        <p className="text-xs text-slate-400 mt-8">{process.env.NEXT_PUBLIC_COMPANY_NAME || "Xtract Environmental Services"}</p>
+        <p className="text-xs text-slate-400 mt-8">{process.env.NEXT_PUBLIC_COMPANY_NAME || "EnviroBase Environmental Services"}</p>
       </div>
     </div>
   );

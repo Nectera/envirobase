@@ -115,7 +115,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       await sendHtmlEmail({
         to: customerEmail.trim(),
-        subject: `Xtract — Content Inventory Review for ${project?.name || "Your Project"}`,
+        subject: `EnviroBase — Content Inventory Review for ${project?.name || "Your Project"}`,
         html,
         text: `Your content inventory is ready for review. Please visit: ${reviewUrl}`,
       }).catch((err: any) => console.error("Failed to send review email:", err));

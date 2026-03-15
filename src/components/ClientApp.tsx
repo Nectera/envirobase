@@ -20,7 +20,7 @@ export default function ClientApp({ children }: { children: ReactNode }) {
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="animate-pulse flex flex-col items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={process.env.NEXT_PUBLIC_LOGO_URL || "/logo.png"} alt={process.env.NEXT_PUBLIC_APP_NAME || "Xtract"} width={40} height={40} className="rounded-xl" />
+          <img src={process.env.NEXT_PUBLIC_LOGO_URL || "/logo.png"} alt={process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase"} width={40} height={40} className="rounded-xl" />
           <div className="h-2 w-24 bg-slate-200 rounded" />
         </div>
       </div>

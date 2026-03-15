@@ -49,7 +49,7 @@ export async function getOrgId(): Promise<string | null> {
  * Returns { session, orgId } or a NextResponse error.
  *
  * If the user has an organizationId, queries will be scoped to that org.
- * If the user has NO organizationId (e.g. standalone Xtract deployment),
+ * If the user has NO organizationId (e.g. standalone EnviroBase deployment),
  * orgId will be null and queries will return all data (no org filter).
  *
  * Use in API routes:

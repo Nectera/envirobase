@@ -402,7 +402,7 @@ export default function InvoiceDetail({ data }: { data: InvoiceData }) {
         <div className="bg-slate-50 p-6 border-b border-slate-200">
           <div className="flex justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">{process.env.NEXT_PUBLIC_COMPANY_NAME || "Xtract Environmental Services"}</h2>
+              <h2 className="text-lg font-bold text-slate-900">{process.env.NEXT_PUBLIC_COMPANY_NAME || "EnviroBase Environmental Services"}</h2>
               <p className="text-sm text-slate-600">{process.env.NEXT_PUBLIC_COMPANY_LOCATION || "Fort Collins, CO"}</p>
               <p className="text-sm text-slate-600">{process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "info@xtractes.com"}</p>
             </div>

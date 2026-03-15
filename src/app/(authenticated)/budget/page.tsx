@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import BudgetDashboard from "./BudgetDashboard";
 
-export const metadata = { title: "Budget vs Actuals — Xtract" };
+export const metadata = { title: "Budget vs Actuals — EnviroBase" };
 
 export default async function BudgetPage() {
   const session = await getServerSession(authOptions);

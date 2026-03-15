@@ -171,7 +171,7 @@ function haversineDistance(
   return R * c;
 }
 
-// Estimate miles from Xtract office to city
+// Estimate miles from office to city
 function estimateMilesToCity(city: string): number {
   const normalizedCity = city.toLowerCase().trim();
   const cityCoords = CO_CITIES[normalizedCity];
@@ -1100,7 +1100,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Auto-estimated from Xtract office (903 5th St, Greeley, CO)
+                Auto-estimated from office (903 5th St, Greeley, CO)
               </p>
             </div>
 

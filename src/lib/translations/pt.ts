@@ -1,4 +1,4 @@
-const _APP = process.env.NEXT_PUBLIC_APP_NAME || "Xtract";
+const _APP = process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase";
 
 export const pt: Record<string, string> = {
   // Common

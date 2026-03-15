@@ -138,7 +138,7 @@ export default function FeedbackPage({ params }: { params: { token: string } }) 
         <div className="bg-[#1B3A2D] text-white">
           <div className="max-w-lg mx-auto px-4 py-6 text-center">
             <p className="text-[#7BC143] text-xs font-medium tracking-wide uppercase mb-1">
-              Xtract Environmental
+              EnviroBase
             </p>
             <h1 className="text-lg font-bold">Thank You!</h1>
           </div>
@@ -226,7 +226,7 @@ export default function FeedbackPage({ params }: { params: { token: string } }) 
       <div className="bg-[#1B3A2D] text-white">
         <div className="max-w-lg mx-auto px-4 py-6 text-center">
           <p className="text-[#7BC143] text-xs font-medium tracking-wide uppercase mb-1">
-            Xtract Environmental
+            EnviroBase
           </p>
           <h1 className="text-lg font-bold">How was your experience?</h1>
           {data.projectName && (
@@ -240,7 +240,7 @@ export default function FeedbackPage({ params }: { params: { token: string } }) 
           {/* Greeting */}
           <p className="text-sm text-slate-600 mb-6 leading-relaxed text-center">
             {data.clientName ? `Hi ${data.clientName}, w` : "W"}e'd love to hear about your
-            recent experience with Xtract Environmental Services.
+            recent experience with EnviroBase Environmental Services.
           </p>
 
           {/* Star Rating */}
@@ -335,7 +335,7 @@ export default function FeedbackPage({ params }: { params: { token: string } }) 
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          Xtract Environmental Services &bull; Fort Collins, CO
+          EnviroBase Environmental Services &bull; Fort Collins, CO
         </p>
       </div>
     </div>

@@ -106,7 +106,7 @@ export default function PandaDocSend({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: `${name} - Please Review & Sign`,
-          message: message || `Hi ${recipientName?.split(" ")[0] || ""},\n\nPlease review and sign the attached document.\n\nThank you,\nXtract Environmental Services`,
+          message: message || `Hi ${recipientName?.split(" ")[0] || ""},\n\nPlease review and sign the attached document.\n\nThank you,\nEnviroBase Environmental Services`,
           parentType,
           parentId,
           estimateId,

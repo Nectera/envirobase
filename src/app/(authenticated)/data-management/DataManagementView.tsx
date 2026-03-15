@@ -31,7 +31,7 @@ const KB_CATEGORIES = [
   { key: "material_invoice", label: "Material Invoice", color: "bg-orange-100 text-orange-700" },
 ] as const;
 
-// Xtract target fields per data type
+// Target fields per data type
 const XTRACT_FIELDS: Record<string, { key: string; label: string; required?: boolean }[]> = {
   companies: [
     { key: "name", label: "Company Name", required: true },
@@ -688,7 +688,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                   <div className="grid grid-cols-[1fr,auto,1fr] bg-slate-50 px-4 py-2 border-b border-slate-200">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Source Column</p>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide w-8 text-center">&rarr;</p>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Xtract Field</p>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Target Field</p>
                   </div>
                   <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
                     {previewData.headers.map((header) => {

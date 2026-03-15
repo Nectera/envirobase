@@ -1,4 +1,4 @@
-// Pre-Abatement Visual Inspection Checklist items — matches Xtract's form exactly
+// Pre-Abatement Visual Inspection Checklist items — matches EnviroBase's form exactly
 
 export const PRE_ABATEMENT_ITEMS = [
   { key: "area_pre_cleaned", label: "Area pre-cleaned of all debris and asbestos contamination" },

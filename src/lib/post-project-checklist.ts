@@ -1,5 +1,5 @@
 // Post Project Inspection Guide — Checklist definitions
-// Based on Xtract Environmental Services PM inspection form
+// Based on EnviroBase Environmental Services PM inspection form
 
 export type ChecklistSection = {
   section: string;

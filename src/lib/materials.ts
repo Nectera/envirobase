@@ -103,7 +103,7 @@ export const LABOR_RATES = {
   technician: { hourly: 27.0, taxBurden: 2.781 },
 };
 
-// Xtract office address for miles calculation
+// office address for miles calculation
 export const XTRACT_OFFICE = {
   address: "903 5th St, Greeley, CO 80631",
   lat: 40.4189,
