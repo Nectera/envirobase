@@ -1,5 +1,4 @@
 const _APP = process.env.NEXT_PUBLIC_APP_NAME || "Xtract";
-const _CO = process.env.NEXT_PUBLIC_COMPANY_SHORT || "Xtract Environmental";
 
 export const pt: Record<string, string> = {
   // Common
@@ -107,7 +106,7 @@ export const pt: Record<string, string> = {
   "sidebar.pms": "Sistema de Gestão de Projetos",
 
   // Login
-  "login.title": `${_CO}`,
+  "login.title": "EnviroBase",
   "login.subtitle": "Plataforma de Serviços Ambientais",
   "login.emailLabel": "E-mail",
   "login.passwordLabel": "Senha",
