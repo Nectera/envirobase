@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const projectId = req.nextUrl.searchParams.get("projectId");
     if (!projectId) return NextResponse.json({ error: "projectId required" }, { status: 400 });
 
-    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    const project = await prisma.project.findUnique({ where: orgWhere(orgId, { id: projectId }) });
 
     // Resolve PM name from project
     let pmName = "";
@@ -23,7 +21,7 @@ export async function GET(req: NextRequest) {
     }
 
     const reports = await prisma.dailyFieldReport.findMany({
-      where: { projectId },
+      where: orgWhere(orgId, { projectId }),
       orderBy: { createdAt: "desc" },
       take: 1,
     });

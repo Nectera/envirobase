@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -9,8 +8,9 @@ import { prisma } from "@/lib/prisma";
  */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN") {
@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.category !== undefined) data.category = body.category;
 
     const line = await prisma.projectBudgetLine.update({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
       data,
     });
 
@@ -44,8 +44,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
  */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN") {
@@ -53,7 +54,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     await prisma.projectBudgetLine.delete({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
     });
 
     return NextResponse.json({ success: true });

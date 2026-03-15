@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
-    const docs = await prisma.leadDocument.findMany({ where: { leadId: params.id } });
+    const docs = await prisma.leadDocument.findMany({ where: orgWhere(orgId, { leadId: params.id }) });
     return NextResponse.json(docs);
   } catch (error: any) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -20,10 +18,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -46,14 +43,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     extraData.createdBy = body.createdBy || userId;
 
     const doc = await prisma.leadDocument.create({
-      data: {
+      data: orgData(orgId, {
         leadId: params.id,
         docType: body.docType || "other",
         name: body.title || body.docType || "Document",
         fileName: body.fileName || null,
         fileSize: body.fileSize || null,
         data: Object.keys(extraData).length > 0 ? extraData : null,
-      },
+      }),
     });
 
     return NextResponse.json(doc, { status: 201 });
@@ -64,10 +61,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const { searchParams } = new URL(req.url);
     const docId = searchParams.get("docId");
@@ -75,7 +71,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: "docId required" }, { status: 400 });
     }
 
-    await prisma.leadDocument.delete({ where: { id: docId } });
+    await prisma.leadDocument.delete({ where: orgWhere(orgId, { id: docId }) });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

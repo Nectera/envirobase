@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { hash } from "bcryptjs";
@@ -13,8 +12,9 @@ function isAdmin(role: string): boolean {
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userRole = (session.user as any)?.role;
     const currentUserId = (session.user as any)?.id;
@@ -29,7 +29,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "You cannot change your own role" }, { status: 400 });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { id } });
+    const existingUser = await prisma.user.findFirst({
+      where: orgWhere(orgId, { id }),
+    });
     if (!existingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -54,7 +56,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id },
+      where: orgWhere(orgId, { id }),
       data: updateData,
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
@@ -74,8 +76,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userRole = (session.user as any)?.role;
     const currentUserId = (session.user as any)?.id;
@@ -88,12 +91,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: "You cannot delete your own account" }, { status: 400 });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { id } });
+    const existingUser = await prisma.user.findFirst({
+      where: orgWhere(orgId, { id }),
+    });
     if (!existingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    await prisma.user.delete({ where: { id } });
+    await prisma.user.delete({ where: orgWhere(orgId, { id }) });
 
     logger.audit("User deleted by admin", {
       deletedBy: currentUserId,

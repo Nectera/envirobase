@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -10,8 +9,9 @@ import { prisma } from "@/lib/prisma";
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const user = session.user as any;
     if (user?.role !== "ADMIN") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -19,9 +19,9 @@ export async function GET(req: NextRequest) {
 
     // Get all projects with budget lines
     const projects = await prisma.project.findMany({
-      where: {
+      where: orgWhere(orgId, {
         status: { in: ["planning", "assessment", "in_progress", "completed"] },
-      },
+      }),
       select: {
         id: true,
         name: true,

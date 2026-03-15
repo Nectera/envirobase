@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -12,13 +11,16 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { orgId } = result;
 
     const { id } = params;
     const body = await req.json().catch(() => ({}));
 
-    const followUp = await prisma.estimateFollowUp.findUnique({ where: { id } });
+    const followUp = await prisma.estimateFollowUp.findFirst({
+      where: orgWhere(orgId, { id }),
+    });
     if (!followUp) {
       return NextResponse.json({ error: "Follow-up not found" }, { status: 404 });
     }
@@ -31,7 +33,7 @@ export async function POST(
     }
 
     const updated = await prisma.estimateFollowUp.update({
-      where: { id },
+      where: orgWhere(orgId, { id }),
       data: {
         status: "cancelled",
         cancelledReason: body.reason || "Manually cancelled",

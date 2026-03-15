@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
@@ -12,11 +11,12 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const items = await prisma.contentInventoryItem.findMany({
-      where: { projectId: params.id },
+      where: orgWhere(orgId, { projectId: params.id }),
       include: { photos: { orderBy: { order: "asc" } } },
       orderBy: { createdAt: "desc" },
     });
@@ -34,8 +34,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const userId = (session.user as any)?.id;
     const userName = (session.user as any)?.name || "Unknown";
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Create the item
     const item = await prisma.contentInventoryItem.create({
-      data: {
+      data: orgData(orgId, {
         projectId: params.id,
         brand: brand?.trim() || null,
         model: model?.trim() || null,
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         location: location?.trim() || null,
         addedBy: userId,
         addedByName: userName,
-      },
+      }),
     });
 
     // Attach photos if provided
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Return item with photos
     const fullItem = await prisma.contentInventoryItem.findUnique({
-      where: { id: item.id },
+      where: orgWhere(orgId, { id: item.id }),
       include: { photos: { orderBy: { order: "asc" } } },
     });
 

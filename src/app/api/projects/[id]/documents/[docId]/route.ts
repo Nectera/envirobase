@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { supabase, DOCUMENTS_BUCKET } from "@/lib/supabase";
 
@@ -10,11 +9,12 @@ import { supabase, DOCUMENTS_BUCKET } from "@/lib/supabase";
  */
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string; docId: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     // Find the document
-    const doc = await prisma.document.findUnique({ where: { id: params.docId } });
+    const doc = await prisma.document.findUnique({ where: orgWhere(orgId, { id: params.docId }) });
     if (!doc) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
@@ -26,7 +26,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     }
 
     // Delete the document record
-    await prisma.document.delete({ where: { id: params.docId } });
+    await prisma.document.delete({ where: orgWhere(orgId, { id: params.docId }) });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

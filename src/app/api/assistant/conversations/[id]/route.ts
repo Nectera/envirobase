@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -8,13 +7,12 @@ export const dynamic = "force-dynamic";
 // GET /api/assistant/conversations/[id] — load conversation messages
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { orgId } = result;
 
-    const conversation = await prisma.assistantConversation.findUnique({
-      where: { id: params.id },
+    const conversation = await prisma.assistantConversation.findFirst({
+      where: orgWhere(orgId, { id: params.id }),
     });
 
     if (!conversation) {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, INVOICES_BUCKET } from "@/lib/supabase";
@@ -17,8 +16,9 @@ import { DEFAULT_MATERIALS } from "@/lib/materials";
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const role = (session.user as any)?.role;
     if (role !== "ADMIN" && role !== "SUPERVISOR") {
@@ -182,7 +182,7 @@ Rules:
 
     // Create KB record
     const article = await prisma.knowledgeBase.create({
-      data: {
+      data: orgData(orgId, {
         title: `Invoice — ${parsedInvoice?.vendor || file.name}${parsedInvoice?.invoiceDate ? ` (${parsedInvoice.invoiceDate})` : ""}`,
         category: "material_invoice",
         content: parsedInvoice
@@ -195,7 +195,7 @@ Rules:
         mimeType: file.type,
         parsedData: parsedInvoice || null,
         createdBy: (session.user as any)?.name || "Unknown",
-      },
+      }),
     });
 
     // Auto-apply price updates if requested

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg } from "@/lib/org-context";
 import { rcApiCall, isConnected, getValidToken } from "@/lib/ringcentral";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -21,7 +20,9 @@ function validateMessageLength(text: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const result = await requireOrg();
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
   if (!session?.user?.email) {
     logger.warn("Unauthorized SMS send attempt");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

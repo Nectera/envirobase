@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, CERTIFICATIONS_BUCKET } from "@/lib/supabase";
@@ -15,8 +14,9 @@ export async function POST(
   { params }: { params: { id: string; certId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const userId = (session.user as any)?.id || "anonymous";
 
     const rl = checkRateLimit(`upload:${userId}`, API_WRITE_LIMIT);
@@ -51,7 +51,7 @@ export async function POST(
 
     // Verify certification belongs to the worker
     const cert = await prisma.certification.findFirst({
-      where: { id: params.certId, workerId: params.id },
+      where: orgWhere(orgId, { id: params.certId, workerId: params.id }),
     });
     if (!cert) {
       return NextResponse.json({ error: "Certification not found" }, { status: 404 });
@@ -84,7 +84,7 @@ export async function POST(
 
     // Update the certification record
     const updated = await prisma.certification.update({
-      where: { id: params.certId },
+      where: orgWhere(orgId, { id: params.certId }),
       data: {
         fileUrl: publicUrl,
         fileName: file.name,

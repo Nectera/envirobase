@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { getReviewConfig, DRIP_SEQUENCE } from "@/lib/review-config";
 
@@ -9,8 +8,8 @@ import { getReviewConfig, DRIP_SEQUENCE } from "@/lib/review-config";
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
 
     const config = await getReviewConfig();
     return NextResponse.json(config);
@@ -25,8 +24,9 @@ export async function GET(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session } = result;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN" && user?.role !== "SUPERVISOR" && user?.role !== "OFFICE") {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, INVENTORY_BUCKET } from "@/lib/supabase";
@@ -12,8 +11,9 @@ import { supabase, INVENTORY_BUCKET } from "@/lib/supabase";
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const userId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`upload:${userId}`, API_WRITE_LIMIT);
@@ -77,12 +77,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // If itemId provided, create the photo record
     if (itemId) {
       await prisma.contentInventoryPhoto.create({
-        data: {
+        data: orgData(orgId, {
           itemId,
           url: publicUrl,
           fileName: file.name,
           fileSize: file.size,
-        },
+        }),
       });
     }
 

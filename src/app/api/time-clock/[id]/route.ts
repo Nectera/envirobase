@@ -1,19 +1,17 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 
 // GET – single time entry
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const entry = await prisma.timeEntry.findUnique({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
       include: { project: true, worker: true },
     });
     if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -26,10 +24,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 // PUT – clock out or update entry (break minutes, notes, etc.)
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -38,7 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const body = await req.json();
-    const existing = await prisma.timeEntry.findUnique({ where: { id: params.id } });
+    const existing = await prisma.timeEntry.findUnique({ where: orgWhere(orgId, { id: params.id }) });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const updateData: any = {};
@@ -90,7 +87,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.clockOutAddress) updateData.clockOutAddress = body.clockOutAddress;
 
 const updated = await prisma.timeEntry.update({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
       data: updateData,
     });
 
@@ -103,10 +100,9 @@ const updated = await prisma.timeEntry.update({
 // DELETE
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -114,7 +110,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    await prisma.timeEntry.delete({ where: { id: params.id } });
+    await prisma.timeEntry.delete({ where: orgWhere(orgId, { id: params.id }) });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

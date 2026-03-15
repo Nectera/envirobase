@@ -1,7 +1,6 @@
 import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { POST_PROJECT_SECTIONS } from "@/lib/post-project-checklist";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
@@ -41,12 +40,11 @@ function wrapText(text: string, maxWidth: number, charWidth: number): string[] {
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
-    const item = await prisma.postProjectInspection.findUnique({ where: { id: params.id }, include: { project: true } });
+    const item = await prisma.postProjectInspection.findUnique({ where: orgWhere(orgId, { id: params.id }), include: { project: true } });
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const pdfDoc = await PDFDocument.create();

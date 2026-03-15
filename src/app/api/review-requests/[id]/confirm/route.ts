@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
@@ -13,8 +12,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN" && user?.role !== "SUPERVISOR" && user?.role !== "OFFICE") {
@@ -24,8 +24,8 @@ export async function POST(
     const rl = checkRateLimit(`write:${user.id}`, API_WRITE_LIMIT);
     if (!rl.allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const reviewRequest = await prisma.reviewRequest.findUnique({
-      where: { id: params.id },
+    const reviewRequest = await prisma.reviewRequest.findFirst({
+      where: orgWhere(orgId, { id: params.id }),
     });
 
     if (!reviewRequest) {
@@ -33,7 +33,7 @@ export async function POST(
     }
 
     const updated = await prisma.reviewRequest.update({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
       data: {
         reviewConfirmed: true,
         reviewConfirmedAt: new Date(),
@@ -58,8 +58,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN") {
@@ -67,7 +68,7 @@ export async function DELETE(
     }
 
     const updated = await prisma.reviewRequest.update({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
       data: {
         reviewConfirmed: false,
         reviewConfirmedAt: null,

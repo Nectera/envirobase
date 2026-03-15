@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
@@ -15,12 +14,11 @@ function getCheckedLabels(allItems: { key: string; label: string }[], checked: s
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
-    const item = await prisma.psiJhaSpa.findUnique({ where: { id: params.id }, include: { project: true } });
+    const item = await prisma.psiJhaSpa.findUnique({ where: orgWhere(orgId, { id: params.id }), include: { project: true } });
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const pdf = await PDFDocument.create();

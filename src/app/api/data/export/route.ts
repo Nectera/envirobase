@@ -1,7 +1,6 @@
 import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import ExcelJS from "exceljs";
 import { COMPANY_NAME } from "@/lib/branding";
@@ -29,14 +28,14 @@ function arrayToCsv(data: any[]): string {
   return lines.join("\n");
 }
 
-async function getCrmTables(): Promise<Record<string, any[]>> {
+async function getCrmTables(orgId: string): Promise<Record<string, any[]>> {
   const [companies, contacts, leads, estimates, invoices, activities] = await Promise.all([
-    prisma.company.findMany(),
-    prisma.contact.findMany(),
-    prisma.lead.findMany(),
-    prisma.estimate.findMany(),
-    prisma.invoice.findMany(),
-    prisma.activity.findMany(),
+    prisma.company.findMany({ where: orgWhere(orgId, {}) }),
+    prisma.contact.findMany({ where: orgWhere(orgId, {}) }),
+    prisma.lead.findMany({ where: orgWhere(orgId, {}) }),
+    prisma.estimate.findMany({ where: orgWhere(orgId, {}) }),
+    prisma.invoice.findMany({ where: orgWhere(orgId, {}) }),
+    prisma.activity.findMany({ where: orgWhere(orgId, {}) }),
   ]);
 
   return {
@@ -138,14 +137,13 @@ async function buildSingleSheetExcel(data: any[], sheetName: string): Promise<Ui
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { orgId } = result;
 
     const type = req.nextUrl.searchParams.get("type") || "all";
     const format = req.nextUrl.searchParams.get("format") || "csv";
-    const crmTables = await getCrmTables();
+    const crmTables = await getCrmTables(orgId);
     const dateStr = new Date().toISOString().split("T")[0];
 
     // Excel format

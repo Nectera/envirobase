@@ -1,7 +1,6 @@
 import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
@@ -324,10 +323,9 @@ function processRows(rows: Record<string, any>[]): Record<string, any>[] {
 export async function POST(req: NextRequest) {
   let step = "init";
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -518,7 +516,7 @@ export async function POST(req: NextRequest) {
       if (companyNames.length > 0) {
         // Batch lookup companies by name
         const companies = await prisma.company.findMany({
-          where: { name: { in: companyNames } },
+          where: orgWhere(orgId, { name: { in: companyNames } }),
           select: { id: true, name: true },
         });
         for (const c of companies) {

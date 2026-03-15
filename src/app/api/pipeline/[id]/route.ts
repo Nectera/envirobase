@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
 // PUT — Update a lead's pipeline stage override (for drag-and-drop)
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -26,8 +24,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     // Get the current lead with company info
-    const currentLead = await prisma.lead.findUnique({
-      where: { id: params.id },
+    const currentLead = await prisma.lead.findFirst({
+      where: orgWhere(orgId, { id: params.id }),
       include: { company: true },
     });
 
@@ -50,7 +48,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         if (typeof includeSaturday === "boolean") updateData.includeSaturday = includeSaturday;
         if (typeof includeSunday === "boolean") updateData.includeSunday = includeSunday;
         lead = await prisma.lead.update({
-          where: { id: params.id },
+          where: orgWhere(orgId, { id: params.id }),
           data: updateData,
         });
       } catch {
@@ -58,7 +56,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         const basicUpdate: any = { pipelineStage };
         if (projectStartDate) basicUpdate.projectStartDate = projectStartDate;
         lead = await prisma.lead.update({
-          where: { id: params.id },
+          where: orgWhere(orgId, { id: params.id }),
           data: basicUpdate,
         });
       }
@@ -94,7 +92,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     // For other stages, just update the pipeline stage
     const lead = await prisma.lead.update({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
       data: { pipelineStage },
     });
 

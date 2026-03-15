@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendNotificationToWorker, sendNotificationToRole, buildIncidentBody } from "@/lib/notifications";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const incidents = await prisma.incident.findMany({
-      where: { projectId: params.id },
+      where: orgWhere(orgId, { projectId: params.id }),
     });
     return NextResponse.json(incidents);
   } catch (error: any) {
@@ -23,10 +21,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -39,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // 1. Create the incident record
     const incident = await prisma.incident.create({
-      data: {
+      data: orgData(orgId, {
         projectId: params.id,
         type: body.type || "other",
         severity: body.severity || "medium",
@@ -51,11 +48,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         status: "open",
         createdAt: now,
         updatedAt: now,
-      },
+      }),
     });
 
     // 2. Get project details for alert context
-    const project = await prisma.project.findUnique({ where: { id: params.id } });
+    const project = await prisma.project.findUnique({ where: orgWhere(orgId, { id: params.id }) });
     const projectName = project?.name || "Unknown Project";
     const projectNumber = (project as any)?.projectNumber || "";
 
@@ -63,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const pmId = (project as any)?.projectManagerId;
     if (pmId) {
       await prisma.alert.create({
-        data: {
+        data: orgData(orgId, {
           type: "incident",
           severity: body.severity === "critical" ? "critical" : "warning",
           title: `Incident: ${body.title || body.type} — ${projectName}`,
@@ -72,7 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           projectId: params.id,
           workerId: pmId,
           dismissed: false,
-        },
+        }),
       });
     }
 
@@ -83,7 +80,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
     for (const admin of officeAdmins) {
       await prisma.alert.create({
-        data: {
+        data: orgData(orgId, {
           type: "incident",
           severity: body.severity === "critical" ? "critical" : "warning",
           title: `Incident: ${body.title || body.type} — ${projectName}`,
@@ -92,14 +89,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           projectId: params.id,
           workerId: admin.id,
           dismissed: false,
-        },
+        }),
       });
     }
 
     // 5. Create an urgent task for the PM to follow up
     if (pmId) {
       await prisma.task.create({
-        data: {
+        data: orgData(orgId, {
           title: `Incident Follow-Up: ${body.title || body.type} — ${projectName}`,
           description: `An incident was reported on ${projectName}.\n\nType: ${body.type.replace(/_/g, " ")}\nSeverity: ${body.severity}\nDate: ${body.date || now.split("T")[0]}\n\n${body.description || ""}`,
           status: "to_do",
@@ -111,7 +108,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           autoCreated: true,
           createdAt: now,
           updatedAt: now,
-        },
+        }),
       });
     }
 

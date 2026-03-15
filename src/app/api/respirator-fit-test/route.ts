@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const url = new URL(req.url);
     const workerId = url.searchParams.get("workerId");
@@ -20,7 +18,7 @@ export async function GET(req: NextRequest) {
     if (projectId) where.projectId = projectId;
 
     const items = await prisma.respiratorFitTest.findMany({
-      where,
+      where: orgWhere(orgId, where),
       include: { worker: true, project: true }
     });
 
@@ -32,10 +30,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -52,7 +49,7 @@ export async function POST(req: NextRequest) {
     const expiresDateStr = expiresDate.toISOString().split("T")[0];
 
     const item = await prisma.respiratorFitTest.create({
-      data: {
+      data: orgData(orgId, {
         workerId: body.workerId,
         projectId: body.projectId || null,
         branchLocation: body.branchLocation || "",
@@ -74,7 +71,7 @@ export async function POST(req: NextRequest) {
         expiresDate: expiresDateStr,
         status: body.status || "draft",
         createdBy: body.createdBy || "",
-      },
+      }),
     });
 
     return NextResponse.json(item, { status: 201 });

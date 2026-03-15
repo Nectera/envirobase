@@ -1,17 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { orgId } = result;
 
-    const licenses = await prisma.companyLicense.findMany();
+    const licenses = await prisma.companyLicense.findMany({
+      where: orgWhere(orgId, {}),
+    });
     return NextResponse.json(licenses);
   } catch (error: any) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -20,10 +20,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -32,7 +31,9 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await req.json();
-    const license = await prisma.companyLicense.create({ data });
+    const license = await prisma.companyLicense.create({
+      data: orgData(orgId, data),
+    });
     return NextResponse.json(license, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

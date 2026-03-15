@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg } from "@/lib/org-context";
 import {
   getConnectionStatus,
   createConnection,
@@ -10,10 +9,9 @@ import {
 
 // GET /api/quickbooks-desktop/status — check connection status
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireOrg();
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
 
   const status = await getConnectionStatus();
   return NextResponse.json(status);
@@ -21,10 +19,9 @@ export async function GET() {
 
 // POST /api/quickbooks-desktop/status — initiate connection
 export async function POST() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireOrg();
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
 
   if (!isConfigured()) {
     return NextResponse.json({
@@ -45,10 +42,9 @@ export async function POST() {
 
 // DELETE /api/quickbooks-desktop/status — disconnect
 export async function DELETE() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireOrg();
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
 
   await disconnect();
   return NextResponse.json({ disconnected: true });

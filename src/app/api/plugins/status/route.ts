@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg } from "@/lib/org-context";
 import prisma from "@/lib/prisma";
 import { PLUGINS } from "@/lib/plugins";
 
 // GET /api/plugins/status — returns connection status for all plugins
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireOrg();
+  if (result instanceof NextResponse) return result;
+  const { session } = result;
 
   try {
     // Get all integration auth records

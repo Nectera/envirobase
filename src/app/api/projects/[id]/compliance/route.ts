@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
@@ -9,10 +8,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireOrg();
+    if (authResult instanceof NextResponse) return authResult;
+    const { session, orgId } = authResult;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -23,22 +21,22 @@ export async function POST(
     const body = await req.json();
 
     const result = await prisma.complianceCheck.upsert({
-      where: {
+      where: orgWhere(orgId, {
         projectId_itemKey: {
           projectId: params.id,
           itemKey: body.itemKey,
         },
-      },
+      }),
       update: {
         checked: body.checked,
         checkedAt: body.checked ? new Date() : null,
       },
-      create: {
+      create: orgData(orgId, {
         projectId: params.id,
         itemKey: body.itemKey,
         checked: body.checked,
         checkedAt: body.checked ? new Date() : null,
-      },
+      }),
     });
 
     return NextResponse.json(result);

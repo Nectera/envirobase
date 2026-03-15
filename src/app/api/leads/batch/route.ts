@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { batchLeadActionSchema, validateBody } from "@/lib/validations";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
@@ -10,10 +9,9 @@ export const dynamic = "force-dynamic";
 // POST /api/leads/batch — bulk update or delete leads
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -36,7 +34,7 @@ export async function POST(req: NextRequest) {
       for (let i = 0; i < ids.length; i += 500) {
         const batch = ids.slice(i, i + 500);
         const result = await prisma.lead.updateMany({
-          where: { id: { in: batch } },
+          where: orgWhere(orgId, { id: { in: batch } }),
           data: { status },
         });
         totalUpdated += result.count;
@@ -79,7 +77,7 @@ export async function POST(req: NextRequest) {
       for (let i = 0; i < ids.length; i += 500) {
         const batch = ids.slice(i, i + 500);
         const result = await prisma.lead.updateMany({
-          where: { id: { in: batch } },
+          where: orgWhere(orgId, { id: { in: batch } }),
           data,
         });
         totalUpdated += result.count;
@@ -94,7 +92,7 @@ export async function POST(req: NextRequest) {
       }
       let deleted = 0;
       for (const id of ids) {
-        await prisma.lead.delete({ where: { id } });
+        await prisma.lead.delete({ where: orgWhere(orgId, { id }) });
         deleted++;
       }
       return NextResponse.json({ success: true, deleted });

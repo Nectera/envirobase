@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg } from "@/lib/org-context";
 import { checkWorkerCertsForProject } from "@/lib/cert-requirements";
 
 /**
@@ -14,8 +13,8 @@ import { checkWorkerCertsForProject } from "@/lib/cert-requirements";
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
 
     const body = await req.json();
     const { workerId, projectTypes } = body;

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
@@ -10,10 +9,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -34,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     // Find the worker
-    const worker = await prisma.worker.findUnique({ where: { id: params.id } });
+    const worker = await prisma.worker.findUnique({ where: orgWhere(orgId, { id: params.id }) });
     if (!worker) {
       return NextResponse.json({ error: "Worker not found" }, { status: 404 });
     }

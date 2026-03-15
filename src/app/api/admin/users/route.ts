@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendWelcomeEmail } from "@/lib/email";
@@ -16,13 +15,15 @@ function isAdmin(role: string): boolean {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userRole = (session.user as any)?.role;
     if (!isAdmin(userRole)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const users = await prisma.user.findMany({
+      where: orgWhere(orgId, {}),
       select: { id: true, name: true, email: true, role: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     });
@@ -35,8 +36,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userRole = (session.user as any)?.role;
     const userId = (session.user as any)?.id || "anonymous";
@@ -64,6 +66,7 @@ export async function POST(req: NextRequest) {
 
     const newUser = await prisma.user.create({
       data: {
+        orgId,
         name: name.trim(),
         email: email.toLowerCase().trim(),
         passwordHash,

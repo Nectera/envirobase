@@ -1,15 +1,13 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
 // GET – generate a daily time report for a project+date
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const url = new URL(req.url);
     const projectId = url.searchParams.get("projectId");
@@ -20,7 +18,7 @@ export async function GET(req: NextRequest) {
     }
 
     const entries = await prisma.timeEntry.findMany({
-      where: { projectId, date },
+      where: orgWhere(orgId, { projectId, date }),
       include: { worker: true },
     });
 
@@ -34,7 +32,7 @@ export async function GET(req: NextRequest) {
     const totalTechnicianHours = Math.round(sum(technicianEntries) * 100) / 100;
     const totalHours = Math.round((totalSupervisorHours + totalTechnicianHours) * 100) / 100;
 
-    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    const project = await prisma.project.findUnique({ where: orgWhere(orgId, { id: projectId }) });
 
     const report = {
       projectId,

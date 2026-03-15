@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, DOCUMENTS_BUCKET } from "@/lib/supabase";
@@ -20,8 +19,9 @@ import { supabase, DOCUMENTS_BUCKET } from "@/lib/supabase";
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`upload:${userId}`, API_WRITE_LIMIT);
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Update project
     const project = await prisma.project.update({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
       data: updateData,
     });
 
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (cost !== null && !isNaN(cost)) {
       // Find post-cost estimate linked to this project
       const postCostEstimates = await prisma.consultationEstimate.findMany({
-        where: { projectId: params.id, isPostCost: true },
+        where: orgWhere(orgId, { projectId: params.id, isPostCost: true }),
       });
 
       for (const est of postCostEstimates) {
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const cogsCost = cogs.reduce((sum: number, c: any) => sum + (c.cost || 0), 0);
 
         await prisma.consultationEstimate.update({
-          where: { id: est.id },
+          where: orgWhere(orgId, { id: est.id }),
           data: { cogs, cogsCost },
         });
         postCostUpdated = true;

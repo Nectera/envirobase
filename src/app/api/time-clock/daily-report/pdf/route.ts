@@ -1,16 +1,14 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { COMPANY_NAME } from "@/lib/branding";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const url = new URL(req.url);
     const projectId = url.searchParams.get("projectId");
@@ -20,11 +18,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "projectId and date required" }, { status: 400 });
     }
 
-    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    const project = await prisma.project.findUnique({ where: orgWhere(orgId, { id: projectId }) });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
     const entries = await prisma.timeEntry.findMany({
-      where: { projectId, date },
+      where: orgWhere(orgId, { projectId, date }),
     });
 
     // Build PDF

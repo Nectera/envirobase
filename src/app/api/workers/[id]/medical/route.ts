@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -20,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const body = await req.json();
 
     const record = await prisma.medicalRecord.create({
-      data: {
+      data: orgData(orgId, {
         workerId: params.id,
         examDate: new Date(body.examDate),
         nextExamDate: new Date(body.nextExamDate),
@@ -29,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         physician: body.physician || null,
         findings: body.findings || null,
         restrictions: body.restrictions || null,
-      },
+      }),
     });
 
     return NextResponse.json(record, { status: 201 });

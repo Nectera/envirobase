@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
 import { toolDefinitions, ADMIN_ONLY_TOOLS, executeTool } from "./tools";
@@ -102,7 +101,9 @@ export async function POST(req: NextRequest) {
     const { messages, conversationId } = await req.json();
 
     // Read role from server session — never trust client-provided role
-    const session = await getServerSession(authOptions);
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const userRole = (session?.user as any)?.role || "TECHNICIAN";
     const userId = (session?.user as any)?.id || "anonymous";
 
@@ -125,13 +126,19 @@ export async function POST(req: NextRequest) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     // Load persistent memories and knowledge base
-    const allMemories = await prisma.assistantMemory.findMany();
-    const knowledgeBaseArticles = await prisma.knowledgeBase.findMany();
+    const allMemories = await prisma.assistantMemory.findMany({
+      where: orgWhere(orgId, {}),
+    });
+    const knowledgeBaseArticles = await prisma.knowledgeBase.findMany({
+      where: orgWhere(orgId, {}),
+    });
 
     // Load or create conversation
     let conversation: any = null;
     if (conversationId) {
-      conversation = await prisma.assistantConversation.findUnique({ where: { id: conversationId } });
+      conversation = await prisma.assistantConversation.findFirst({
+        where: orgWhere(orgId, { id: conversationId }),
+      });
     }
 
     // Build message history
@@ -233,12 +240,12 @@ export async function POST(req: NextRequest) {
 
     if (conversation) {
       await prisma.assistantConversation.update({
-        where: { id: conversation.id },
+        where: orgWhere(orgId, { id: conversation.id }),
         data: { messages: savedMessages },
       });
     } else {
       conversation = await prisma.assistantConversation.create({
-        data: { messages: savedMessages },
+        data: orgData(orgId, { messages: savedMessages }),
       });
     }
 

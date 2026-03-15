@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
@@ -13,8 +12,9 @@ export async function PUT(
   { params }: { params: { id: string; itemId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const userId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -31,7 +31,7 @@ export async function PUT(
     if (body.customerNote !== undefined) data.customerNote = body.customerNote?.trim() || null;
 
     const item = await prisma.contentInventoryItem.update({
-      where: { id: params.itemId },
+      where: orgWhere(orgId, { id: params.itemId }),
       data,
       include: { photos: { orderBy: { order: "asc" } } },
     });
@@ -52,8 +52,9 @@ export async function DELETE(
   { params }: { params: { id: string; itemId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const userId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -61,7 +62,7 @@ export async function DELETE(
 
     // Photos cascade-delete via Prisma relation
     await prisma.contentInventoryItem.delete({
-      where: { id: params.itemId },
+      where: orgWhere(orgId, { id: params.itemId }),
     });
 
     return NextResponse.json({ success: true });

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
 const VALID_CATEGORIES = [
@@ -20,8 +19,9 @@ const VALID_CATEGORIES = [
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const getUser = session.user as any;
     if (getUser?.role !== "ADMIN") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     }
 
     const lines = await prisma.projectBudgetLine.findMany({
-      where: { projectId },
+      where: orgWhere(orgId, { projectId }),
       orderBy: [{ category: "asc" }, { createdAt: "asc" }],
     });
 
@@ -74,8 +74,9 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN") {
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
     }
 
     const line = await prisma.projectBudgetLine.create({
-      data: {
+      data: orgData(orgId, {
         projectId,
         category,
         description,
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
         actualAmount: parseFloat(actualAmount) || 0,
         notes: notes || null,
         source: "manual",
-      },
+      }),
     });
 
     return NextResponse.json(line, { status: 201 });

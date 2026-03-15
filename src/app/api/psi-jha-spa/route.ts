@@ -1,19 +1,17 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const url = new URL(req.url);
     const projectId = url.searchParams.get("projectId");
-    const where: any = {};
+    const where: any = orgWhere(orgId, {});
     if (projectId) where.projectId = projectId;
     const rawItems = await prisma.psiJhaSpa.findMany({ where, include: { project: true } });
     // Flatten data JSON fields onto each item for frontend compatibility
@@ -29,10 +27,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -46,12 +43,12 @@ export async function POST(req: NextRequest) {
     const { projectId, date, status, ...extraFields } = body;
 
     const item = await prisma.psiJhaSpa.create({
-      data: {
+      data: orgData(orgId, {
         projectId,
         date: date || new Date().toISOString().split("T")[0],
         status: status || "draft",
         data: Object.keys(extraFields).length > 0 ? extraFields : null,
-      },
+      }),
     });
     return NextResponse.json(item, { status: 201 });
   } catch (error: any) {

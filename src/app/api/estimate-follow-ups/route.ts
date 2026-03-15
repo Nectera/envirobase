@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import {
   getEstimateFollowUpConfig,
@@ -10,8 +9,9 @@ import {
 // ─── GET /api/estimate-follow-ups ───────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const { searchParams } = new URL(req.url);
     const estimateId = searchParams.get("estimateId");
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     if (estimateId) where.estimateId = estimateId;
 
     const followUps = await prisma.estimateFollowUp.findMany({
-      where,
+      where: orgWhere(orgId, where),
       orderBy: { createdAt: "desc" },
       take: 100,
     });
@@ -36,8 +36,9 @@ export async function GET(req: NextRequest) {
 // Create a follow-up sequence for an estimate and send touch 1
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const user = session.user as any;
     const body = await req.json();
@@ -51,7 +52,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify estimate exists and is in "sent" status
-    const estimate = await prisma.estimate.findUnique({ where: { id: estimateId } });
+    const estimate = await prisma.estimate.findFirst({
+      where: orgWhere(orgId, { id: estimateId }),
+    });
     if (!estimate) {
       return NextResponse.json({ error: "Estimate not found" }, { status: 404 });
     }
@@ -64,10 +67,10 @@ export async function POST(req: NextRequest) {
 
     // Check if there's already an active follow-up for this estimate
     const existing = await prisma.estimateFollowUp.findFirst({
-      where: {
+      where: orgWhere(orgId, {
         estimateId,
         status: { in: ["pending", "active"] },
-      },
+      }),
     });
     if (existing) {
       return NextResponse.json(
@@ -85,7 +88,7 @@ export async function POST(req: NextRequest) {
     nextTouchAt.setDate(nextTouchAt.getDate() + firstStep.delayDays);
 
     const followUp = await prisma.estimateFollowUp.create({
-      data: {
+      data: orgData(orgId, {
         estimateId,
         clientName: clientName || null,
         clientEmail,
@@ -94,7 +97,7 @@ export async function POST(req: NextRequest) {
         status: "active",
         touchesSent: 0,
         nextTouchAt,
-      },
+      }),
     });
 
     return NextResponse.json(followUp, { status: 201 });

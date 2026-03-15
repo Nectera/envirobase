@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { requireOrg } from "@/lib/org-context";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session } = result;
     if (!session?.user?.email) {
       logger.warn("Unauthorized email send attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

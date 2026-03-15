@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendHtmlEmail, escapeHtml } from "@/lib/email";
@@ -14,11 +13,12 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const review = await prisma.contentInventoryReview.findUnique({
-      where: { projectId: params.id },
+      where: orgWhere(orgId, { projectId: params.id }),
     });
 
     return NextResponse.json(review || null);
@@ -35,8 +35,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const userId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -47,26 +48,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Upsert review record
     const review = await prisma.contentInventoryReview.upsert({
-      where: { projectId: params.id },
+      where: orgWhere(orgId, { projectId: params.id }),
       update: {
         customerName: customerName?.trim() || undefined,
         customerEmail: customerEmail?.trim() || undefined,
         sentAt: new Date(),
         sentBy: userId,
       },
-      create: {
+      create: orgData(orgId, {
         projectId: params.id,
         customerName: customerName?.trim() || null,
         customerEmail: customerEmail?.trim() || null,
         sentAt: new Date(),
         sentBy: userId,
-      },
+      }),
     });
 
     // If customer email provided, send the review link
     if (customerEmail?.trim()) {
       const project = await prisma.project.findUnique({
-        where: { id: params.id },
+        where: orgWhere(orgId, { id: params.id }),
         select: { name: true },
       });
 
@@ -133,8 +134,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
  */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
     const userId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -147,7 +149,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.status !== undefined) data.status = body.status;
 
     const review = await prisma.contentInventoryReview.update({
-      where: { projectId: params.id },
+      where: orgWhere(orgId, { projectId: params.id }),
       data,
     });
 

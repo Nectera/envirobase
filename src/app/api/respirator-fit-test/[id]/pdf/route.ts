@@ -1,7 +1,6 @@
 import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { FIT_TEST_ITEMS } from "@/lib/respirator-fit-tests";
@@ -26,13 +25,12 @@ function wrapText(text: string, maxWidth: number): string[] {
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const result = await requireOrg();
+    if (result instanceof NextResponse) return result;
+    const { session, orgId } = result;
 
     const item = await prisma.respiratorFitTest.findUnique({
-      where: { id: params.id },
+      where: orgWhere(orgId, { id: params.id }),
       include: { worker: true }
     });
 
