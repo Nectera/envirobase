@@ -323,9 +323,9 @@ function processRows(rows: Record<string, any>[]): Record<string, any>[] {
 export async function POST(req: NextRequest) {
   let step = "init";
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);

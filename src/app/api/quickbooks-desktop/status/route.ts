@@ -9,9 +9,9 @@ import {
 
 // GET /api/quickbooks-desktop/status — check connection status
 export async function GET() {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { session } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { session } = auth;
 
   const status = await getConnectionStatus();
   return NextResponse.json(status);
@@ -19,9 +19,9 @@ export async function GET() {
 
 // POST /api/quickbooks-desktop/status — initiate connection
 export async function POST() {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { session } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { session } = auth;
 
   if (!isConfigured()) {
     return NextResponse.json({
@@ -42,9 +42,9 @@ export async function POST() {
 
 // DELETE /api/quickbooks-desktop/status — disconnect
 export async function DELETE() {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { session } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { session } = auth;
 
   await disconnect();
   return NextResponse.json({ disconnected: true });

@@ -12,9 +12,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN" && user?.role !== "SUPERVISOR" && user?.role !== "OFFICE") {
@@ -58,9 +58,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN") {

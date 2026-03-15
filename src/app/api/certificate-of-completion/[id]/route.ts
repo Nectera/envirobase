@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const item = await prisma.certificateOfCompletion.findUnique({
       where: orgWhere(orgId, { id: params.id }),
@@ -22,9 +22,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -57,9 +57,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);

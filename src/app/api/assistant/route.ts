@@ -101,9 +101,9 @@ export async function POST(req: NextRequest) {
     const { messages, conversationId } = await req.json();
 
     // Read role from server session — never trust client-provided role
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const userRole = (session?.user as any)?.role || "TECHNICIAN";
     const userId = (session?.user as any)?.id || "anonymous";
 

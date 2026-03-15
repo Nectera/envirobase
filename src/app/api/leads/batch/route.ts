@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 // POST /api/leads/batch — bulk update or delete leads
 export async function POST(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -33,11 +33,11 @@ export async function POST(req: NextRequest) {
       let totalUpdated = 0;
       for (let i = 0; i < ids.length; i += 500) {
         const batch = ids.slice(i, i + 500);
-        const result = await prisma.lead.updateMany({
+        const updateResult = await prisma.lead.updateMany({
           where: orgWhere(orgId, { id: { in: batch } }),
           data: { status },
         });
-        totalUpdated += result.count;
+        totalUpdated += updateResult.count;
       }
       return NextResponse.json({ success: true, updated: totalUpdated });
     }
@@ -76,11 +76,11 @@ export async function POST(req: NextRequest) {
       let totalUpdated = 0;
       for (let i = 0; i < ids.length; i += 500) {
         const batch = ids.slice(i, i + 500);
-        const result = await prisma.lead.updateMany({
+        const updateResult = await prisma.lead.updateMany({
           where: orgWhere(orgId, { id: { in: batch } }),
           data,
         });
-        totalUpdated += result.count;
+        totalUpdated += updateResult.count;
       }
       return NextResponse.json({ success: true, updated: totalUpdated });
     }

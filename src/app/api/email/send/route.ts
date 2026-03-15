@@ -8,9 +8,9 @@ import { logger } from "@/lib/logger";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session } = auth;
     if (!session?.user?.email) {
       logger.warn("Unauthorized email send attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -55,22 +55,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Send the email
-    const result = await sendEmail({
+    const emailResult = await sendEmail({
       to,
       subject,
       body: emailBody,
       cc: cc || undefined,
     });
 
-    if (!result.success) {
+    if (!emailResult.success) {
       logger.error("Failed to send email", {
         to,
         subject,
-        error: result.error,
+        error: emailResult.error,
         userId: session.user.email,
       });
       return NextResponse.json(
-        { error: result.error || "Failed to send email" },
+        { error: emailResult.error || "Failed to send email" },
         { status: 500 }
       );
     }
@@ -94,12 +94,12 @@ export async function POST(request: NextRequest) {
       userId: session.user.email,
       to,
       subject,
-      messageId: result.messageId,
+      messageId: emailResult.messageId,
     });
 
     return NextResponse.json({
       success: true,
-      messageId: result.messageId,
+      messageId: emailResult.messageId,
     });
   } catch (error: any) {
     logger.error("Email send error", {

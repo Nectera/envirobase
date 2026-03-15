@@ -4,9 +4,9 @@ import { rcApiCall, isConnected, getValidToken } from "@/lib/ringcentral";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { session } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { session } = auth;
 
   try {
     if (!(await isConnected())) {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       ringOutBody.from = { phoneNumber: auth.phoneNumber };
     }
 
-    const result = await rcApiCall("POST", "/account/~/extension/~/ring-out", ringOutBody);
+    const callResult = await rcApiCall("POST", "/account/~/extension/~/ring-out", ringOutBody);
 
     // Log to activity feed
     if (parentType && parentId) {
@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      callId: result.id,
-      status: result.status?.callStatus,
+      callId: callResult.id,
+      status: callResult.status?.callStatus,
     });
   } catch (error: any) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

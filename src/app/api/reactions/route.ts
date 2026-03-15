@@ -10,9 +10,9 @@ import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
  */
 export async function GET(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const { searchParams } = new URL(req.url);
     const targetType = searchParams.get("targetType");
@@ -60,9 +60,9 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const userId = (session.user as any)?.id;
     const userName = (session.user as any)?.name || "User";
 

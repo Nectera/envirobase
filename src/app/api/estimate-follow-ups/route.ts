@@ -9,9 +9,9 @@ import {
 // ─── GET /api/estimate-follow-ups ───────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const { searchParams } = new URL(req.url);
     const estimateId = searchParams.get("estimateId");
@@ -36,9 +36,9 @@ export async function GET(req: NextRequest) {
 // Create a follow-up sequence for an estimate and send touch 1
 export async function POST(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const user = session.user as any;
     const body = await req.json();

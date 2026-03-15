@@ -12,9 +12,9 @@ function isAdmin(role: string): boolean {
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userRole = (session.user as any)?.role;
     const currentUserId = (session.user as any)?.id;
@@ -76,9 +76,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userRole = (session.user as any)?.role;
     const currentUserId = (session.user as any)?.id;

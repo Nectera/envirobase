@@ -15,9 +15,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const userId = (session.user as any)?.id;
 
     // Verify user is a member
@@ -65,9 +65,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const userId = (session.user as any)?.id;
     const userName = (session.user as any)?.name || "Unknown";
 

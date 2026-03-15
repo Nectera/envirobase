@@ -6,9 +6,9 @@ import { prisma } from "@/lib/prisma";
 // GET – single time entry
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const entry = await prisma.timeEntry.findUnique({
       where: orgWhere(orgId, { id: params.id }),
@@ -24,9 +24,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 // PUT – clock out or update entry (break minutes, notes, etc.)
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -100,9 +100,9 @@ const updated = await prisma.timeEntry.update({
 // DELETE
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);

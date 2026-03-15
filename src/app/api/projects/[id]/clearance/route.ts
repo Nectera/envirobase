@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const formData = await req.formData();
     const report = formData.get("report") as File | null;
     const invoice = formData.get("invoice") as File | null;
-    const result = formData.get("result") as string || null;
+    const clearanceResult = formData.get("result") as string || null;
     const date = formData.get("date") as string || null;
     const cost = formData.get("cost") ? Number(formData.get("cost")) : null;
     const vendor = formData.get("vendor") as string || null;
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const MAX_SIZE = 25 * 1024 * 1024;
 
     const updateData: any = {};
-    if (result) updateData.clearanceResult = result;
+    if (clearanceResult) updateData.clearanceResult = clearanceResult;
     if (date) updateData.clearanceDate = date;
     if (cost !== null && !isNaN(cost)) updateData.clearanceCost = cost;
     if (vendor) updateData.clearanceVendor = vendor;

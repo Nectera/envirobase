@@ -8,9 +8,9 @@ export const maxDuration = 30; // Allow time for AI summary + email on submissio
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const report = await prisma.dailyFieldReport.findUnique({
       where: orgWhere(orgId, { id: params.id }),
@@ -25,9 +25,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -71,9 +71,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);

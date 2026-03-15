@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 // GET /api/assistant/conversations — list recent conversations
 export async function GET() {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { orgId } = auth;
 
     const conversations = await prisma.assistantConversation.findMany({
       where: orgWhere(orgId, {}),
@@ -38,9 +38,9 @@ export async function GET() {
 // DELETE /api/assistant/conversations?id=xxx — delete a conversation
 export async function DELETE(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { orgId } = auth;
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

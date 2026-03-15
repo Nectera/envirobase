@@ -3,9 +3,9 @@ import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { orgId } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { orgId } = auth;
 
   const body = await req.json();
   const metric = await prisma.metric.update({
@@ -17,9 +17,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { orgId } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { orgId } = auth;
 
   await prisma.metric.delete({ where: orgWhere(orgId, { id: params.id }) });
   return NextResponse.json({ success: true });

@@ -9,9 +9,9 @@ import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
  */
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const members = await prisma.chatMember.findMany({
       where: { channelId: params.id },
@@ -25,14 +25,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     });
     const userMap = new Map(users.map((u: any) => [u.id, u]));
 
-    const result = members.map((m: any) => ({
+    const memberList = members.map((m: any) => ({
       id: m.id,
       userId: m.userId,
       joinedAt: m.joinedAt,
       user: userMap.get(m.userId) || { id: m.userId, name: "Unknown", email: "", role: "" },
     }));
 
-    return NextResponse.json(result);
+    return NextResponse.json(memberList);
   } catch (error: any) {
     console.error("Chat members GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -45,9 +45,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const currentUserId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`write:${currentUserId}`, API_WRITE_LIMIT);
@@ -79,9 +79,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
  */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const currentUserId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`write:${currentUserId}`, API_WRITE_LIMIT);

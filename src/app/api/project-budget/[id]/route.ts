@@ -8,9 +8,9 @@ import { prisma } from "@/lib/prisma";
  */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN") {
@@ -44,9 +44,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
  */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN") {

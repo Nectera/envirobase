@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireOrg, orgWhere } from "@/lib/org-context";
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { orgId } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { orgId } = auth;
 
   const data = await req.json();
   const license = await prisma.companyLicense.update({
@@ -16,9 +16,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { orgId } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { orgId } = auth;
 
   await prisma.companyLicense.delete({
     where: orgWhere(orgId, { id: params.id }),

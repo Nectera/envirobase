@@ -19,9 +19,9 @@ const VALID_CATEGORIES = [
  */
 export async function GET(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const getUser = session.user as any;
     if (getUser?.role !== "ADMIN") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -74,9 +74,9 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN") {

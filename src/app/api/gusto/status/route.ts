@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session } = auth;
 
     const status = await getConnectionStatus();
     return NextResponse.json(status);
@@ -20,9 +20,9 @@ export async function GET() {
 
 export async function DELETE() {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);

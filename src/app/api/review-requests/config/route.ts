@@ -8,8 +8,8 @@ import { getReviewConfig, DRIP_SEQUENCE } from "@/lib/review-config";
  */
 export async function GET(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
 
     const config = await getReviewConfig();
     return NextResponse.json(config);
@@ -24,9 +24,9 @@ export async function GET(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session } = auth;
 
     const user = session.user as any;
     if (user?.role !== "ADMIN" && user?.role !== "SUPERVISOR" && user?.role !== "OFFICE") {

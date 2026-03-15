@@ -20,9 +20,9 @@ function validateMessageLength(text: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const result = await requireOrg();
-  if (result instanceof NextResponse) return result;
-  const { session } = result;
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { session } = auth;
   if (!session?.user?.email) {
     logger.warn("Unauthorized SMS send attempt");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       text,
     };
 
-    const result = await rcApiCall("POST", "/account/~/extension/~/sms", smsBody);
+    const smsResult = await rcApiCall("POST", "/account/~/extension/~/sms", smsBody);
 
     // Log to activity feed
     if (parentType && parentId) {
@@ -127,13 +127,13 @@ export async function POST(request: NextRequest) {
     logger.audit("sms_sent", {
       userId: session.user.email,
       to,
-      messageId: result.id,
+      messageId: smsResult.id,
       messageLength: text.length,
     });
 
     return NextResponse.json({
       success: true,
-      messageId: result.id,
+      messageId: smsResult.id,
     });
   } catch (error: any) {
     logger.error("SMS send error", {

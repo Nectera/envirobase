@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session } = auth;
 
     return NextResponse.json(await getConnectionStatus());
   } catch (error: any) {
@@ -20,9 +20,9 @@ export async function GET() {
 // Save API key
 export async function POST(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -43,9 +43,9 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE() {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session } = auth;
 
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);

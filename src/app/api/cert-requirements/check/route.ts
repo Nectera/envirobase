@@ -13,8 +13,8 @@ import { checkWorkerCertsForProject } from "@/lib/cert-requirements";
  */
 export async function POST(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
 
     const body = await req.json();
     const { workerId, projectTypes } = body;

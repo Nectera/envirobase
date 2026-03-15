@@ -12,9 +12,9 @@ export async function PUT(
   { params }: { params: { id: string; itemId: string } }
 ) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const userId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
@@ -52,9 +52,9 @@ export async function DELETE(
   { params }: { params: { id: string; itemId: string } }
 ) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
     const userId = (session.user as any)?.id;
 
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);

@@ -15,9 +15,9 @@ function isAdmin(role: string): boolean {
 
 export async function GET() {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userRole = (session.user as any)?.role;
     if (!isAdmin(userRole)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -36,9 +36,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const result = await requireOrg();
-    if (result instanceof NextResponse) return result;
-    const { session, orgId } = result;
+    const auth = await requireOrg();
+    if (auth instanceof NextResponse) return auth;
+    const { session, orgId } = auth;
 
     const userRole = (session.user as any)?.role;
     const userId = (session.user as any)?.id || "anonymous";
