@@ -28,7 +28,7 @@ function arrayToCsv(data: any[]): string {
   return lines.join("\n");
 }
 
-async function getCrmTables(orgId: string): Promise<Record<string, any[]>> {
+async function getCrmTables(orgId: string | null): Promise<Record<string, any[]>> {
   const [companies, contacts, leads, estimates, invoices, activities] = await Promise.all([
     prisma.company.findMany({ where: orgWhere(orgId, {}) }),
     prisma.contact.findMany({ where: orgWhere(orgId, {}) }),
