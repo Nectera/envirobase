@@ -29,13 +29,13 @@ export async function POST() {
     }, { status: 400 });
   }
 
-  const result = await createConnection();
-  if (result.error) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+  const connResult = await createConnection();
+  if (connResult.error) {
+    return NextResponse.json({ error: connResult.error }, { status: 400 });
   }
 
   return NextResponse.json({
-    authSessionUrl: result.authSessionUrl,
+    authSessionUrl: connResult.authSessionUrl,
     message: "Conductor auth session created. Direct the user to the auth URL to link their QuickBooks Desktop.",
   });
 }
