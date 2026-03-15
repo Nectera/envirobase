@@ -1,0 +1,105 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { formatDate, getTypeBadgeColor, getStatusColor } from "@/lib/utils";
+import { TYPE_LABELS } from "@/lib/regulations";
+import type { Project, ProjectTask } from "@/types";
+
+type ProjectWithTasks = Project & { tasks: ProjectTask[] };
+
+export default function ProjectFilters({ projects }: { projects: ProjectWithTasks[] }) {
+  const [filter, setFilter] = useState("all");
+
+  const filtered = filter === "all" ? projects : projects.filter((p) => p.type === filter);
+
+  const tabs = [
+    { key: "all", label: "All" },
+    { key: "ASBESTOS", label: "Asbestos" },
+    { key: "LEAD", label: "Lead" },
+    { key: "METH", label: "Meth" },
+  ];
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-4">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setFilter(t.key)}
+            className={`px-3 py-1.5 text-sm rounded-lg font-medium transition ${
+              filter === t.key
+                ? t.key === "ASBESTOS" ? "bg-indigo-600 text-white"
+                : t.key === "LEAD" ? "bg-amber-500 text-white"
+                : t.key === "METH" ? "bg-red-500 text-white"
+                : "bg-indigo-600 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            {t.label}{" "}
+            <span className="opacity-70">
+              ({t.key === "all" ? projects.length : projects.filter((p) => p.type === t.key).length})
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b-2 border-slate-200">
+              <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Project</th>
+              <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Type</th>
+              <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Status</th>
+              <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Client</th>
+              <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Progress</th>
+              <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Timeline</th>
+              <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Permit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((p) => {
+              const done = p.tasks.filter((t) => t.status === "completed").length;
+              const pct = p.tasks.length ? Math.round((done / p.tasks.length) * 100) : 0;
+              const barColor = p.type === "ASBESTOS" ? "bg-indigo-500" : p.type === "LEAD" ? "bg-amber-500" : "bg-red-500";
+
+              return (
+                <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                  <td className="px-4 py-3">
+                    <Link href={`/projects/${p.id}`} className="hover:text-indigo-600">
+                      <div className="font-medium text-[13px]">{p.name}</div>
+                      <div className="text-[11px] text-slate-400">{p.projectNumber} &bull; {p.address}</div>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${getTypeBadgeColor(p.type)}`}>
+                      {TYPE_LABELS[p.type] || p.type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${getStatusColor(p.status)}`}>
+                      {p.status.replace("_", " ")}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-600">{p.client}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 min-w-[120px]">
+                      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-[11px] text-slate-400 w-8 text-right">{pct}%</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-600">
+                    {formatDate(p.startDate)} — {formatDate(p.estEndDate)}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-600">{p.permitNumber || "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  );
+}

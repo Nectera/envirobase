@@ -1,0 +1,307 @@
+"use client";
+
+import { useState } from "react";
+import { Shield, Stethoscope, AlertTriangle, Wind } from "lucide-react";
+
+type Certification = {
+  id: string;
+  name: string;
+  number: string;
+  issued: string;
+  expires: string;
+  status: string;
+};
+
+type MedicalRecord = {
+  id: string;
+  examDate: string;
+  nextExamDate: string;
+  examType: string;
+  provider: string;
+  respiratorFitDate: string | null;
+  bll: string | null;
+  notes: string | null;
+};
+
+type FitTest = {
+  id: string;
+  testDate: string;
+  expiresDate: string;
+  respiratorType: string;
+  respiratorSize: string;
+  status: string;
+  testResults: Record<string, string> | null;
+};
+
+function formatDate(d: string | null) {
+  if (!d) return "—";
+  return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export default function MyDocumentsView({
+  certifications,
+  medicalRecords,
+  fitTests,
+}: {
+  certifications: Certification[];
+  medicalRecords: MedicalRecord[];
+  fitTests: FitTest[];
+}) {
+  const [tab, setTab] = useState<"certs" | "medical" | "fit">("certs");
+  const today = new Date().toISOString().split("T")[0];
+
+  // Cert status counts
+  const expiredCerts = certifications.filter((c) => c.expires < today).length;
+  const expiringCerts = certifications.filter((c) => {
+    const daysLeft = Math.ceil((new Date(c.expires).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
+    return c.expires >= today && daysLeft <= 30;
+  }).length;
+
+  return (
+    <div>
+      {/* Alert banner for expiring/expired certs */}
+      {(expiredCerts > 0 || expiringCerts > 0) && (
+        <div className={`mb-4 rounded-lg border p-3 flex items-center gap-2 text-xs font-medium ${
+          expiredCerts > 0 ? "bg-red-50 border-red-200 text-red-800" : "bg-amber-50 border-amber-200 text-amber-800"
+        }`}>
+          <AlertTriangle size={14} />
+          {expiredCerts > 0 && <span>{expiredCerts} expired certification{expiredCerts > 1 ? "s" : ""}</span>}
+          {expiredCerts > 0 && expiringCerts > 0 && <span>·</span>}
+          {expiringCerts > 0 && <span>{expiringCerts} expiring within 30 days</span>}
+          <span className="text-slate-500 ml-1">— Contact your supervisor to renew</span>
+        </div>
+      )}
+
+      {/* Tab toggle */}
+      <div className="flex gap-1 mb-4">
+        <button
+          onClick={() => setTab("certs")}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition ${
+            tab === "certs" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          <Shield size={12} className="inline mr-1" />
+          Certifications ({certifications.length})
+        </button>
+        <button
+          onClick={() => setTab("medical")}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition ${
+            tab === "medical" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          <Stethoscope size={12} className="inline mr-1" />
+          Medical Records ({medicalRecords.length})
+        </button>
+        <button
+          onClick={() => setTab("fit")}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition ${
+            tab === "fit" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          <Wind size={12} className="inline mr-1" />
+          Fit Tests ({fitTests.length})
+        </button>
+      </div>
+
+      {/* Certifications */}
+      {tab === "certs" && (
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 overflow-hidden">
+          {certifications.length === 0 ? (
+            <div className="py-12 text-center">
+              <Shield size={28} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm text-slate-400">No certifications on file</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Certification</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Number</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Issued</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Expires</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {certifications.map((cert) => {
+                  const isExpired = cert.expires < today;
+                  const daysLeft = Math.ceil((new Date(cert.expires).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
+                  const isExpiring = !isExpired && daysLeft <= 30;
+
+                  return (
+                    <tr key={cert.id} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="px-4 py-2.5 font-medium text-[13px]">{cert.name}</td>
+                      <td className="px-4 py-2.5 text-xs font-mono text-slate-600">{cert.number}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-600">{formatDate(cert.issued)}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-600">
+                        {formatDate(cert.expires)}
+                        {isExpiring && (
+                          <span className="ml-1 text-amber-600 text-[10px]">({daysLeft}d left)</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {isExpired ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-red-100 text-red-700">
+                            <AlertTriangle size={10} /> Expired
+                          </span>
+                        ) : isExpiring ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700">
+                            <AlertTriangle size={10} /> Expiring
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-green-100 text-green-700">
+                            Active
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Medical Records */}
+      {tab === "medical" && (
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 overflow-hidden">
+          {medicalRecords.length === 0 ? (
+            <div className="py-12 text-center">
+              <Stethoscope size={28} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm text-slate-400">No medical records on file</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {medicalRecords.map((rec) => {
+                const nextDue = rec.nextExamDate;
+                const isOverdue = nextDue && nextDue < today;
+                const daysUntilDue = nextDue ? Math.ceil((new Date(nextDue).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24)) : null;
+                const isDueSoon = daysUntilDue !== null && daysUntilDue > 0 && daysUntilDue <= 60;
+
+                return (
+                  <div key={rec.id} className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-[11px] text-slate-400 mb-0.5">Exam Date</div>
+                        <div className="text-sm font-medium">{formatDate(rec.examDate)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 mb-0.5">Next Exam Due</div>
+                        <div className="text-sm font-medium">{formatDate(rec.nextExamDate)}</div>
+                        {isOverdue && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-red-600 font-medium mt-0.5">
+                            <AlertTriangle size={10} /> Overdue
+                          </span>
+                        )}
+                        {isDueSoon && (
+                          <span className="text-[10px] text-amber-600 mt-0.5 block">Due in {daysUntilDue} days</span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 mb-0.5">Provider</div>
+                        <div className="text-sm font-medium">{rec.provider || "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 mb-0.5">Exam Type</div>
+                        <div className="text-sm font-medium">{rec.examType || "—"}</div>
+                      </div>
+                      {rec.bll && (
+                        <div>
+                          <div className="text-[11px] text-slate-400 mb-0.5">Blood Lead Level</div>
+                          <div className="text-sm font-medium">{rec.bll}</div>
+                        </div>
+                      )}
+                      {rec.respiratorFitDate && (
+                        <div>
+                          <div className="text-[11px] text-slate-400 mb-0.5">Respirator Clearance</div>
+                          <div className="text-sm font-medium">{formatDate(rec.respiratorFitDate)}</div>
+                        </div>
+                      )}
+                    </div>
+                    {rec.notes && (
+                      <div className="mt-2 text-xs text-slate-500 italic">{rec.notes}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="border-t border-slate-200 p-3 bg-blue-50 text-xs text-blue-800">
+            <strong>OSHA Record Retention:</strong> Medical surveillance records must be retained for duration of employment plus 30 years (29 CFR 1926.1101 / 1926.62).
+          </div>
+        </div>
+      )}
+
+      {/* Respirator Fit Tests */}
+      {tab === "fit" && (
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 overflow-hidden">
+          {fitTests.length === 0 ? (
+            <div className="py-12 text-center">
+              <Wind size={28} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm text-slate-400">No respirator fit tests on file</p>
+              <p className="text-xs text-slate-400 mt-1">OSHA requires annual fit testing per 29 CFR 1910.134</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Test Date</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Respirator</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Size</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Expires</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fitTests.map((ft) => {
+                  const isExpired = ft.status === "completed" && ft.expiresDate <= today;
+                  const results = ft.testResults || {};
+                  const hasFail = Object.values(results).includes("fail");
+
+                  let statusLabel = ft.status;
+                  let statusColor = "bg-slate-100 text-slate-600";
+                  if (ft.status === "completed") {
+                    if (isExpired) {
+                      statusLabel = "Expired";
+                      statusColor = "bg-red-100 text-red-700";
+                    } else if (hasFail) {
+                      statusLabel = "Failed";
+                      statusColor = "bg-red-100 text-red-700";
+                    } else {
+                      statusLabel = "Passed";
+                      statusColor = "bg-green-100 text-green-700";
+                    }
+                  } else {
+                    statusLabel = "Pending";
+                    statusColor = "bg-yellow-100 text-yellow-700";
+                  }
+
+                  return (
+                    <tr key={ft.id} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="px-4 py-2.5 font-medium text-[13px]">{formatDate(ft.testDate)}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-600">{ft.respiratorType || "—"}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-600">{ft.respiratorSize || "—"}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-600">
+                        {formatDate(ft.expiresDate)}
+                        {isExpired && <span className="ml-1 text-red-500 text-[10px]">(overdue)</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${statusColor}`}>{statusLabel}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+
+          <div className="border-t border-slate-200 p-3 bg-blue-50 text-xs text-blue-800">
+            <strong>Annual Requirement:</strong> Respirator fit tests must be repeated annually and whenever respirator type changes (29 CFR 1910.134).
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

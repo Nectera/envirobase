@@ -1,0 +1,1286 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Organization (Multi-Tenancy) ───────────────────────────────
+
+model Organization {
+  id        String   @id @default(uuid())
+  slug      String   @unique // URL-friendly identifier (e.g., "xtract", "envirobase")
+  name      String   // Display name (e.g., "Xtract Environmental Services")
+  status    String   @default("active") // active, suspended, cancelled, trialing
+
+  // Branding
+  appName          String?  // e.g., "Xtract", "EnviroBase"
+  companyName      String?  // Full legal name
+  companyShort     String?  // Short display name
+  logoUrl          String?  // URL to logo
+  brandColor       String?  @default("#7BC143") // Primary brand hex color
+  accentColor      String?  // Secondary color
+  supportEmail     String?  // e.g., "hello@envirobase.app"
+  companyLocation  String?  // e.g., "Fort Collins, CO"
+  domain           String?  // Custom domain (e.g., "app.envirobase.app")
+  website          String?  // Marketing website URL
+
+  // Subscription & billing
+  plan                  String   @default("pro") // free, starter, pro, enterprise
+  stripeCustomerId      String?  @unique
+  stripeSubscriptionId  String?  @unique
+  trialEndsAt           DateTime?
+  billingEmail          String?
+
+  // Feature flags (JSON object: { "crm": true, "metrics": true, "chat": false, ... })
+  features              Json?    @default("{}")
+
+  // Limits
+  maxUsers              Int      @default(25)
+  maxWorkers            Int      @default(50)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  users                  User[]
+  workers                Worker[]
+  projects               Project[]
+  companies              Company[]
+  contacts               Contact[]
+  leads                  Lead[]
+  estimates              Estimate[]
+  consultationEstimates  ConsultationEstimate[]
+  invoices               Invoice[]
+  tasks                  Task[]
+  taskAutomationRules    TaskAutomationRule[]
+  taskTemplates          TaskTemplate[]
+  metrics                Metric[]
+  alerts                 Alert[]
+  notifications          Notification[]
+  chatChannels           ChatChannel[]
+  calendarEvents         CalendarEvent[]
+  companyInfos           CompanyInfo[]
+  companyLicenses        CompanyLicense[]
+  integrationAuths       IntegrationAuth[]
+  knowledgeBases         KnowledgeBase[]
+  assistantConversations AssistantConversation[]
+  assistantMemories      AssistantMemory[]
+  bonusPeriods           BonusPeriod[]
+  incidents              Incident[]
+  activities             Activity[]
+  settings               Setting[]
+
+  @@map("organizations")
+}
+
+// ─── Auth & Users ────────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  passwordHash     String
+  name             String
+  role             String    @default("TECHNICIAN") // ADMIN, SUPERVISOR, OFFICE, TECHNICIAN
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  organizationId   String?
+  organization     Organization? @relation(fields: [organizationId], references: [id])
+  createdAt        DateTime  @default(now())
+
+  workers                Worker[]
+  notificationPreference NotificationPreference?
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+// ─── Workers & Certifications ────────────────────────────────────
+
+model Worker {
+  id                    String  @id @default(uuid())
+  name                  String
+  role                  String? // Abatement Supervisor, Lead Inspector, etc.
+  types                 String? // Comma-separated: ASBESTOS,LEAD,METH,MOLD,SELECT_DEMO
+  position              String? // Project Manager, Supervisor, Technician, etc.
+  phone                 String?
+  email                 String?
+  photoUrl              String?
+  address               String?
+  homeCity              String?
+  homeState             String?
+  homeZip               String?
+  city                  String?
+  state                 String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  status                String  @default("active")
+  skillRating           Int?
+  userId                String?
+  user                  User?   @relation(fields: [userId], references: [id])
+  organizationId        String?
+  organization          Organization? @relation(fields: [organizationId], references: [id])
+  createdAt             DateTime @default(now())
+
+  certifications     Certification[]
+  medicalRecords     MedicalRecord[]
+  projectWorkers     ProjectWorker[]
+  timeEntries        TimeEntry[]
+  scheduleEntries    ScheduleEntry[]
+  respiratorFitTests RespiratorFitTest[]
+  timeOffs           TimeOff[]
+  alerts             Alert[]
+
+  @@index([organizationId])
+  @@map("workers")
+}
+
+model Certification {
+  id       String @id @default(uuid())
+  workerId String
+  worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  name     String
+  number   String?
+  issued   String? // YYYY-MM-DD
+  expires  String? // YYYY-MM-DD
+  status   String  @default("active") // active, expiring_soon, expired
+  fileUrl  String?
+  fileName String?
+
+  @@map("certifications")
+}
+
+model MedicalRecord {
+  id               String  @id @default(uuid())
+  workerId         String
+  worker           Worker  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  examDate         String? // YYYY-MM-DD
+  nextExamDate     String? // YYYY-MM-DD
+  respiratorFitDate String? // YYYY-MM-DD
+  bll              String? // Blood Lead Level
+
+  @@map("medical_records")
+}
+
+// ─── Projects ────────────────────────────────────────────────────
+
+model Project {
+  id               String   @id @default(uuid())
+  projectNumber    String?
+  name             String
+  type             String   // ASBESTOS, LEAD, METH
+  subtype          String?  // commercial, residential
+  status           String   @default("planning") // planning, assessment, in_progress, completed
+  priority         String   @default("medium") // low, medium, high
+  address          String?
+  client           String?
+  clientPhone      String?
+  clientEmail      String?
+  startDate        String?  // YYYY-MM-DD
+  estEndDate       String?  // YYYY-MM-DD
+  notificationDate String?
+  permitNumber     String?
+  acmQuantity      String?
+  projectManagerId    String?
+  estimatedDays       Int?
+  estimatedLaborHours Int?
+  compliance          Json?    // Compliance checklist as JSON
+  organizationId      String?
+  organization        Organization? @relation(fields: [organizationId], references: [id])
+
+  // Air clearance results
+  clearanceResult      String?  // pass, fail, pending
+  clearanceDate        String?  // YYYY-MM-DD
+  clearanceCost        Float?   // Actual cost from invoice
+  clearanceVendor      String?  // Lab / vendor name
+  clearanceNotes       String?  // Additional notes
+  clearanceReportUrl   String?  // Uploaded report file URL
+  clearanceReportName  String?  // Original filename
+  clearanceInvoiceUrl  String?  // Uploaded invoice file URL
+  clearanceInvoiceName String?  // Original filename
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tasks              ProjectTask[]
+  workers            ProjectWorker[]
+  alerts             Alert[]
+  complianceChecks   ComplianceCheck[]
+  documents          Document[]
+  dailyFieldReports  DailyFieldReport[]
+  timeEntries        TimeEntry[]
+  psiJhaSpas         PsiJhaSpa[]
+  preAbatementInspections PreAbatementInspection[]
+  certificatesOfCompletion CertificateOfCompletion[]
+  respiratorFitTests RespiratorFitTest[]
+  postProjectInspections PostProjectInspection[]
+  scheduleEntries    ScheduleEntry[]
+  invoices           Invoice[]
+  incidents          Incident[]
+  chatChannels       ChatChannel[]
+  contentInventory       ContentInventoryItem[]
+  contentInventoryReview ContentInventoryReview?
+  leads              Lead[]
+  reviewRequests     ReviewRequest[]
+  budgetLines        ProjectBudgetLine[]
+
+  @@index([organizationId])
+  @@map("projects")
+}
+
+model ProjectTask {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  status    String  @default("pending") // pending, in_progress, completed
+  date      String? // YYYY-MM-DD
+  sortOrder Int     @default(0)
+
+  @@map("project_tasks")
+}
+
+model ProjectWorker {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workerId  String
+  worker    Worker  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  role      String? // Supervisor, Worker, AMS, Inspector
+
+  @@map("project_workers")
+}
+
+// ─── Project Budget ─────────────────────────────────────────────
+
+model ProjectBudgetLine {
+  id           String  @id @default(uuid())
+  projectId    String
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category     String  // labor, materials, equipment, subcontractor, disposal, permits, clearance, other
+  description  String
+  budgetAmount Float   @default(0)
+  actualAmount Float   @default(0)
+  notes        String?
+  source       String? // manual, estimate — tracks origin of the line item
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([category])
+  @@map("project_budget_lines")
+}
+
+// ─── Alerts ──────────────────────────────────────────────────────
+
+model Alert {
+  id        String  @id @default(uuid())
+  type      String  // certification, project, compliance, medical
+  severity  String  // critical, warning, info
+  title     String
+  message   String?
+  date      String? // YYYY-MM-DD
+  dismissed Boolean @default(false)
+  workerId  String?
+  worker    Worker? @relation(fields: [workerId], references: [id], onDelete: SetNull)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@map("alerts")
+}
+
+// ─── Notifications ──────────────────────────────────────────────
+
+model Notification {
+  id         String   @id @default(uuid())
+  type       String   @default("mention") // mention, assignment, etc.
+  title      String
+  message    String?
+  link       String?  // e.g. /leads/abc123 — where to navigate on click
+  read       Boolean  @default(false)
+  userId     String   // User ID of the recipient
+  fromUserId String?  // User ID of who triggered it
+  fromName   String?  // Display name of the sender
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([organizationId])
+  @@map("notifications")
+}
+
+// ─── Compliance & Inspections ────────────────────────────────────
+
+model ComplianceCheck {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  itemKey   String
+  checked   Boolean @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, itemKey])
+  @@map("compliance_checks")
+}
+
+model DailyFieldReport {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      String?
+  status    String   @default("draft")
+  data      Json?    // Report data stored as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("daily_field_reports")
+}
+
+model PsiJhaSpa {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("psi_jha_spas")
+}
+
+model PreAbatementInspection {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pre_abatement_inspections")
+}
+
+model CertificateOfCompletion {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("certificates_of_completion")
+}
+
+model RespiratorFitTest {
+  id        String   @id @default(uuid())
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  testDate  String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("respirator_fit_tests")
+}
+
+model PostProjectInspection {
+  id             String   @id @default(uuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inspectionDate String?
+  status         String   @default("draft")
+  data           Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("post_project_inspections")
+}
+
+// ─── Documents ───────────────────────────────────────────────────
+
+model Document {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String?
+  fileName  String?
+  fileUrl   String?
+  fileSize  Int?
+  mimeType  String?
+  docType   String?  // initial_sampling, state_permit, proposal, contract, other
+  date      String?
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("documents")
+}
+
+model LeadDocument {
+  id        String   @id @default(uuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  name      String?
+  fileName  String?
+  fileUrl   String?
+  fileSize  Int?
+  mimeType  String?
+  docType   String?
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lead_documents")
+}
+
+// ─── Time & Scheduling ──────────────────────────────────────────
+
+model TimeEntry {
+  id        String   @id @default(uuid())
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  date      String?  // YYYY-MM-DD
+  clockIn   String?  // ISO datetime
+  clockOut  String?  // ISO datetime
+  hours     Float?
+  notes     String?
+
+  // GPS location capture
+  clockInLat       Float?   // Latitude at clock-in
+  clockInLng       Float?   // Longitude at clock-in
+  clockInAddress   String?  // Reverse-geocoded address at clock-in
+  clockOutLat      Float?   // Latitude at clock-out
+  clockOutLng      Float?   // Longitude at clock-out
+  clockOutAddress  String?  // Reverse-geocoded address at clock-out
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("time_entries")
+}
+
+model ScheduleEntry {
+  id        String   @id @default(uuid())
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  date      String?  // YYYY-MM-DD
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("schedule_entries")
+}
+
+model TimeOff {
+  id        String   @id @default(uuid())
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  startDate String?
+  endDate   String?
+  reason    String?
+  status    String   @default("pending") // pending, approved, denied
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("time_offs")
+}
+
+model CalendarEvent {
+  id             String   @id @default(uuid())
+  type           String?
+  title          String?
+  office         String?
+  startDate      String?
+  endDate        String?
+  notes          String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("calendar_events")
+}
+
+// ─── Company ─────────────────────────────────────────────────────
+
+model CompanyInfo {
+  id             String   @id @default(uuid())
+  data           Json?    // All company info stored as JSON
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("company_info")
+}
+
+model CompanyLicense {
+  id             String   @id @default(uuid())
+  name           String?
+  number         String?
+  state          String?
+  expirationDate String?
+  data           Json?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("company_licenses")
+}
+
+// ─── CRM ─────────────────────────────────────────────────────────
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  type      String?  // general_contractor, property_manager, etc.
+  phone     String?
+  email     String?
+  website   String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  notes              String?
+  referralFeeEnabled Boolean  @default(false)
+  referralFeePercent Float?   @default(10)
+  organizationId     String?
+  organization       Organization? @relation(fields: [organizationId], references: [id])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  contacts  Contact[]
+  leads     Lead[]
+  estimates Estimate[]
+  invoices  Invoice[]
+
+  @@index([organizationId])
+  @@map("companies")
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  firstName String
+  lastName  String?
+  name      String?
+  title     String?
+  email     String?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  notes     String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads     Lead[]
+  estimates Estimate[]
+  invoices  Invoice[]
+
+  @@index([organizationId])
+  @@map("contacts")
+}
+
+model Lead {
+  id               String   @id @default(uuid())
+  companyId        String?
+  company          Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactId        String?
+  contact          Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  firstName        String?
+  lastName         String?
+  email            String?
+  phone            String?
+  title            String?
+  description      String?
+  status           String   @default("new") // new, contacted, site_visit, proposal_sent, negotiation, won, lost
+  projectType      String?  // ASBESTOS, LEAD, METH, MOLD, SELECT_DEMO
+  source           String?  // Cold Call, Referral, Website, etc.
+  estimatedValue   Float?
+  notes            String?
+  // Address
+  address          String?
+  city             String?
+  state            String?
+  zip              String?
+  locationNotes    String?
+  // Insurance
+  isInsuranceJob   Boolean  @default(false)
+  insuranceCarrier String?
+  claimNumber      String?
+  adjusterName     String?
+  adjusterPhone    String?
+  adjusterEmail    String?
+  dateOfLoss       String?
+  // Site Visit
+  siteVisitDate    String?
+  siteVisitTime    String?
+  siteVisitNotes   String?
+  // Win / Loss
+  wonDate          String?
+  lostDate         String?
+  lostReason       String?
+  pipelineStage    String?
+  projectId        String?
+  project          Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  // Other
+  office           String?
+  projectStartDate  String?
+  projectEndDate    String?
+  includeSaturday   Boolean @default(false)
+  includeSunday     Boolean @default(false)
+  referralSource    String?
+  assignedTo       String?
+  isArchived       Boolean  @default(false)
+  organizationId   String?
+  organization     Organization? @relation(fields: [organizationId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  estimates              Estimate[]
+  consultationEstimates  ConsultationEstimate[]
+  invoices               Invoice[]
+  documents              LeadDocument[]
+  activities             Activity[]
+
+  @@index([organizationId])
+  @@map("leads")
+}
+
+model Estimate {
+  id             String   @id @default(uuid())
+  estimateNumber String?
+  leadId         String?
+  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  companyId      String?
+  company        Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  status         String   @default("draft") // draft, sent, approved, rejected
+  data           Json?    // Full estimate data
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  followUps      EstimateFollowUp[]
+
+  @@index([organizationId])
+  @@map("estimates")
+}
+
+model EstimateFollowUp {
+  id                String    @id @default(uuid())
+  estimateId        String
+  estimate          Estimate  @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  clientName        String?
+  clientEmail       String?
+  sentBy            String?
+  sentByName        String?
+  // Drip sequence tracking
+  touchesSent       Int       @default(0)
+  lastTouchAt       DateTime?
+  nextTouchAt       DateTime?
+  sequenceComplete  Boolean   @default(false)
+  // Status tracking
+  status            String    @default("pending") // pending, active, completed, cancelled
+  cancelledReason   String?
+  failureReason     String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([estimateId])
+  @@index([status])
+  @@index([nextTouchAt])
+  @@map("estimate_follow_ups")
+}
+
+model ConsultationEstimate {
+  id                    String   @id @default(uuid())
+  leadId                String?
+  lead                  Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  companyId             String?
+  contactId             String?
+  estimateId            String?
+  createdBy             String?
+  status                String   @default("draft")
+  data                  Json?
+  // Site info
+  customerName          String?
+  address               String?
+  city                  String?
+  state                 String?  @default("CO")
+  zip                   String?
+  milesFromShop         Float?   @default(0)
+  projectDate           String?
+  // Consultation checklist
+  siteVisitRequirements Json?
+  daysNeeded            Float?   @default(0)
+  crewSize              Int?     @default(0)
+  scopeOfWork           String?
+  paymentType           String?  @default("self_pay")
+  lossType              String?
+  septicSystem          Boolean? @default(false)
+  vacateProperty        String?
+  driveTimeHours        Float?   @default(0)
+  wasteDescription      String?
+  permitNeeded          String?
+  airClearances         String?
+  projectDesign         String?
+  deconLocation         String?
+  namsCount             Int?     @default(0)
+  ductCleaning          String?
+  asbestosDumpster      Boolean? @default(false)
+  directLoadOut         String?
+  openDumpster          String?
+  dumpsterPlacement     String?
+  portableBathroom      Boolean? @default(false)
+  flooringLayers        String?
+  drywallLayers         String?
+  hvacDucting           String?
+  spillQuantity         String?
+  contentsRemoval       String?
+  furnitureAppliances   String?
+  customerResponsible   String?
+  powerAvailable        Boolean? @default(true)
+  waterSource           Boolean? @default(true)
+  difficultyRating      Int?     @default(1)
+  fieldNotes            String?
+  // Labor
+  supervisorHours       Float?   @default(0)
+  supervisorOtHours     Float?   @default(0)
+  technicianHours       Float?   @default(0)
+  technicianOtHours     Float?   @default(0)
+  // Operating Costs
+  opsItems              Json?
+  opsPerHourRate        Float?   @default(11.5)
+  opsCost               Float?   @default(0)
+  // COGS & Materials
+  cogs                  Json?
+  materials             Json?
+  // Totals
+  laborCost             Float?   @default(0)
+  cogsCost              Float?   @default(0)
+  materialCost          Float?   @default(0)
+  totalCost             Float?   @default(0)
+  // Markup & pricing
+  markupPercent         Float?
+  customerPriceOverride Float?
+  customerPrice         Float?
+  serviceDescription    String?
+  // Post-cost
+  isPostCost            Boolean? @default(false)
+  originalEstimateId    String?
+  projectId             String?
+  projectNumber         String?
+  //
+  organizationId        String?
+  organization          Organization? @relation(fields: [organizationId], references: [id])
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  invoices  Invoice[]
+
+  @@index([organizationId])
+  @@map("consultation_estimates")
+}
+
+model Invoice {
+  id                     String   @id @default(uuid())
+  invoiceNumber          String?
+  projectId              String?
+  project                Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  consultationEstimateId String?
+  consultationEstimate   ConsultationEstimate? @relation(fields: [consultationEstimateId], references: [id], onDelete: SetNull)
+  contactId              String?
+  contact                Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  companyId              String?
+  company                Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  leadId                 String?
+  lead                   Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  status                 String   @default("draft") // draft, sent, paid, overdue, void
+  data                   Json?    // Full invoice data (line items, amounts, etc.)
+  // Denormalized fields for quick access
+  customerName           String?
+  customerEmail          String?
+  totalAmount            Float?
+  paidAmount             Float?
+  dueDate                String?
+  qbInvoiceId            String?  // QuickBooks invoice ID
+  organizationId         String?
+  organization           Organization? @relation(fields: [organizationId], references: [id])
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("invoices")
+}
+
+model Activity {
+  id         String   @id @default(uuid())
+  parentType String?  // lead, project, etc.
+  parentId   String?
+  leadId     String?
+  lead       Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type       String?  // note, call, email, meeting, status_change
+  content    String?
+  user       String?  // Who performed the activity
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([organizationId])
+  @@map("activities")
+}
+
+// ─── Tasks & Automation ──────────────────────────────────────────
+
+model Task {
+  id               String   @id @default(uuid())
+  title            String
+  description      String?
+  status           String   @default("pending") // pending, in_progress, completed
+  priority         String   @default("medium") // low, medium, high
+  dueDate          String?
+  assignedTo       String?  // worker ID (not a formal FK to allow flexibility)
+  createdBy        String?
+  linkedEntityType String?  // lead, project, estimate, contact, company
+  linkedEntityId   String?
+  autoCreated      Boolean  @default(false)
+  completedAt      String?
+  organizationId   String?
+  organization     Organization? @relation(fields: [organizationId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("tasks")
+}
+
+model TaskAutomationRule {
+  id               String   @id @default(uuid())
+  name             String?
+  trigger          String?
+  triggerValue     String?
+  actions          Json?
+  enabled          Boolean  @default(true)
+  taskTitle        String?
+  taskDescription  String?
+  taskPriority     String?  @default("medium")
+  assignToField    String?
+  assignToValue    String?
+  linkedEntity       Boolean? @default(true)
+  leadStatusAction   String?
+  dueDateOffsetDays  Int?     // e.g. 3 = due 3 days after trigger
+  organizationId     String?
+  organization       Organization? @relation(fields: [organizationId], references: [id])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("task_automation_rules")
+}
+
+model TaskTemplate {
+  id             String   @id @default(uuid())
+  name           String?
+  description    String?
+  tasks          Json?    // Array of task definitions
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("task_templates")
+}
+
+// ─── Analytics ───────────────────────────────────────────────────
+
+model Metric {
+  id             String   @id @default(uuid())
+  year           Int?
+  weekStartDate  String?
+  data           Json?    // Metric data
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("metrics")
+}
+
+// ─── Incidents ───────────────────────────────────────────────────
+
+model Incident {
+  id             String   @id @default(uuid())
+  projectId      String?
+  project        Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  date           String?
+  data           Json?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@map("incidents")
+}
+
+// ─── AI Assistant ────────────────────────────────────────────────
+
+model AssistantConversation {
+  id             String   @id @default(uuid())
+  title          String?
+  messages       Json?    // Array of messages
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("assistant_conversations")
+}
+
+model AssistantMemory {
+  id             String   @id @default(uuid())
+  category       String?
+  content        String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@map("assistant_memory")
+}
+
+model KnowledgeBase {
+  id             String   @id @default(uuid())
+  title          String?
+  category       String?  // training_manual, employee_handbook, safety_procedures, tips, regulations, general, material_invoice
+  content        String?
+  tags           String?
+
+  // File attachment (used for material invoices, etc.)
+  fileUrl        String?
+  fileName       String?
+  fileSize       Int?
+  mimeType       String?
+
+  // AI-parsed data (JSON — e.g., extracted material prices)
+  parsedData     Json?
+
+  createdBy      String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("knowledge_base")
+}
+
+// ─── Settings (Key-Value Store) ──────────────────────────────────
+
+model Setting {
+  key            String  @id
+  value          String  // JSON string for complex values
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@map("settings")
+}
+
+// ─── Integration Auth ────────────────────────────────────────────
+
+model IntegrationAuth {
+  id             String   @id @default(uuid())
+  provider       String   // quickbooks, ringcentral, pandadoc, gusto
+  data           Json     // Token data, connection info, etc.
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, provider])
+  @@index([organizationId])
+  @@map("integration_auth")
+}
+
+// ─── Notification Preferences ───────────────────────────────────
+
+model NotificationPreference {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Schedule
+  scheduleAssigned      Boolean  @default(true)
+  scheduleChanged       Boolean  @default(true)
+  // Tasks
+  taskAssigned          Boolean  @default(true)
+  taskDueSoon           Boolean  @default(true)
+  taskCompleted         Boolean  @default(false)
+  // Safety & Compliance
+  certExpiring          Boolean  @default(true)
+  incidentReported      Boolean  @default(true)
+  // Daily Reports
+  fieldReportSubmitted  Boolean  @default(true)
+  // Content Inventory
+  inventoryReviewCompleted Boolean @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+// ─── Chat System ─────────────────────────────────────────────────
+
+model ChatChannel {
+  id             String   @id @default(uuid())
+  name           String
+  type           String   @default("general") // "project", "general", "dm"
+  description    String?
+  projectId      String?
+  project        Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  isPrivate      Boolean  @default(false)
+  createdBy      String   // User ID
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  messages     ChatMessage[]
+  members      ChatMember[]
+  readReceipts ChatReadReceipt[]
+
+  @@index([projectId])
+  @@index([type])
+  @@index([organizationId])
+  @@map("chat_channels")
+}
+
+model ChatMessage {
+  id           String   @id @default(uuid())
+  channelId    String
+  channel      ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  senderId     String   // User ID
+  senderName   String   // Denormalized for display
+  content      String
+  mentions     String?  // JSON array of mentioned user IDs
+  fileUrl      String?
+  fileName     String?
+  fileSize     Int?
+  fileMimeType String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([channelId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+model ChatMember {
+  id        String   @id @default(uuid())
+  channelId String
+  channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  @@unique([channelId, userId])
+  @@index([userId])
+  @@map("chat_members")
+}
+
+model ChatReadReceipt {
+  id                String   @id @default(uuid())
+  channelId         String
+  channel           ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId            String
+  lastReadMessageId String?
+  lastReadAt        DateTime @default(now())
+
+  @@unique([channelId, userId])
+  @@index([userId])
+  @@map("chat_read_receipts")
+}
+
+// ─── Reactions (chat messages + activity notes) ─────────────────
+
+model Reaction {
+  id         String   @id @default(uuid())
+  targetType String   // "message" or "activity"
+  targetId   String
+  userId     String
+  userName   String
+  emoji      String   // e.g. "👍", "❤️", "😂"
+  createdAt  DateTime @default(now())
+
+  @@unique([targetType, targetId, userId, emoji])
+  @@index([targetType, targetId])
+  @@map("reactions")
+}
+
+// ─── Content Inventory ──────────────────────────────────────────
+
+model ContentInventoryItem {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  brand        String?
+  model        String?
+  description  String
+  location     String?  // Room/area where item was found
+  status       String   @default("pending") // pending, keep, dispose
+  customerNote String?  // Optional note from customer
+  addedBy      String   // User ID who added
+  addedByName  String   // Denormalized name
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  photos ContentInventoryPhoto[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("content_inventory_items")
+}
+
+model ContentInventoryPhoto {
+  id        String   @id @default(uuid())
+  itemId    String
+  item      ContentInventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  url       String   // Supabase Storage URL
+  fileName  String?
+  fileSize  Int?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@map("content_inventory_photos")
+}
+
+model ContentInventoryReview {
+  id            String    @id @default(uuid())
+  projectId     String    @unique
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  token         String    @unique @default(uuid())
+  customerName  String?
+  customerEmail String?
+  status        String    @default("pending") // pending, in_progress, completed
+  completedAt   DateTime?
+  sentAt        DateTime?
+  sentBy        String?   // User ID who sent the link
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("content_inventory_reviews")
+}
+
+// ─── Bonus Pool ─────────────────────────────────────────────────
+
+model BonusPeriod {
+  id                     String   @id @default(uuid())
+  month                  String   // YYYY-MM format
+  totalHoursSaved        Float    @default(0)
+  ratePerHour            Float    @default(17)
+  poolAmount             Float    @default(0)
+  // Position splits stored as JSON: { "Office Assistant": { pct, pool, headcount, perPerson }, ... }
+  positionSplits         Json?
+  // Whether admin manually overrode the auto-calculated splits
+  isOverridden           Boolean  @default(false)
+  // High performer
+  highPerformerWorkerId  String?
+  highPerformerName      String?
+  highPerformerAmount    Float?   @default(0)
+  // Google reviews
+  googleReviewCount      Int      @default(0)
+  googleReviewBonusEach  Float    @default(50)
+  // Status
+  status                 String   @default("draft") // draft, finalized
+  notes                  String?
+  organizationId         String?
+  organization           Organization? @relation(fields: [organizationId], references: [id])
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([organizationId, month])
+  @@index([organizationId])
+  @@map("bonus_periods")
+}
+
+// ─── Feedback Survey & Google Review Requests ───────────────────
+
+model ReviewRequest {
+  id                    String    @id @default(uuid())
+  token                 String    @unique @default(uuid())
+  projectId             String
+  project               Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Client info snapshot at time of send
+  clientName            String?
+  clientEmail           String?
+  clientPhone           String?
+  // Which Google Business location
+  googleLocationKey     String?   // e.g. "front_range", "western_slope"
+  // Send info
+  method                String    @default("both") // email, sms, both
+  sentAt                DateTime?
+  sentBy                String?   // User ID who triggered
+  sentByName            String?   // Denormalized
+  // Survey response
+  rating                Int?      // 1-5 stars
+  feedbackComment       String?   // Optional comment (especially for low ratings)
+  contactPermission     Boolean?  // "May we follow up?" (low rating only)
+  surveyCompletedAt     DateTime?
+  // Google review tracking (only for 4-5 star)
+  googleReviewPrompted  Boolean   @default(false) // Did we show the Google link?
+  googleReviewClicked   Boolean   @default(false) // Did they click it?
+  reviewConfirmed       Boolean   @default(false) // Admin confirmed review appeared
+  reviewConfirmedAt     DateTime?
+  reviewConfirmedBy     String?   // User ID
+  // Drip sequence tracking
+  touchesSent           Int       @default(0) // 0-3, how many messages have been sent
+  lastTouchAt           DateTime? // When the last touch was sent
+  nextTouchAt           DateTime? // When the next touch should fire
+  nextTouchType         String?   // "sms" | "email" | null (done)
+  sequenceComplete      Boolean   @default(false)
+  // Status
+  status                String    @default("pending") // pending, sent, survey_completed, review_confirmed, failed
+  failureReason         String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@index([sentAt])
+  @@index([nextTouchAt])
+  @@map("review_requests")
+}

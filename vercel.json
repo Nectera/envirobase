@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/review-requests/drip",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/estimate-follow-ups/drip",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cert-requirements/cron",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { ClipboardCheck, Plus, ChevronRight } from "lucide-react";
+import { getTranslation, type Language } from "@/lib/translations";
+
+export const dynamic = "force-dynamic";
+
+export default async function PostProjectListPage() {
+  const language: Language = "en";
+  const t = (key: string) => getTranslation(language, key);
+  const items = await prisma.postProjectInspection.findMany({ include: { project: true } });
+
+  const statusColors: Record<string, string> = {
+    draft: "bg-yellow-100 text-yellow-800",
+    submitted: "bg-blue-100 text-blue-800",
+    reviewed: "bg-green-100 text-green-800",
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">{t("postProject.title")}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{t("postProject.subtitle")}</p>
+        </div>
+        <Link href="/post-project-inspection/new"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
+          <Plus size={16} /> {t("postProject.newInspection")}
+        </Link>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
+          <ClipboardCheck size={36} className="mx-auto text-slate-300 mb-3" />
+          <h3 className="font-semibold text-slate-700">{t("postProject.noInspections")}</h3>
+          <p className="text-sm text-slate-500 mt-1">{t("postProject.noInspectionsDescription")}</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">{t("postProject.inspectionDate")}</th>
+                <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">{t("postProject.clientName")}</th>
+                <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">{t("postProject.projectName")}</th>
+                <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">{t("postProject.pm")}</th>
+                <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">{t("common.status")}</th>
+                <th className="px-4 py-2"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {items.map((item: any) => (
+                <tr key={item.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-2 font-medium text-slate-900 whitespace-nowrap">
+                    {new Date(item.inspectionDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  </td>
+                  <td className="px-4 py-2 text-slate-600">{item.clientName || "—"}</td>
+                  <td className="px-4 py-2 text-slate-600">{item.project?.name || "—"}</td>
+                  <td className="px-4 py-2 text-slate-600">{item.projectManagerName || "—"}</td>
+                  <td className="px-4 py-2">
+                    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusColors[item.status] || "bg-slate-100"}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2">
+                    <Link href={`/post-project-inspection/${item.id}`} className="text-slate-400 hover:text-indigo-600">
+                      <ChevronRight size={16} />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,591 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("TECHNICIAN")
+  createdAt    DateTime @default(now())
+  workers Worker[]
+  @@map("users")
+}
+
+model Worker {
+  id                    String  @id @default(uuid())
+  name                  String
+  role                  String?
+  types                 String?
+  position              String?
+  phone                 String?
+  email                 String?
+  photoUrl              String?
+  address               String?
+  homeCity              String?
+  homeState             String?
+  homeZip               String?
+  city                  String?
+  state                 String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  status                String  @default("active")
+  skillRating           Int?
+  userId                String?
+  user                  User?   @relation(fields: [userId], references: [id])
+  createdAt             DateTime @default(now())
+  certifications     Certification[]
+  medicalRecords     MedicalRecord[]
+  projectWorkers     ProjectWorker[]
+  timeEntries        TimeEntry[]
+  scheduleEntries    ScheduleEntry[]
+  respiratorFitTests RespiratorFitTest[]
+  timeOffs           TimeOff[]
+  alerts             Alert[]
+  @@map("workers")
+}
+
+model Certification {
+  id       String @id @default(uuid())
+  workerId String
+  worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  name     String
+  number   String?
+  issued   String?
+  expires  String?
+  status   String  @default("active")
+  @@map("certifications")
+}
+
+model MedicalRecord {
+  id               String  @id @default(uuid())
+  workerId         String
+  worker           Worker  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  examDate         String?
+  nextExamDate     String?
+  respiratorFitDate String?
+  bll              String?
+  @@map("medical_records")
+}
+
+model Project {
+  id               String   @id @default(uuid())
+  projectNumber    String?
+  name             String
+  type             String
+  subtype          String?
+  status           String   @default("planning")
+  priority         String   @default("medium")
+  address          String?
+  client           String?
+  startDate        String?
+  estEndDate       String?
+  notificationDate String?
+  permitNumber     String?
+  acmQuantity      String?
+  compliance       Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  tasks              ProjectTask[]
+  workers            ProjectWorker[]
+  alerts             Alert[]
+  complianceChecks   ComplianceCheck[]
+  documents          Document[]
+  dailyFieldReports  DailyFieldReport[]
+  timeEntries        TimeEntry[]
+  psiJhaSpas         PsiJhaSpa[]
+  preAbatementInspections PreAbatementInspection[]
+  certificatesOfCompletion CertificateOfCompletion[]
+  respiratorFitTests RespiratorFitTest[]
+  postProjectInspections PostProjectInspection[]
+  scheduleEntries    ScheduleEntry[]
+  invoices           Invoice[]
+  incidents          Incident[]
+  @@map("projects")
+}
+
+model ProjectTask {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  status    String  @default("pending")
+  date      String?
+  sortOrder Int     @default(0)
+  @@map("project_tasks")
+}
+
+model ProjectWorker {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workerId  String
+  worker    Worker  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  role      String?
+  @@map("project_workers")
+}
+
+model Alert {
+  id        String  @id @default(uuid())
+  type      String
+  severity  String
+  title     String
+  message   String?
+  date      String?
+  dismissed Boolean @default(false)
+  workerId  String?
+  worker    Worker? @relation(fields: [workerId], references: [id], onDelete: SetNull)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  @@map("alerts")
+}
+
+model ComplianceCheck {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  itemKey   String
+  checked   Boolean @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+  @@unique([projectId, itemKey])
+  @@map("compliance_checks")
+}
+
+model DailyFieldReport {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("daily_field_reports")
+}
+
+model PsiJhaSpa {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("psi_jha_spas")
+}
+
+model PreAbatementInspection {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("pre_abatement_inspections")
+}
+
+model CertificateOfCompletion {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date      String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("certificates_of_completion")
+}
+
+model RespiratorFitTest {
+  id        String   @id @default(uuid())
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  testDate  String?
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("respirator_fit_tests")
+}
+
+model PostProjectInspection {
+  id             String   @id @default(uuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inspectionDate String?
+  status         String   @default("draft")
+  data           Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@map("post_project_inspections")
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String?
+  fileName  String?
+  fileUrl   String?
+  fileSize  Int?
+  mimeType  String?
+  docType   String?
+  date      String?
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("documents")
+}
+
+model LeadDocument {
+  id        String   @id @default(uuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  name      String?
+  fileName  String?
+  fileUrl   String?
+  fileSize  Int?
+  mimeType  String?
+  docType   String?
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("lead_documents")
+}
+
+model TimeEntry {
+  id        String   @id @default(uuid())
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  date      String?
+  clockIn   String?
+  clockOut  String?
+  hours     Float?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("time_entries")
+}
+
+model ScheduleEntry {
+  id        String   @id @default(uuid())
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  date      String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("schedule_entries")
+}
+
+model TimeOff {
+  id        String   @id @default(uuid())
+  workerId  String
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  startDate String?
+  endDate   String?
+  reason    String?
+  status    String   @default("pending")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("time_offs")
+}
+
+model CalendarEvent {
+  id        String   @id @default(uuid())
+  type      String?
+  title     String?
+  office    String?
+  startDate String?
+  endDate   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("calendar_events")
+}
+
+model CompanyInfo {
+  id        String   @id @default(uuid())
+  data      Json?
+  updatedAt DateTime @updatedAt
+  @@map("company_info")
+}
+
+model CompanyLicense {
+  id             String   @id @default(uuid())
+  name           String?
+  number         String?
+  state          String?
+  expirationDate String?
+  data           Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@map("company_licenses")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  type      String?
+  phone     String?
+  email     String?
+  website   String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contacts  Contact[]
+  leads     Lead[]
+  estimates Estimate[]
+  invoices  Invoice[]
+  @@map("companies")
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name      String
+  title     String?
+  email     String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  leads     Lead[]
+  estimates Estimate[]
+  invoices  Invoice[]
+  @@map("contacts")
+}
+
+model Lead {
+  id               String   @id @default(uuid())
+  companyId        String?
+  company          Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactId        String?
+  contact          Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  firstName        String?
+  lastName         String?
+  email            String?
+  phone            String?
+  title            String?
+  description      String?
+  status           String   @default("new")
+  projectType      String?
+  source           String?
+  estimatedValue   Float?
+  notes            String?
+  address          String?
+  city             String?
+  state            String?
+  zip              String?
+  isInsuranceJob   Boolean  @default(false)
+  insuranceCarrier String?
+  claimNumber      String?
+  adjusterName     String?
+  adjusterPhone    String?
+  adjusterEmail    String?
+  dateOfLoss       String?
+  siteVisitDate    String?
+  siteVisitNotes   String?
+  office           String?
+  projectStartDate String?
+  referralSource   String?
+  assignedTo       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  estimates              Estimate[]
+  consultationEstimates  ConsultationEstimate[]
+  invoices               Invoice[]
+  documents              LeadDocument[]
+  activities             Activity[]
+  @@map("leads")
+}
+
+model Estimate {
+  id             String   @id @default(uuid())
+  estimateNumber String?
+  leadId         String?
+  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  companyId      String?
+  company        Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  status         String   @default("draft")
+  data           Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@map("estimates")
+}
+
+model ConsultationEstimate {
+  id        String   @id @default(uuid())
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  status    String   @default("draft")
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  invoices  Invoice[]
+  @@map("consultation_estimates")
+}
+
+model Invoice {
+  id                     String   @id @default(uuid())
+  invoiceNumber          String?
+  projectId              String?
+  project                Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  consultationEstimateId String?
+  consultationEstimate   ConsultationEstimate? @relation(fields: [consultationEstimateId], references: [id], onDelete: SetNull)
+  contactId              String?
+  contact                Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  companyId              String?
+  company                Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  leadId                 String?
+  lead                   Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  status                 String   @default("draft")
+  data                   Json?
+  customerName           String?
+  customerEmail          String?
+  totalAmount            Float?
+  paidAmount             Float?
+  dueDate                String?
+  qbInvoiceId            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  @@map("invoices")
+}
+
+model Activity {
+  id         String   @id @default(uuid())
+  parentType String?
+  parentId   String?
+  leadId     String?
+  lead       Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type       String?
+  content    String?
+  user       String?
+  createdAt  DateTime @default(now())
+  @@map("activities")
+}
+
+model Task {
+  id               String   @id @default(uuid())
+  title            String
+  description      String?
+  status           String   @default("pending")
+  priority         String   @default("medium")
+  dueDate          String?
+  assignedTo       String?
+  linkedEntityType String?
+  linkedEntityId   String?
+  autoCreated      Boolean  @default(false)
+  completedAt      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  @@map("tasks")
+}
+
+model TaskAutomationRule {
+  id           String   @id @default(uuid())
+  trigger      String?
+  triggerValue String?
+  actions      Json?
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@map("task_automation_rules")
+}
+
+model TaskTemplate {
+  id        String   @id @default(uuid())
+  name      String?
+  tasks     Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("task_templates")
+}
+
+model Metric {
+  id            String   @id @default(uuid())
+  year          Int?
+  weekStartDate String?
+  data          Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@map("metrics")
+}
+
+model Incident {
+  id        String   @id @default(uuid())
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  date      String?
+  data      Json?
+  createdAt DateTime @default(now())
+  @@map("incidents")
+}
+
+model AssistantConversation {
+  id        String   @id @default(uuid())
+  title     String?
+  messages  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("assistant_conversations")
+}
+
+model AssistantMemory {
+  id        String   @id @default(uuid())
+  category  String?
+  content   String?
+  createdAt DateTime @default(now())
+  @@map("assistant_memory")
+}
+
+model KnowledgeBase {
+  id        String   @id @default(uuid())
+  title     String?
+  category  String?
+  content   String?
+  tags      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("knowledge_base")
+}
+
+model Setting {
+  key   String @id
+  value String
+  @@map("settings")
+}
+
+model IntegrationAuth {
+  id        String   @id @default(uuid())
+  provider  String   @unique
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("integration_auth")
+}

@@ -1,0 +1,112 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { MoreHorizontal, Pencil, Copy, Trash2 } from "lucide-react";
+
+export default function InvoiceActions({
+  id,
+  invoiceNumber,
+}: {
+  id: string;
+  invoiceNumber: string;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+
+  const handleDelete = async () => {
+    if (!confirm(`Delete invoice ${invoiceNumber}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await fetch(`/api/invoices/${id}`, { method: "DELETE" });
+      router.refresh();
+    } catch {
+      alert("Failed to delete.");
+    }
+    setDeleting(false);
+    setOpen(false);
+  };
+
+  const handleDuplicate = async () => {
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/invoices/${id}`);
+      const data = await res.json();
+      // Strip id, timestamps, invoice number for new copy
+      const {
+        id: _id, createdAt, updatedAt, invoiceNumber: _num,
+        sentDate, paidDate, paidAmount, status,
+        consultationEstimate, company, contact, lead,
+        ...rest
+      } = data;
+      const dupRes = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...rest,
+          status: "draft",
+          sentDate: null,
+          paidDate: null,
+          paidAmount: 0,
+          notes: `${rest.notes ? rest.notes + "\n" : ""}Duplicated from ${invoiceNumber}`,
+        }),
+      });
+      if (dupRes.ok) {
+        const newItem = await dupRes.json();
+        router.push(`/invoices/${newItem.id}`);
+      }
+    } catch {
+      alert("Failed to duplicate.");
+    }
+    setDuplicating(false);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="p-1 rounded hover:bg-slate-100 transition text-slate-400 hover:text-slate-600"
+      >
+        <MoreHorizontal className="w-4 h-4" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-7 z-20 bg-white border border-slate-200 rounded-lg shadow-lg py-1 w-40">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push(`/invoices/${id}`);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
+            <button
+              onClick={handleDuplicate}
+              disabled={duplicating}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              {duplicating ? "Duplicating..." : "Duplicate"}
+            </button>
+            <div className="border-t border-slate-100 my-1" />
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

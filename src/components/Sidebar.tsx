@@ -1,0 +1,255 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+import {
+  Home, FolderOpen, Users, ClipboardCheck, LogOut,
+  Clock, ClipboardList, Building2, Calendar, CalendarDays, FileText,
+  Target, LayoutDashboard, Receipt, CheckSquare, TrendingUp, BarChart3,
+  Settings, X, Database, UserPlus, Bell, MessageSquare, DollarSign,
+  PanelLeftClose, PanelLeftOpen, Gift, Puzzle,
+} from "lucide-react";
+import Image from "next/image";
+import { useMobileNav } from "./MobileNavProvider";
+import { useTranslation } from "./LanguageProvider";
+import ChatUnreadBadge from "./ChatUnreadBadge";
+import { useSidebarCollapse } from "./SidebarCollapseProvider";
+
+const crmPaths = ["/crm", "/leads", "/companies", "/contacts", "/metrics", "/pipeline", "/estimates"];
+
+type NavItem = { href: string; labelKey: string; icon: any };
+
+export default function Sidebar({
+  userRole,
+  userName,
+}: {
+  alertCount?: number;
+  userRole?: string;
+  userName?: string;
+}) {
+  const { t } = useTranslation();
+  const pathname = usePathname();
+  const { isOpen, close } = useMobileNav();
+  const { collapsed, toggle } = useSidebarCollapse();
+  const isTech = userRole === "TECHNICIAN";
+  const isOffice = userRole === "OFFICE";
+  const isAdmin = userRole === "ADMIN" || userRole === "SUPERVISOR";
+
+  const crmNavItems: NavItem[] = [
+    { href: "/crm", labelKey: "sidebar.crmDashboard", icon: LayoutDashboard },
+    { href: "/leads", labelKey: "sidebar.leads", icon: Target },
+    { href: "/pipeline", labelKey: "sidebar.pipeline", icon: TrendingUp },
+    { href: "/estimates", labelKey: "sidebar.estimates", icon: Receipt },
+    { href: "/companies", labelKey: "sidebar.companies", icon: Building2 },
+    { href: "/contacts", labelKey: "sidebar.contacts", icon: Users },
+    { href: "/metrics", labelKey: "sidebar.metrics", icon: BarChart3 },
+    { href: "/tasks", labelKey: "sidebar.tasks", icon: CheckSquare },
+    { href: "/calendar", labelKey: "sidebar.calendar", icon: CalendarDays },
+  ];
+
+  // Hide Estimates and Metrics on mobile
+  const mobileHiddenCrmPaths = ["/estimates", "/metrics"];
+
+  const pmNavItems: NavItem[] = [
+    { href: "/dashboard", labelKey: "sidebar.dashboard", icon: Home },
+    { href: "/projects", labelKey: "sidebar.projects", icon: FolderOpen },
+    { href: "/schedule", labelKey: "sidebar.schedule", icon: Calendar },
+    { href: "/compliance", labelKey: "sidebar.compliance", icon: ClipboardCheck },
+    ...(userRole === "ADMIN" ? [{ href: "/budget", labelKey: "sidebar.budget", icon: DollarSign }] : []),
+  ];
+
+  const settingsNavItems: NavItem[] = [
+    { href: "/workers", labelKey: "sidebar.team", icon: Users },
+    { href: "/company", labelKey: "sidebar.company", icon: Building2 },
+    { href: "/data-management", labelKey: "sidebar.dataManagement", icon: Database },
+    { href: "/plugins", labelKey: "sidebar.plugins", icon: Puzzle },
+    { href: "/settings/notifications", labelKey: "sidebar.notifications", icon: Bell },
+    { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+  ];
+
+  const technicianNavItems: NavItem[] = [
+    { href: "/schedule", labelKey: "sidebar.mySchedule", icon: Calendar },
+    { href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock },
+    { href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift },
+    { href: "/my-documents", labelKey: "sidebar.myDocuments", icon: FileText },
+    { href: "/tasks", labelKey: "sidebar.myTasks", icon: CheckSquare },
+  ];
+
+  const chatNavItem = () => {
+    const isActive = pathname === "/chat" || pathname.startsWith("/chat/");
+    return (
+      <Link
+        key="/chat"
+        href="/chat"
+        onClick={close}
+        className={`sidebar-item ${isActive ? "sidebar-item-active" : ""} ${collapsed ? "sidebar-item-collapsed" : ""}`}
+        title={collapsed ? t("sidebar.chat") : undefined}
+      >
+        <MessageSquare size={16} />
+        {!collapsed && <span className="flex-1">{t("sidebar.chat")}</span>}
+        {!collapsed && <ChatUnreadBadge />}
+      </Link>
+    );
+  };
+
+  const renderNavItem = (item: NavItem, mobileHidden = false) => {
+    const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={close}
+        className={`sidebar-item ${isActive ? "sidebar-item-active" : ""}${mobileHidden ? " hidden md:flex" : ""} ${collapsed ? "sidebar-item-collapsed" : ""}`}
+        title={collapsed ? t(item.labelKey) : undefined}
+      >
+        <Icon size={16} />
+        {!collapsed && <span className="flex-1">{t(item.labelKey)}</span>}
+      </Link>
+    );
+  };
+
+  const subtitleKey = isTech ? "sidebar.myPortal" : isOffice ? "sidebar.salesPortal" : "sidebar.pms";
+
+  const sectionDivider = (
+    <div className="mx-4 my-2 border-t border-white/[0.06]" />
+  );
+
+  const sectionLabel = (labelKey: string) => (
+    collapsed ? (
+      <div className="mx-4 my-2 border-t border-white/[0.06]" />
+    ) : (
+      <div className="px-5 py-1.5">
+        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{t(labelKey)}</span>
+      </div>
+    )
+  );
+
+  const sidebarContent = (
+    <>
+      <div className={`${collapsed ? "px-2 py-5" : "px-5 py-5"} flex items-center justify-between`}>
+        <div className={`flex items-center ${collapsed ? "justify-center w-full" : "gap-2.5"}`}>
+          <Image src={process.env.NEXT_PUBLIC_LOGO_URL || "/logo.png"} alt={process.env.NEXT_PUBLIC_APP_NAME || "Xtract"} width={32} height={32} className="rounded-lg flex-shrink-0" />
+          {!collapsed && (
+            <div>
+              <h1 className="text-base font-bold text-white tracking-tight">{process.env.NEXT_PUBLIC_COMPANY_SHORT || "Xtract Environmental"}</h1>
+              <p className="text-[11px] text-slate-500 mt-0.5">{t(subtitleKey)}</p>
+            </div>
+          )}
+        </div>
+        {/* Close button — mobile only */}
+        <button onClick={close} className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-xl">
+          <X size={20} />
+        </button>
+      </div>
+
+      <nav className="flex-1 py-1 overflow-y-auto">
+        {isTech && (
+          <>
+            {technicianNavItems.map((item) => renderNavItem(item))}
+            {sectionDivider}
+            {chatNavItem()}
+          </>
+        )}
+        {isOffice && (
+          <>
+            {crmNavItems.map((item) => renderNavItem(item, mobileHiddenCrmPaths.includes(item.href)))}
+            {sectionDivider}
+            {chatNavItem()}
+          </>
+        )}
+        {isAdmin && (
+          <>
+            {renderNavItem({ href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock })}
+            {renderNavItem({ href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift })}
+            {chatNavItem()}
+            {sectionDivider}
+            {sectionLabel("sidebar.salesCrm")}
+            {crmNavItems.map((item) => renderNavItem(item, mobileHiddenCrmPaths.includes(item.href)))}
+            {sectionDivider}
+            {sectionLabel("sidebar.projectManagement")}
+            {pmNavItems.map((item) => renderNavItem(item))}
+            {sectionDivider}
+            {sectionLabel("sidebar.settings")}
+            {settingsNavItems.map((item) => renderNavItem(item))}
+          </>
+        )}
+      </nav>
+
+      <div className="border-t border-white/[0.06] p-4 mx-2 space-y-3">
+        {/* Collapse toggle — desktop only */}
+        <button
+          onClick={toggle}
+          className="hidden md:flex sidebar-item w-full text-slate-500 hover:text-slate-300 !mx-0 !px-2 justify-center"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+          {!collapsed && <span className="text-xs flex-1">Collapse</span>}
+        </button>
+        {!collapsed && (isTech || isOffice) && userName && (
+          <div className="text-xs text-slate-400 font-medium">{userName}</div>
+        )}
+        {(isTech || isOffice) && (
+          <Link
+            href="/settings/notifications"
+            onClick={close}
+            className={`sidebar-item w-full text-slate-500 hover:text-slate-300 !mx-0 !px-2 ${collapsed ? "sidebar-item-collapsed" : ""}`}
+            title={collapsed ? t("sidebar.notifications") : undefined}
+          >
+            <Bell size={14} />
+            {!collapsed && <span className="text-xs">{t("sidebar.notifications")}</span>}
+          </Link>
+        )}
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className={`sidebar-item w-full text-slate-500 hover:text-red-400 !mx-0 !px-2 ${collapsed ? "sidebar-item-collapsed" : ""}`}
+          title={collapsed ? t("sidebar.signOut") : undefined}
+        >
+          <LogOut size={14} />
+          {!collapsed && <span className="text-xs">{t("sidebar.signOut")}</span>}
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar — floating translucent panel */}
+      <aside
+        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 overflow-hidden transition-all duration-300 ease-in-out ${
+          collapsed ? "w-[72px]" : "w-[232px]"
+        }`}
+        style={{
+          borderRadius: "24px",
+          background: "rgba(15, 23, 42, 0.88)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: "1px solid rgba(255, 255, 255, 0.06)",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile overlay sidebar — always expanded */}
+      {isOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={close} />
+          {/* Sidebar panel */}
+          <aside
+            className="relative w-72 text-slate-300 flex flex-col h-full z-10"
+            style={{
+              background: "rgba(15, 23, 42, 0.95)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+            }}
+          >
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
+  );
+}

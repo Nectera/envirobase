@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hide scrollbar but keep scrolling */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+@layer base {
+  body {
+    @apply text-slate-900 antialiased;
+    background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 40%, #eff6ff 70%, #f0fdf4 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* ── Floating sidebar nav items ── */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-2.5 text-sm text-slate-400 transition-all duration-200 cursor-pointer mx-2 rounded-xl;
+  }
+  .sidebar-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    @apply text-white;
+  }
+  .sidebar-item-active {
+    background: rgba(123, 193, 67, 0.15) !important;
+    @apply text-white;
+    box-shadow: inset 3px 0 0 0 #7BC143;
+  }
+  .sidebar-item-collapsed {
+    @apply justify-center px-0 mx-1;
+  }
+  .sidebar-item-collapsed.sidebar-item-active {
+    box-shadow: none;
+    border-radius: 12px;
+  }
+}
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Global element softening ── */
+
+/* Round all inputs and selects */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  border-radius: 14px !important;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+select:focus,
+textarea:focus {
+  border-color: #7BC143 !important;
+  box-shadow: 0 0 0 3px rgba(123, 193, 67, 0.12) !important;
+  outline: none !important;
+}
+
+/* Table row hover */
+tbody tr {
+  transition: background-color 0.15s ease;
+}
+tbody tr:hover {
+  background-color: rgba(123, 193, 67, 0.03) !important;
+}
+
+/* Modal/dialog softening */
+[role="dialog"] > div {
+  border-radius: 24px !important;
+}

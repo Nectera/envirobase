@@ -1,0 +1,154 @@
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { CheckCircle, AlertCircle, Clock, Plus } from "lucide-react";
+import { getTranslation, type Language } from "@/lib/translations";
+
+export const dynamic = "force-dynamic";
+
+export default async function RespiratorFitTestListPage() {
+  const language: Language = "en";
+  const t = (key: string) => getTranslation(language, key);
+  const items = await prisma.respiratorFitTest.findMany({
+    include: { worker: true, project: true }
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  function getDisplayStatus(item: any): "passed" | "failed" | "expired" | "pending" | "draft" {
+    if (item.status !== "completed") {
+      return "draft";
+    }
+
+    const expiresDate = new Date(item.expiresDate);
+    expiresDate.setHours(0, 0, 0, 0);
+
+    if (expiresDate < today) {
+      return "expired";
+    }
+
+    // Determine if passed or failed based on test results
+    const results = Object.values(item.testResults || {});
+    if (results.length === 0) {
+      return "pending";
+    }
+
+    const hasFail = results.includes("fail");
+    return hasFail ? "failed" : "passed";
+  }
+
+  const statusConfig: Record<string, { bg: string; text: string; icon: any }> = {
+    passed: { bg: "bg-green-100", text: "text-green-800", icon: CheckCircle },
+    failed: { bg: "bg-red-100", text: "text-red-800", icon: AlertCircle },
+    expired: { bg: "bg-orange-100", text: "text-orange-800", icon: AlertCircle },
+    pending: { bg: "bg-yellow-100", text: "text-yellow-800", icon: Clock },
+    draft: { bg: "bg-slate-100", text: "text-slate-800", icon: Clock }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">{t("respirator.title")}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {t("respirator.subtitle")}
+          </p>
+        </div>
+        <Link
+          href="/respirator-fit-test/new"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition"
+        >
+          <Plus size={16} /> {t("respirator.newFitTest")}
+        </Link>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
+          <CheckCircle size={36} className="mx-auto text-slate-300 mb-3" />
+          <h3 className="font-semibold text-slate-700">{t("respirator.noTests")}</h3>
+          <p className="text-sm text-slate-500 mt-1">
+            {t("respirator.noTestsDescription")}
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50/50 border-b border-slate-100">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs">
+                  {t("respirator.employee")}
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs">
+                  {t("respirator.respiratorType")}
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs">
+                  {t("respirator.testDate")}
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs">
+                  {t("respirator.expires")}
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs">
+                  {t("common.status")}
+                </th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {items.map((item: any) => {
+                const displayStatus = getDisplayStatus(item);
+                const config = statusConfig[displayStatus];
+                const IconComponent = config.icon;
+
+                const testDate = new Date(item.testDate + "T12:00:00");
+                const expiresDate = new Date(item.expiresDate + "T12:00:00");
+
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {item.employeeName || item.worker?.name || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {item.respiratorType || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                      {testDate.toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric"
+                      })}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                      {expiresDate.toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric"
+                      })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <IconComponent size={14} className={config.text} />
+                        <span
+                          className={`inline-block px-2 py-1 text-xs font-medium rounded-full capitalize ${config.bg} ${config.text}`}
+                        >
+                          {displayStatus}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/respirator-fit-test/${item.id}`}
+                        className="text-slate-400 hover:text-indigo-600 transition"
+                      >
+                        →
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

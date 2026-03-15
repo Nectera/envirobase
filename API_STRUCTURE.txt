@@ -1,0 +1,78 @@
+XTRACT ENVIRONMENTAL - CRM API ROUTES STRUCTURE
+================================================
+
+src/app/api/
+├── companies/
+│   ├── route.ts (GET - list with search/type filter + counts, POST - create)
+│   └── [id]/
+│       └── route.ts (GET - with contacts/leads/estimates, PUT - update, DELETE)
+│
+├── contacts/
+│   ├── route.ts (GET - list with companyId/search filter, POST - create)
+│   └── [id]/
+│       └── route.ts (GET - with company, PUT - update, DELETE)
+│
+├── leads/
+│   ├── route.ts (GET - list with status/projectType/assignedTo filters, POST - create + activity log)
+│   └── [id]/
+│       └── route.ts (GET - with company/contact/estimates, PUT - update + status change activity, DELETE)
+│
+├── estimates/
+│   ├── route.ts (GET - list with status/companyId filters, POST - create with auto-generated number)
+│   └── [id]/
+│       └── route.ts (GET - with company/contact/lead, PUT - update, DELETE)
+│
+└── activities/
+    └── route.ts (GET - list by parentType/parentId, POST - create activity log entry)
+
+TOTAL FILES: 9 route files
+TOTAL SIZE: ~11.3 KB
+
+API ENDPOINTS SUMMARY:
+======================
+
+COMPANIES:
+  GET    /api/companies?search=...&type=... → List companies with counts
+  POST   /api/companies → Create company
+  GET    /api/companies/[id] → Get company details
+  PUT    /api/companies/[id] → Update company
+  DELETE /api/companies/[id] → Delete company
+
+CONTACTS:
+  GET    /api/contacts?companyId=...&search=... → List contacts
+  POST   /api/contacts → Create contact
+  GET    /api/contacts/[id] → Get contact details
+  PUT    /api/contacts/[id] → Update contact
+  DELETE /api/contacts/[id] → Delete contact
+
+LEADS:
+  GET    /api/leads?status=...&projectType=...&assignedTo=... → List leads
+  POST   /api/leads → Create lead (+ activity log)
+  GET    /api/leads/[id] → Get lead details
+  PUT    /api/leads/[id] → Update lead (+ status change activity)
+  DELETE /api/leads/[id] → Delete lead
+
+ESTIMATES:
+  GET    /api/estimates?status=...&companyId=... → List estimates
+  POST   /api/estimates → Create estimate (auto-numbered)
+  GET    /api/estimates/[id] → Get estimate details
+  PUT    /api/estimates/[id] → Update estimate
+  DELETE /api/estimates/[id] → Delete estimate
+
+ACTIVITIES:
+  GET    /api/activities?parentType=...&parentId=... → List activities
+  POST   /api/activities → Create activity log entry
+
+FEATURES:
+==========
+✓ Query parameter filtering
+✓ Related data inclusion (contacts, leads, estimates, company)
+✓ Automatic timestamp management
+✓ Activity logging for leads
+✓ Auto-generated estimate numbers
+✓ Cascading deletes
+✓ Error handling (404s)
+✓ Status code management (201 for creates)
+✓ Next.js 14 App Router pattern
+✓ Dynamic route segments [id]
+
