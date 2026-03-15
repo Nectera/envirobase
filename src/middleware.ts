@@ -63,9 +63,14 @@ export async function middleware(request: NextRequest) {
   // Get the JWT token
   const token = await getToken({ req: request });
 
-  // Not authenticated — let NextAuth handle it
+  // Not authenticated — redirect to login (except API routes)
   if (!token) {
-    return addSecurityHeaders(NextResponse.next());
+    if (pathname.startsWith("/api/")) {
+      return addSecurityHeaders(NextResponse.next());
+    }
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return addSecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
   const isApi = pathname.startsWith("/api/");
