@@ -108,7 +108,7 @@ export const pt: Record<string, string> = {
 
   // Login
   "login.title": `${_CO}`,
-  "login.subtitle": "Sistema de Gestão de Projetos",
+  "login.subtitle": "Plataforma de Serviços Ambientais",
   "login.emailLabel": "E-mail",
   "login.passwordLabel": "Senha",
   "login.signIn": "Entrar",
