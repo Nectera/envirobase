@@ -123,6 +123,10 @@ function MentionInput({
     let match;
     while ((match = mentionPattern.exec(text)) !== null) {
       const name = match[1].toLowerCase();
+      if (name === "all") {
+        if (!mentioned.includes("__all__")) mentioned.push("__all__");
+        continue;
+      }
       const user = users.find(
         (u) => u.name.toLowerCase() === name || u.name.toLowerCase().startsWith(name)
       );
@@ -153,8 +157,30 @@ function MentionInput({
         className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 ${className}`}
         rows={multiline ? 3 : undefined}
       />
-      {showDropdown && filteredUsers.length > 0 && (
+      {showDropdown && (filteredUsers.length > 0 || "all".startsWith(mentionQuery.toLowerCase())) && (
         <div className="absolute z-50 mt-1 w-64 bg-white rounded-lg shadow-lg border border-slate-200 max-h-40 overflow-y-auto">
+          {/* @all option */}
+          {"all".startsWith(mentionQuery.toLowerCase()) && (
+            <button
+              onClick={() => {
+                const before = value.slice(0, mentionStart);
+                const after = value.slice((inputRef.current?.selectionStart || value.length));
+                const newText = `${before}@all ${after}`;
+                setShowDropdown(false);
+                onChange(newText, ["__all__"]);
+                setTimeout(() => inputRef.current?.focus(), 0);
+              }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex items-center gap-2 border-b border-slate-100"
+            >
+              <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">
+                @
+              </div>
+              <div>
+                <div className="font-medium text-slate-700">all</div>
+                <div className="text-xs text-slate-400">Notify everyone</div>
+              </div>
+            </button>
+          )}
           {filteredUsers.slice(0, 6).map((u) => (
             <button
               key={u.id}

@@ -111,14 +111,25 @@ export async function POST(req: NextRequest) {
     // Create notifications for mentioned users
     if (mentions?.length) {
       const mentionedIds: string[] = Array.isArray(mentions) ? mentions : JSON.parse(mentions);
-      for (const mentionedUserId of mentionedIds) {
-        if (mentionedUserId === user.id) continue;
+      const isAll = mentionedIds.includes("__all__");
+
+      // If @all, notify every user in the org except the sender
+      const targetIds = isAll
+        ? (await prisma.user.findMany({
+            where: { organizationId: user.organizationId || undefined, id: { not: user.id } },
+            select: { id: true },
+          })).map((u: any) => u.id)
+        : mentionedIds.filter((id: string) => id !== user.id);
+
+      for (const mentionedUserId of targetIds) {
         try {
           await prisma.notification.create({
             data: {
               type: "mention",
-              title: "You were mentioned in a note",
-              message: title ? `${user.name || user.email} mentioned you in "${title}"` : `${user.name || user.email} mentioned you in a note`,
+              title: isAll ? "Team note posted" : "You were mentioned in a note",
+              message: title
+                ? `${user.name || user.email} ${isAll ? "posted a note to everyone" : `mentioned you`} in "${title}"`
+                : `${user.name || user.email} ${isAll ? "posted a note to everyone" : "mentioned you in a note"}`,
               link: entityType && entityId ? `/${entityType}s/${entityId}` : null,
               userId: mentionedUserId,
               fromUserId: user.id,
