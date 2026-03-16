@@ -24,7 +24,7 @@ const PLANS = [
   {
     id: "starter",
     name: "Starter",
-    price: "$49",
+    price: "$599",
     period: "/month",
     icon: Zap,
     description: "For growing operations",
@@ -44,7 +44,7 @@ const PLANS = [
   {
     id: "pro",
     name: "Pro",
-    price: "$99",
+    price: "$799",
     period: "/month",
     icon: Star,
     popular: true,
