@@ -263,6 +263,7 @@ export const PLUGINS: PluginDefinition[] = [
     longDescription: "Connect your Gusto account to sync employees with workers, view payroll data, and manage onboarding from within the app.",
     category: "payroll",
     authType: "oauth",
+    comingSoon: true,
     iconColor: "bg-rose-100",
     iconTextColor: "text-rose-700",
     brandColor: "bg-rose-600",
