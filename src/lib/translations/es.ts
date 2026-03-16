@@ -1,5 +1,4 @@
 const _APP = process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase";
-const _CO = process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase";
 
 export const es: Record<string, string> = {
   // Common
@@ -107,7 +106,7 @@ export const es: Record<string, string> = {
   "sidebar.pms": "Sistema de Gestión de Proyectos",
 
   // Login
-  "login.title": `${_CO}`,
+  "login.title": "EnviroBase",
   "login.subtitle": "Sistema de Gestión de Proyectos",
   "login.emailLabel": "Correo electrónico",
   "login.passwordLabel": "Contraseña",
