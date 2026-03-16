@@ -60,10 +60,10 @@ function ShellContent({
               <span>You&apos;re viewing a read-only demo</span>
               <span className="hidden sm:inline">—</span>
               <a
-                href="/signup"
+                href="mailto:sales@envirobase.app"
                 className="underline underline-offset-2 hover:text-amber-100 transition-colors hidden sm:inline"
               >
-                Sign up for a free trial to make changes
+                Contact us to get started
               </a>
             </div>
           )}

@@ -92,7 +92,7 @@ export async function middleware(request: NextRequest) {
       if (!isSafe) {
         return addSecurityHeaders(
           NextResponse.json(
-            { error: "Demo account is read-only. Sign up for a free trial to make changes." },
+            { error: "Demo account is read-only. Contact us to get started with your own account." },
             { status: 403 }
           )
         );
