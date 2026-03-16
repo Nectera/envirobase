@@ -10,6 +10,7 @@ import { Check, Circle, Loader2, Plus, FileDown, ChevronRight, ChevronDown, Aler
 import ActivityFeed from "@/components/ActivityFeed";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import ContentInventoryTab from "@/components/ContentInventoryTab";
+import NotesTab from "@/components/NotesTab";
 import ProjectBudgetTab from "./ProjectBudgetTab";
 import type { ChecklistSection } from "@/lib/regulations";
 
@@ -146,7 +147,7 @@ export default function ProjectTabs({
   officeManagerId?: string | null;
   linkedConsultationEstimate?: any;
 }) {
-  const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "documents" | "activity" | "inventory" | "budget">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "documents" | "activity" | "inventory" | "notes" | "budget">("dashboard");
   const router = useRouter();
   const { data: sessionData } = useSession();
   const userRole = (sessionData?.user as any)?.role;
@@ -214,6 +215,7 @@ export default function ProjectTabs({
     { key: "documents" as const, label: `Documents (${projectDocuments.length})` },
     { key: "activity" as const, label: `Activity (${(activities || []).length + (linkedActivities || []).length})` },
     { key: "inventory" as const, label: "Inventory" },
+    { key: "notes" as const, label: "Notes" },
     ...(userRole === "ADMIN" ? [{ key: "budget" as const, label: "Budget" }] : []),
   ];
 
@@ -1373,6 +1375,10 @@ export default function ProjectTabs({
 
       {tab === "inventory" && (
         <ContentInventoryTab projectId={project.id} />
+      )}
+
+      {tab === "notes" && (
+        <NotesTab entityType="project" entityId={project.id} />
       )}
 
       {tab === "budget" && (

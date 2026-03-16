@@ -10,6 +10,7 @@ import { ArrowLeft, Plus, Stethoscope, AlertTriangle, ChevronRight, MapPin } fro
 import CreateAccountButton from "./CreateAccountButton";
 import SkillRating from "./SkillRating";
 import CertificationsSection from "./CertificationsSection";
+import WorkerNotesSection from "./WorkerNotesSection";
 
 export const dynamic = "force-dynamic";
 
@@ -277,6 +278,9 @@ export default async function WorkerDetailPage({ params }: { params: { id: strin
           </div>
         </div>
       )}
+
+      {/* Notes */}
+      <WorkerNotesSection workerId={worker.id} />
     </div>
   );
 }

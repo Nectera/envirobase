@@ -83,6 +83,7 @@ model Organization {
   incidents              Incident[]
   activities             Activity[]
   settings               Setting[]
+  notes                  Note[]
 
   @@map("organizations")
 }
@@ -1293,4 +1294,47 @@ model ReviewRequest {
   @@index([sentAt])
   @@index([nextTouchAt])
   @@map("review_requests")
+}
+
+// ─── Notes ──────────────────────────────────────────────────────
+
+model Note {
+  id             String   @id @default(uuid())
+  title          String?
+  content        String
+  color          String   @default("default")
+  isPinned       Boolean  @default(false)
+  visibility     String   @default("team")  // "team" | "private"
+  entityType     String?  // "project" | "lead" | "company" | "contact" | "worker" | null (global)
+  entityId       String?
+  mentions       String?  // JSON array of user IDs
+  createdById    String
+  createdByName  String
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  comments       NoteComment[]
+
+  @@index([entityType, entityId])
+  @@index([createdById])
+  @@index([isPinned])
+  @@index([visibility])
+  @@index([organizationId])
+  @@map("notes")
+}
+
+model NoteComment {
+  id            String   @id @default(uuid())
+  noteId        String
+  note          Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  content       String
+  mentions      String?
+  createdById   String
+  createdByName String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([noteId])
+  @@map("note_comments")
 }

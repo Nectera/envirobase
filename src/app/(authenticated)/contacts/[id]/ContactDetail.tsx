@@ -10,6 +10,7 @@ import EmailCompose from "@/components/EmailCompose";
 import ClickToCall from "@/components/ClickToCall";
 import SMSCompose from "@/components/SMSCompose";
 import PandaDocSend from "@/components/PandaDocSend";
+import NotesTab from "@/components/NotesTab";
 import { useTranslation } from "@/components/LanguageProvider";
 
 function formatDate(d: string) {
@@ -48,7 +49,7 @@ export default function ContactDetail({
   relatedLeads: any[];
 }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"details" | "activity">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "activity" | "notes">("details");
   const [showEmailCompose, setShowEmailCompose] = useState(false);
   const [showSMSCompose, setShowSMSCompose] = useState(false);
   const [showPandaDoc, setShowPandaDoc] = useState(false);
@@ -151,7 +152,21 @@ export default function ContactDetail({
         >
           {t("activity.title")} ({activities.length + companyActivities.length})
         </button>
+        <button
+          onClick={() => setActiveTab("notes")}
+          className={`pb-3 text-sm font-medium transition-colors ${
+            activeTab === "notes"
+              ? "border-b-2 border-indigo-600 text-indigo-600"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Notes
+        </button>
       </div>
+
+      {activeTab === "notes" && (
+        <NotesTab entityType="contact" entityId={contact.id} />
+      )}
 
       {/* Details Tab */}
       {activeTab === "details" && (

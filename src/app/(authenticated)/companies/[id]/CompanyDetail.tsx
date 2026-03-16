@@ -7,6 +7,7 @@ import { Users, TrendingUp, Activity, Plus, ChevronRight, Mail, Phone, Badge, Se
 import ActivityFeed from "@/components/ActivityFeed";
 import EmailCompose from "@/components/EmailCompose";
 import ClickToCall from "@/components/ClickToCall";
+import NotesTab from "@/components/NotesTab";
 
 const COMPANY_TYPES = [
   { value: "property_mgmt", label: "Property Management" },
@@ -81,7 +82,7 @@ export default function CompanyDetail({
   linkedActivities?: any[];
 }) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"contacts" | "leads" | "activity">("contacts");
+  const [activeTab, setActiveTab] = useState<"contacts" | "leads" | "activity" | "notes">("contacts");
   const [showEmailCompose, setShowEmailCompose] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [emailRecipient, setEmailRecipient] = useState("");
@@ -242,6 +243,18 @@ export default function CompanyDetail({
             Activity ({activities.length + linkedActivities.length})
           </div>
         </button>
+        <button
+          onClick={() => setActiveTab("notes")}
+          className={`pb-3 font-medium text-sm transition-colors ${
+            activeTab === "notes"
+              ? "border-b-2 border-indigo-600 text-indigo-600"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            Notes
+          </div>
+        </button>
       </div>
 
       {/* Contacts Tab */}
@@ -375,6 +388,10 @@ export default function CompanyDetail({
           activities={activities}
           linkedActivities={linkedActivities}
         />
+      )}
+
+      {activeTab === "notes" && (
+        <NotesTab entityType="company" entityId={company.id} />
       )}
 
       <EmailCompose

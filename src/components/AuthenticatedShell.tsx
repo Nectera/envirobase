@@ -9,6 +9,7 @@ import SidebarCollapseProvider, { useSidebarCollapse } from "@/components/Sideba
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import PullToRefresh from "@/components/PullToRefresh";
 import ErrorBoundaryWrapper from "@/components/ErrorBoundaryWrapper";
+import GlobalNotesPanel from "@/components/GlobalNotesPanel";
 
 interface AuthenticatedShellProps {
   alertCount: number;
@@ -71,6 +72,7 @@ function ShellContent({
         </div>
 
         <AIAssistant />
+        <GlobalNotesPanel />
         <PWAInstallPrompt />
         <PullToRefresh />
       </div>
