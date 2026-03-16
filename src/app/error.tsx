@@ -16,7 +16,12 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           </svg>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h2>
-        <p className="text-gray-600 mb-6">An unexpected error occurred. Please try again.</p>
+        <p className="text-gray-600 mb-4">An unexpected error occurred. Please try again or contact support if the issue persists.</p>
+        {error?.message && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 mb-6 font-mono break-all">
+            {error.message}
+          </p>
+        )}
         <button
           onClick={reset}
           className="px-6 py-2.5 bg-[#1a7a3a] text-white rounded-lg hover:bg-[#15632f] transition-colors font-medium"
