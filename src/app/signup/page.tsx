@@ -199,7 +199,7 @@ export default function SignupPage() {
         <nav className="flex items-center justify-between mb-12">
           <Link href="/login" className="flex items-center gap-3">
             <Image
-              src={process.env.NEXT_PUBLIC_LOGO_URL || "/logo.png"}
+              src="/logo.svg"
               alt="EnviroBase"
               width={36}
               height={36}

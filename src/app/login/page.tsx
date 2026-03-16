@@ -142,7 +142,7 @@ export default function LoginPage() {
           <nav className="flex items-center justify-between mb-16 lg:mb-24">
             <div className="flex items-center gap-3">
               <Image
-                src={process.env.NEXT_PUBLIC_LOGO_URL || "/logo.png"}
+                src="/logo.svg"
                 alt={process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase"}
                 width={40}
                 height={40}
@@ -442,7 +442,7 @@ export default function LoginPage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Image
-              src={process.env.NEXT_PUBLIC_LOGO_URL || "/logo.png"}
+              src="/logo.svg"
               alt={process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase"}
               width={24}
               height={24}
