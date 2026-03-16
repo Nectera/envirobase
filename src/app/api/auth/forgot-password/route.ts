@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findFirst({
       where: { email: { equals: email.toLowerCase().trim(), mode: "insensitive" } },
+      select: { id: true, email: true, orgId: true, resetToken: true, resetTokenExpiry: true },
     });
     if (!user) {
       logger.info("Password reset requested for non-existent email", { email });
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     const appUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
 
-    const result = await sendPasswordResetEmail(user.email, resetUrl);
+    const result = await sendPasswordResetEmail(user.email, resetUrl, user.orgId);
 
     if (result.success) {
       logger.audit("Password reset email sent", { userId: user.id, email: user.email });

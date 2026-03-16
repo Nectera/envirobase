@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     });
 
     const appUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const emailResult = await sendWelcomeEmail(newUser.email, newUser.name, newUser.role, tempPassword, `${appUrl}/login`);
+    const emailResult = await sendWelcomeEmail(newUser.email, newUser.name, newUser.role, tempPassword, `${appUrl}/login`, orgId);
 
     logger.audit("User created by admin", {
       createdBy: userId, newUserId: newUser.id, email: newUser.email, role: newUser.role, welcomeEmailSent: emailResult.success,

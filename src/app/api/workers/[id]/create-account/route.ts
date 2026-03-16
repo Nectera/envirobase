@@ -68,7 +68,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       // Send welcome email (non-blocking)
       const loginUrl = `${process.env.NEXTAUTH_URL || "https://localhost:3000"}/login`;
-      sendWelcomeEmail(email, worker.name, worker.role || "TECHNICIAN", password, loginUrl).catch(() => {});
+      sendWelcomeEmail(email, worker.name, worker.role || "TECHNICIAN", password, loginUrl, orgId).catch(() => {});
 
       return NextResponse.json({ success: true, userId: existingUser.id, email, linked: true }, { status: 200 });
     }

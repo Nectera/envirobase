@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrg } from "@/lib/org-context";
-import { sendEmail, isEmailConfigured } from "@/lib/email";
+import { sendEmail, isEmailConfigured, isOrgEmailConfigured } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const auth = await requireOrg();
     if (auth instanceof NextResponse) return auth;
-    const { session } = auth;
+    const { session, orgId } = auth;
     if (!session?.user?.email) {
       logger.warn("Unauthorized email send attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,9 +37,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isEmailConfigured()) {
+    const emailReady = await isOrgEmailConfigured(orgId);
+    if (!emailReady) {
       return NextResponse.json(
-        { error: "Email not configured. Add SMTP credentials to .env.local" },
+        { error: "Email not configured. Set up SMTP in Settings → Email." },
         { status: 503 }
       );
     }
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
       subject,
       body: emailBody,
       cc: cc || undefined,
+      organizationId: orgId,
     });
 
     if (!emailResult.success) {
@@ -115,8 +117,13 @@ export async function POST(request: NextRequest) {
 
 // Check if email is configured
 export async function GET() {
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) return auth;
+  const { orgId } = auth;
+
+  const configured = await isOrgEmailConfigured(orgId);
   return NextResponse.json({
-    configured: isEmailConfigured(),
+    configured,
     sender: process.env.SMTP_USER || null,
   });
 }

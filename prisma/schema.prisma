@@ -28,6 +28,16 @@ model Organization {
   domain           String?  // Custom domain (e.g., "app.envirobase.app")
   website          String?  // Marketing website URL
 
+
+  // SMTP / Email settings (per-tenant)
+  smtpHost         String?
+  smtpPort         Int?     @default(587)
+  smtpUser         String?
+  smtpPassword     String?
+  smtpFromName     String?
+  smtpFromEmail    String?
+  smtpSecure       Boolean  @default(false)
+
   // Subscription & billing
   plan                  String   @default("pro") // free, starter, pro, enterprise
   stripeCustomerId      String?  @unique

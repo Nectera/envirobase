@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck } from "lucide-react";
+import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog } from "lucide-react";
+import SmtpSettings from "./SmtpSettings";
 import { useTranslation } from "@/components/LanguageProvider";
 import { logger } from "@/lib/logger";
 import { DEFAULT_COGS_RATES, type COGSRates } from "@/lib/materials";
@@ -15,7 +16,7 @@ interface Props {
 
 export default function SettingsView({ initialPositions, initialRoles, initialCertTypes, initialCogsRates }: Props) {
   const { t, language, setLanguage } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements">("roles");
+  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email">("roles");
   const [positions, setPositions] = useState(initialPositions);
   const [roles, setRoles] = useState(initialRoles);
   const [certTypes, setCertTypes] = useState(initialCertTypes);
@@ -63,6 +64,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
     { key: "reviews" as const, label: "Google Reviews", icon: Star },
     { key: "estimateFollowUp" as const, label: "Estimate Follow-Up", icon: Mail },
     { key: "certRequirements" as const, label: "Cert Requirements", icon: ShieldCheck },
+    { key: "email" as const, label: "Email / SMTP", icon: ServerCog },
   ];
 
   const currentItems = activeTab === "roles" ? roles : activeTab === "positions" ? positions : certTypes;
@@ -1077,6 +1079,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
           </div>
         </div>
       )}
+
+      {/* Email / SMTP tab */}
+      {activeTab === "email" && <SmtpSettings />}
 
       {/* Save button */}
       {(activeTab === "roles" || activeTab === "positions" || activeTab === "certifications") && (
