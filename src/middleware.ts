@@ -76,6 +76,13 @@ export async function middleware(request: NextRequest) {
   const isApi = pathname.startsWith("/api/");
   const isRoot = pathname === "/";
 
+  // Admin dashboard — ADMIN only
+  if (pathname.startsWith("/admin")) {
+    if (token.role !== "ADMIN") {
+      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
+    }
+  }
+
   // Technician route protection
   if (token.role === "TECHNICIAN") {
     const isAllowed = TECHNICIAN_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + "/"));

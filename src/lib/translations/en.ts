@@ -83,6 +83,8 @@ export const en: Record<string, string> = {
   "sidebar.notifications": "Notifications",
   "sidebar.plugins": "Plug-ins",
   "sidebar.settings": "Settings",
+  "sidebar.platform": "Platform",
+  "sidebar.platformAdmin": "Platform Admin",
   "sidebar.crmDashboard": "CRM Dashboard",
   "sidebar.leads": "Leads",
   "sidebar.pipeline": "Pipeline",

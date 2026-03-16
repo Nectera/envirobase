@@ -8,7 +8,7 @@ import {
   Clock, ClipboardList, Building2, Calendar, CalendarDays, FileText,
   Target, LayoutDashboard, Receipt, CheckSquare, TrendingUp, BarChart3,
   Settings, X, Database, UserPlus, Bell, MessageSquare, DollarSign,
-  PanelLeftClose, PanelLeftOpen, Gift, Puzzle,
+  PanelLeftClose, PanelLeftOpen, Gift, Puzzle, Shield,
 } from "lucide-react";
 import Image from "next/image";
 import { useMobileNav } from "./MobileNavProvider";
@@ -173,6 +173,13 @@ export default function Sidebar({
             {sectionDivider}
             {sectionLabel("sidebar.settings")}
             {settingsNavItems.map((item) => renderNavItem(item))}
+            {userRole === "ADMIN" && (
+              <>
+                {sectionDivider}
+                {sectionLabel("sidebar.platform")}
+                {renderNavItem({ href: "/admin", labelKey: "sidebar.platformAdmin", icon: Shield })}
+              </>
+            )}
           </>
         )}
       </nav>
