@@ -201,12 +201,12 @@ export default function ConsultationDetail({
   const opsTotal =
     data.opsTotal ?? data.opsCost ?? (data.opsPerHourRate ? totalHours * data.opsPerHourRate : (data.opsItems || []).reduce((sum, op) => sum + (op.cost || 0), 0));
   const cogsTotal =
-    data.cogsTotal ?? data.cogsCost ?? data.cogs.reduce((sum, item) => sum + (item.cost || 0), 0);
+    data.cogsTotal ?? data.cogsCost ?? (data.cogs || []).reduce((sum, item) => sum + (item.cost || 0), 0);
 
   // Materials total: support both old unitPrice and new cost formats
   const materialsTotal =
     data.materialsTotal ?? data.materialCost ??
-    data.materials.reduce((sum, mat) => {
+    (data.materials || []).reduce((sum, mat) => {
       if (mat.cost != null) return sum + mat.cost;
       if (mat.unitPrice != null) return sum + mat.qty * mat.unitPrice;
       return sum;
@@ -700,7 +700,7 @@ export default function ConsultationDetail({
       )}
 
       {/* Cost Breakdown - COGS */}
-      {data.cogs.some((item) => item.cost > 0) && (
+      {data.cogs?.some((item) => item.cost > 0) && (
         <div className="border border-slate-200 rounded-lg p-6 bg-white mb-6">
           <h2 className="font-semibold text-slate-900 mb-4">COGS</h2>
 
@@ -714,7 +714,7 @@ export default function ConsultationDetail({
                 </tr>
               </thead>
               <tbody>
-                {data.cogs
+                {(data.cogs || [])
                   .filter((item) => item.cost > 0)
                   .map((item, idx) => {
                     const defaultNotes = DEFAULT_COGS.find(
@@ -748,7 +748,7 @@ export default function ConsultationDetail({
       )}
 
       {/* Cost Breakdown - Materials */}
-      {data.materials.some((mat) => mat.qty > 0 || (mat.cost && mat.cost > 0)) && (
+      {data.materials?.some((mat) => mat.qty > 0 || (mat.cost && mat.cost > 0)) && (
         <div className="border border-slate-200 rounded-lg p-6 bg-white mb-6">
           <h2 className="font-semibold text-slate-900 mb-4">Materials</h2>
 
@@ -762,7 +762,7 @@ export default function ConsultationDetail({
                 </tr>
               </thead>
               <tbody>
-                {data.materials
+                {(data.materials || [])
                   .filter((mat) => mat.qty > 0 || (mat.cost && mat.cost > 0))
                   .map((material, idx) => {
                     const matDefault = DEFAULT_MATERIALS.find(
