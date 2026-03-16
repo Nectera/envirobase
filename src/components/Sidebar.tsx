@@ -130,7 +130,8 @@ export default function Sidebar({
     <>
       <div className={`${collapsed ? "px-2 py-5" : "px-5 py-5"} flex items-center justify-between`}>
         <div className={`flex items-center ${collapsed ? "justify-center w-full" : "gap-2.5"}`}>
-          <Image src="/logo.svg" alt={process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase"} width={32} height={32} className="rounded-lg flex-shrink-0" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="EnviroBase" width={32} height={32} className="rounded-lg flex-shrink-0" />
           {!collapsed && (
             <div>
               <h1 className="text-base font-bold text-white tracking-tight">{process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}</h1>

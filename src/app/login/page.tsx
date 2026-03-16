@@ -141,9 +141,10 @@ export default function LoginPage() {
           {/* Nav */}
           <nav className="flex items-center justify-between mb-16 lg:mb-24">
             <div className="flex items-center gap-3">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src="/logo.svg"
-                alt={process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase"}
+                alt="EnviroBase"
                 width={40}
                 height={40}
                 className="rounded-xl"
@@ -441,9 +442,10 @@ export default function LoginPage() {
       <footer className="border-t border-slate-800/50 py-8">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/logo.svg"
-              alt={process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase"}
+              alt="EnviroBase"
               width={24}
               height={24}
               className="rounded-md"

@@ -198,7 +198,8 @@ export default function SignupPage() {
         {/* Nav */}
         <nav className="flex items-center justify-between mb-12">
           <Link href="/login" className="flex items-center gap-3">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/logo.svg"
               alt="EnviroBase"
               width={36}
