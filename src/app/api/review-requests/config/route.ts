@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { getReviewConfig, DRIP_SEQUENCE } from "@/lib/review-config";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/review-requests/config
  */

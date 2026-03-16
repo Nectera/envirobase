@@ -4,6 +4,8 @@ import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { sendFieldReportEmail } from "@/lib/fieldReportEmail";
 
+export const dynamic = "force-dynamic";
+
 export const maxDuration = 30; // Allow time for AI summary + email on submission
 
 export async function GET(req: NextRequest) {

@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/chat/dm
  * Find or create a DM channel between the current user and one or more other users.

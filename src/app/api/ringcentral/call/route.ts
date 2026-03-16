@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import { rcApiCall, isConnected, getValidToken } from "@/lib/ringcentral";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   const auth = await requireOrg();
   if (auth instanceof NextResponse) return auth;

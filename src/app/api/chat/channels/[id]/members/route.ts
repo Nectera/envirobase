@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/chat/channels/[id]/members
  * List members of a channel with user details.

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { hash } from "bcryptjs";
 
+export const dynamic = "force-dynamic";
+
 const VALID_ROLES = ["ADMIN", "SUPERVISOR", "OFFICE", "TECHNICIAN"];
 
 function isAdmin(role: string): boolean {

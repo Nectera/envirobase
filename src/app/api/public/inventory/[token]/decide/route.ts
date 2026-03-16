@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/public/inventory/[token]/decide
  * Public endpoint — customer marks an item as "keep" or "dispose".

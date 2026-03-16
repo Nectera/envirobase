@@ -6,6 +6,8 @@ import { PRE_ABATEMENT_ITEMS, REMOVAL_TECHNIQUES } from "@/lib/pre-abatement-che
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { COMPANY_NAME } from "@/lib/branding";
 
+export const dynamic = "force-dynamic";
+
 function formatDate(dateStr: string): string {
   try {
     return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });

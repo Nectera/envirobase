@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 // Validate phone number format
 function validatePhoneNumber(phoneNumber: string): boolean {
   // Remove common separators and whitespace

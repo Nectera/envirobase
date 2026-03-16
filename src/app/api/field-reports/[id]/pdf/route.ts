@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { COMPANY_NAME } from "@/lib/branding";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const result = await requireOrg();

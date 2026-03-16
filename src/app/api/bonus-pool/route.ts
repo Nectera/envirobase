@@ -3,6 +3,8 @@ import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_READ_LIMIT, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 // Default position weights for the weighted headcount formula
 const DEFAULT_WEIGHTS: Record<string, number> = {
   "Office Assistant": 0.5,

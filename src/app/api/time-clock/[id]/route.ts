@@ -3,6 +3,8 @@ import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET – single time entry
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/project-budget/populate-from-estimate
  * Auto-populate budget lines from a ConsultationEstimate.

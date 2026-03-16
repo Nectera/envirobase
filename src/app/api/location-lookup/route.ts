@@ -2,6 +2,8 @@ import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrg } from "@/lib/org-context";
 
+export const dynamic = "force-dynamic";
+
 // WMO weather code → human-readable condition
 const WMO_CODES: Record<number, string> = {
   0: "Clear Sky", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",

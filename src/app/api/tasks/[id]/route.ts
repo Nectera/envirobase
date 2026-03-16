@@ -6,6 +6,8 @@ import { runTaskCompletionAutomations } from "@/lib/taskAutomation";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendNotificationToWorker, sendNotificationToRole, buildTaskNotificationBody } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const auth = await requireOrg();

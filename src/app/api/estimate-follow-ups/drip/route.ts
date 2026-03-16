@@ -6,6 +6,8 @@ import {
   sendFollowUpTouch,
 } from "@/lib/estimate-followup-config";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/estimate-follow-ups/drip
  *

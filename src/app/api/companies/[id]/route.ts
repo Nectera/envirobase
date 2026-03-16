@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { updateCompanySchema, validateBody } from "@/lib/validations";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const auth = await requireOrg();

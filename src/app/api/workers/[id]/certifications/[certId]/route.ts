@@ -3,6 +3,8 @@ import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 /**
  * DELETE /api/workers/[id]/certifications/[certId]
  * Remove a certification record.

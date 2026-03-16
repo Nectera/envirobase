@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import prisma from "@/lib/prisma";
 import { testSmtpConnection } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/settings/email — Get org SMTP settings (passwords masked)
  */

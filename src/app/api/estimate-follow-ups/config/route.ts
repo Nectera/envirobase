@@ -6,6 +6,8 @@ import {
   ESTIMATE_FOLLOWUP_SEQUENCE,
 } from "@/lib/estimate-followup-config";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/estimate-follow-ups/config
  */

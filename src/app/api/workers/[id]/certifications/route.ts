@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendNotificationToWorker, sendNotificationToRole, buildCertExpiryBody } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const result = await requireOrg();

@@ -8,6 +8,8 @@ import {
 } from "@/lib/psi-hazards";
 import { COMPANY_NAME } from "@/lib/branding";
 
+export const dynamic = "force-dynamic";
+
 function getCheckedLabels(allItems: { key: string; label: string }[], checked: string[]) {
   return allItems.filter((i) => checked.includes(i.key)).map((i) => i.label);
 }

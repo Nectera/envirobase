@@ -6,6 +6,8 @@ import { runLeadStatusAutomations } from "@/lib/taskAutomation";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const auth = await requireOrg();

@@ -10,6 +10,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // Only ADMIN users of the root EnviroBase org can manage organizations
 async function requireSuperAdmin() {
   const session = await getServerSession(authOptions);

@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const auth = await requireOrg();

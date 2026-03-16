@@ -7,6 +7,8 @@ import {
   isConfigured,
 } from "@/lib/conductor";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/quickbooks-desktop/status — check connection status
 export async function GET() {
   const auth = await requireOrg();

@@ -5,6 +5,8 @@ import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendNotificationToWorker, buildTaskNotificationBody } from "@/lib/notifications";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireOrg();

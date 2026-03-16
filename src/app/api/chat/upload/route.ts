@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, CHAT_BUCKET } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const ALLOWED_TYPES = [

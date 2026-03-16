@@ -3,6 +3,8 @@ import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { requireOrg, orgWhere } from "@/lib/org-context";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireOrg();

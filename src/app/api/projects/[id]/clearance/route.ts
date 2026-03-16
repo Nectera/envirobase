@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, DOCUMENTS_BUCKET } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/projects/[id]/clearance
  * Upload clearance report and/or invoice, save results, and update post-cost COGS.

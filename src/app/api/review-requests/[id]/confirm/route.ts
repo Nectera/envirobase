@@ -3,6 +3,8 @@ import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/review-requests/[id]/confirm
  * Admin confirms that a Google review actually appeared.

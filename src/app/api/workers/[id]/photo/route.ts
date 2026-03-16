@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const result = await requireOrg();
   if (result instanceof NextResponse) return result;

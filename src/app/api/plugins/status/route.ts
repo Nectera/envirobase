@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import prisma from "@/lib/prisma";
 import { PLUGINS } from "@/lib/plugins";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/plugins/status — returns connection status for all plugins
 export async function GET() {
   const result = await requireOrg();

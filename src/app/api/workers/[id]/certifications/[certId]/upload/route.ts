@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, CERTIFICATIONS_BUCKET } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/workers/[id]/certifications/[certId]/upload
  * Upload a cert document (PDF or image) to Supabase Storage and

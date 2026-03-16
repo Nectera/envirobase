@@ -3,6 +3,8 @@ import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET – list time entries, optionally filtered by projectId, workerId, date
 export async function GET(req: NextRequest) {
   try {

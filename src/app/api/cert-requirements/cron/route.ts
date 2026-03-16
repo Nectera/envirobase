@@ -7,6 +7,8 @@ import {
   buildCertExpiryBody,
 } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/cert-requirements/cron
  *

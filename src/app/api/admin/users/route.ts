@@ -7,6 +7,8 @@ import { logger } from "@/lib/logger";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
+export const dynamic = "force-dynamic";
+
 const VALID_ROLES = ["ADMIN", "SUPERVISOR", "OFFICE", "TECHNICIAN"];
 
 function isAdmin(role: string): boolean {

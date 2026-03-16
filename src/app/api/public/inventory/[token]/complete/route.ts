@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { sendNotificationToUser } from "@/lib/notifications";
 import { escapeHtml } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/public/inventory/[token]/complete
  * Public endpoint — customer submits all decisions and completes the review.

@@ -6,6 +6,8 @@ import { supabase, INVOICES_BUCKET } from "@/lib/supabase";
 import Anthropic from "@anthropic-ai/sdk";
 import { DEFAULT_MATERIALS } from "@/lib/materials";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/knowledge-base/upload-invoice
  * 1. Uploads a material invoice (PDF or image) to Supabase Storage

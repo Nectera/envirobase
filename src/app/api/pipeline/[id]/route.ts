@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireOrg, orgWhere } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 // PUT — Update a lead's pipeline stage override (for drag-and-drop)
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {

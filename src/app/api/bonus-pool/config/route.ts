@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_READ_LIMIT, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 const DEFAULTS = {
   ratePerHour: 17,
   googleReviewBonusEach: 50,

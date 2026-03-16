@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getReviewConfig, DRIP_SEQUENCE } from "@/lib/review-config";
 import { sendTouch, buildSurveyUrl } from "../route";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/review-requests/drip
  *

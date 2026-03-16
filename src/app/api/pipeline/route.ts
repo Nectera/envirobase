@@ -2,6 +2,8 @@ import { NextResponse, NextRequest } from "next/server";
 import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireOrg();

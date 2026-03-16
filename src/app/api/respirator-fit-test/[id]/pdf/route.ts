@@ -6,6 +6,8 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { FIT_TEST_ITEMS } from "@/lib/respirator-fit-tests";
 import { COMPANY_NAME } from "@/lib/branding";
 
+export const dynamic = "force-dynamic";
+
 function wrapText(text: string, maxWidth: number): string[] {
   const charsPerLine = Math.floor(maxWidth / 4.5);
   const lines: string[] = [];

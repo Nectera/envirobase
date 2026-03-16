@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, INVENTORY_BUCKET } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/projects/[id]/inventory/upload
  * Upload a photo to Supabase Storage for content inventory.

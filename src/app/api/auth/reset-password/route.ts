@@ -5,6 +5,8 @@ import { logger } from "@/lib/logger";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
+export const dynamic = "force-dynamic";
+
 const RESET_RATE_LIMIT = { maxRequests: 5, windowSeconds: 60 };
 
 export async function POST(req: NextRequest) {

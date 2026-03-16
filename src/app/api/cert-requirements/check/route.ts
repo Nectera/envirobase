@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireOrg } from "@/lib/org-context";
 import { checkWorkerCertsForProject } from "@/lib/cert-requirements";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/cert-requirements/check
  *

@@ -2,6 +2,8 @@ import { NextResponse, NextRequest } from "next/server";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET – generate a daily time report for a project+date
 export async function GET(req: NextRequest) {
   try {

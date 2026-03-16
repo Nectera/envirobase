@@ -3,6 +3,8 @@ import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 /**
  * PUT /api/projects/[id]/inventory/[itemId]
  * Update an inventory item. Body: { brand?, model?, description?, location?, status?, customerNote? }

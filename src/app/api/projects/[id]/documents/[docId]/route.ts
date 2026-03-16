@@ -3,6 +3,8 @@ import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { supabase, DOCUMENTS_BUCKET } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 /**
  * DELETE /api/projects/[id]/documents/[docId]
  * Delete a document record and optionally remove the file from Supabase Storage.

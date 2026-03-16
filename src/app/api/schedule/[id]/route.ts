@@ -4,6 +4,8 @@ import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendNotificationToWorker, buildScheduleNotificationBody } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const auth = await requireOrg();

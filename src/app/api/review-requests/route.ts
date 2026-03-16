@@ -7,6 +7,8 @@ import { getValidToken, rcApiCall } from "@/lib/ringcentral";
 import { getReviewConfig, DRIP_SEQUENCE } from "@/lib/review-config";
 import { COMPANY_SHORT, COMPANY_NAME, COMPANY_LOCATION, BRAND_COLOR, APP_URL } from "@/lib/branding";
 
+export const dynamic = "force-dynamic";
+
 export function buildSurveyUrl(token: string) {
   return `${APP_URL}/feedback/${token}`;
 }

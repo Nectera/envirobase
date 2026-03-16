@@ -3,6 +3,8 @@ import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { getCertRequirementsConfig, CERT_REQUIREMENTS_DEFAULTS } from "@/lib/cert-requirements";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/cert-requirements
  */

@@ -12,6 +12,8 @@ import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { checkRateLimit } from "@/lib/rateLimit";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   // Rate limit by IP
   let clientIp = "unknown";
