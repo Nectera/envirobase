@@ -158,6 +158,23 @@ export default function SignupPage() {
       });
 
       if (signInResult?.ok) {
+        // For paid plans, redirect to Stripe checkout
+        if (selectedPlan !== "enterprise") {
+          try {
+            const checkoutRes = await fetch("/api/stripe/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orgId: data.organization.id, plan: selectedPlan }),
+            });
+            const checkoutData = await checkoutRes.json();
+            if (checkoutData.url) {
+              window.location.href = checkoutData.url;
+              return;
+            }
+          } catch {
+            // Stripe checkout failed — still send to dashboard
+          }
+        }
         router.push("/dashboard");
       } else {
         // Account created but auto-login failed — send to login page

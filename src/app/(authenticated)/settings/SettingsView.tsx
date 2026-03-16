@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog } from "lucide-react";
+import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog, CreditCard } from "lucide-react";
 import SmtpSettings from "./SmtpSettings";
+import BillingSettings from "./BillingSettings";
 import { useTranslation } from "@/components/LanguageProvider";
 import { logger } from "@/lib/logger";
 import { DEFAULT_COGS_RATES, type COGSRates } from "@/lib/materials";
@@ -16,7 +17,7 @@ interface Props {
 
 export default function SettingsView({ initialPositions, initialRoles, initialCertTypes, initialCogsRates }: Props) {
   const { t, language, setLanguage } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email">("roles");
+  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email" | "billing">("roles");
   const [positions, setPositions] = useState(initialPositions);
   const [roles, setRoles] = useState(initialRoles);
   const [certTypes, setCertTypes] = useState(initialCertTypes);
@@ -65,6 +66,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
     { key: "estimateFollowUp" as const, label: "Estimate Follow-Up", icon: Mail },
     { key: "certRequirements" as const, label: "Cert Requirements", icon: ShieldCheck },
     { key: "email" as const, label: "Email / SMTP", icon: ServerCog },
+    { key: "billing" as const, label: "Billing", icon: CreditCard },
   ];
 
   const currentItems = activeTab === "roles" ? roles : activeTab === "positions" ? positions : certTypes;
@@ -1082,6 +1084,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
       {/* Email / SMTP tab */}
       {activeTab === "email" && <SmtpSettings />}
+
+      {/* Billing tab */}
+      {activeTab === "billing" && <BillingSettings />}
 
       {/* Save button */}
       {(activeTab === "roles" || activeTab === "positions" || activeTab === "certifications") && (
