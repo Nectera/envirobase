@@ -9,34 +9,6 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   debug: process.env.NODE_ENV === "development",
-  cookies: {
-    sessionToken: {
-      name: "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: true,
-      },
-    },
-    callbackUrl: {
-      name: "next-auth.callback-url",
-      options: {
-        sameSite: "lax" as const,
-        path: "/",
-        secure: true,
-      },
-    },
-    csrfToken: {
-      name: "next-auth.csrf-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax" as const,
-        path: "/",
-        secure: true,
-      },
-    },
-  },
   providers: [
     CredentialsProvider({
       name: "credentials",
