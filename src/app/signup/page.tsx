@@ -177,7 +177,7 @@ export default function SignupPage() {
       <div className="fixed inset-0 bg-gradient-to-br from-slate-950 via-emerald-950/30 to-slate-950 -z-10" />
       <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-emerald-500/8 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 -z-10" />
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8 min-h-screen flex flex-col">
         {/* Nav */}
         <nav className="flex items-center justify-between mb-12">
           <Link href="/login" className="flex items-center gap-3">
@@ -200,7 +200,7 @@ export default function SignupPage() {
 
         {/* Step 1: Plan Selection */}
         {step === "plan" && (
-          <div>
+          <div className="flex-1 flex flex-col justify-center">
             <div className="text-center mb-10">
               <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">Choose your plan</h1>
               <p className="text-slate-400 max-w-lg mx-auto">
@@ -208,7 +208,7 @@ export default function SignupPage() {
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10 max-w-4xl mx-auto">
               {PLANS.map((plan) => {
                 const isSelected = selectedPlan === plan.id;
                 const Icon = plan.icon;
