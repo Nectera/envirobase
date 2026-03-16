@@ -124,7 +124,7 @@ export default function LoginPage() {
 
   function handleDemoLogin() {
     setEmail("demo@envirobase.app");
-    setPassword("demo123");
+    setPassword("EnviroBase2026!");
     setShowDemo(true);
   }
 
@@ -281,7 +281,7 @@ export default function LoginPage() {
                   ) : (
                     <div className="text-center space-y-2">
                       <p className="text-xs text-slate-400">Demo credentials filled in — click Sign In above</p>
-                      <p className="text-[10px] text-slate-500">demo@envirobase.app / demo123</p>
+                      <p className="text-[10px] text-slate-500">demo@envirobase.app / EnviroBase2026!</p>
                     </div>
                   )}
                 </div>

@@ -14,6 +14,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
 
   const userRole = (session.user as any)?.role as string | undefined;
   const userName = session.user?.name || undefined;
+  const isDemo = (session.user as any)?.isDemo || false;
 
   // Route protection for technicians
   const headersList = headers();
@@ -36,6 +37,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
       recentAlerts={recentAlerts}
       userRole={userRole}
       userName={userName}
+      isDemo={isDemo}
     >
       {children}
     </AuthenticatedShell>

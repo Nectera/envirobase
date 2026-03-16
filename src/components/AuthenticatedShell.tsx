@@ -16,6 +16,7 @@ interface AuthenticatedShellProps {
   recentAlerts: any[];
   userRole?: string;
   userName?: string;
+  isDemo?: boolean;
   children: ReactNode;
 }
 
@@ -24,6 +25,7 @@ function ShellContent({
   recentAlerts,
   userRole,
   userName,
+  isDemo,
   children,
 }: AuthenticatedShellProps) {
   const { collapsed } = useSidebarCollapse();
@@ -52,16 +54,16 @@ function ShellContent({
             collapsed ? "md:ml-[104px]" : "md:ml-[264px]"
           }`}
         >
-          {/* Demo Banner */}
-          {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
-            <div className="bg-emerald-600 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2 flex-shrink-0">
-              <span>You&apos;re viewing a live demo of {process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}</span>
+          {/* Demo Read-Only Banner */}
+          {isDemo && (
+            <div className="bg-amber-500 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2 flex-shrink-0">
+              <span>You&apos;re viewing a read-only demo</span>
               <span className="hidden sm:inline">—</span>
               <a
-                href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "hello@envirobase.app"}`}
-                className="underline underline-offset-2 hover:text-emerald-100 transition-colors hidden sm:inline"
+                href="/signup"
+                className="underline underline-offset-2 hover:text-amber-100 transition-colors hidden sm:inline"
               >
-                Contact us to get started
+                Sign up for a free trial to make changes
               </a>
             </div>
           )}

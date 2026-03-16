@@ -76,6 +76,30 @@ export async function middleware(request: NextRequest) {
   const isApi = pathname.startsWith("/api/");
   const isRoot = pathname === "/";
 
+  // ── Demo user: read-only mode ──
+  // Block all mutating API requests for demo accounts
+  if (token.isDemo && isApi) {
+    const method = request.method.toUpperCase();
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+      // Allow a few safe POST endpoints that are read-like
+      const safePostRoutes = [
+        "/api/auth",           // NextAuth session management
+        "/api/search",         // Search is read-only
+        "/api/data/export",    // Export is read-only
+        "/api/data/import/preview", // Preview is read-only
+      ];
+      const isSafe = safePostRoutes.some((r) => pathname.startsWith(r));
+      if (!isSafe) {
+        return addSecurityHeaders(
+          NextResponse.json(
+            { error: "Demo account is read-only. Sign up for a free trial to make changes." },
+            { status: 403 }
+          )
+        );
+      }
+    }
+  }
+
   // Admin dashboard — ADMIN only
   if (pathname.startsWith("/admin")) {
     if (token.role !== "ADMIN") {

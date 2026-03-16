@@ -5,6 +5,9 @@ import { prisma } from "./prisma";
 import { checkRateLimit } from "./rateLimit";
 import { logger } from "./logger";
 
+// Demo account email — this user gets read-only access
+export const DEMO_EMAIL = "demo@envirobase.app";
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
@@ -74,6 +77,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
             organizationId: user.organizationId,
+            isDemo: user.email.toLowerCase() === DEMO_EMAIL,
           };
         } catch (err: any) {
           logger.error("Login: database error", { error: err.message, email });
@@ -89,6 +93,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.id = user.id;
         token.organizationId = (user as any).organizationId;
+        token.isDemo = (user as any).isDemo || false;
       }
       return token;
     },
@@ -97,6 +102,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role = token.role;
         (session.user as any).id = token.id;
         (session.user as any).organizationId = token.organizationId;
+        (session.user as any).isDemo = token.isDemo || false;
       }
       return session;
     },
