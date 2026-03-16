@@ -141,7 +141,7 @@ export default function LoginPage() {
           {/* Nav */}
           <nav className="flex items-center justify-between mb-16 lg:mb-24">
             <div className="flex items-center gap-3">
-              <Logo size={40} className="rounded-xl" />
+              <Logo size={40} className="" />
               <span className="text-xl font-bold text-white tracking-tight">
                 {process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}
               </span>
@@ -435,8 +435,7 @@ export default function LoginPage() {
       <footer className="border-t border-slate-800/50 py-8">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Logo size={24} className="rounded-md"
-            />
+            <Logo size={24} className="" />
             <span className="text-sm font-medium text-slate-500">
               {process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"} &copy; {new Date().getFullYear()}
             </span>

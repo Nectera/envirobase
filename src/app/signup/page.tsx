@@ -198,8 +198,7 @@ export default function SignupPage() {
         {/* Nav */}
         <nav className="flex items-center justify-between mb-12">
           <Link href="/login" className="flex items-center gap-3">
-            <Logo size={36} className="rounded-xl"
-            />
+            <Logo size={36} className="" />
             <span className="text-lg font-bold text-white tracking-tight">EnviroBase</span>
           </Link>
           <Link
