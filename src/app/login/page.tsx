@@ -4,8 +4,8 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { getTranslation, Language, TranslationKey } from "@/lib/translations";
+import Logo from "@/components/Logo";
 import {
   FolderOpen,
   Target,
@@ -141,14 +141,7 @@ export default function LoginPage() {
           {/* Nav */}
           <nav className="flex items-center justify-between mb-16 lg:mb-24">
             <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.svg"
-                alt="EnviroBase"
-                width={40}
-                height={40}
-                className="rounded-xl"
-              />
+              <Logo size={40} className="rounded-xl" />
               <span className="text-xl font-bold text-white tracking-tight">
                 {process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}
               </span>
@@ -442,13 +435,7 @@ export default function LoginPage() {
       <footer className="border-t border-slate-800/50 py-8">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.svg"
-              alt="EnviroBase"
-              width={24}
-              height={24}
-              className="rounded-md"
+            <Logo size={24} className="rounded-md"
             />
             <span className="text-sm font-medium text-slate-500">
               {process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"} &copy; {new Date().getFullYear()}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Logo from "@/components/Logo";
 import {
   ArrowLeft,
   ArrowRight,
@@ -198,13 +198,7 @@ export default function SignupPage() {
         {/* Nav */}
         <nav className="flex items-center justify-between mb-12">
           <Link href="/login" className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.svg"
-              alt="EnviroBase"
-              width={36}
-              height={36}
-              className="rounded-xl"
+            <Logo size={36} className="rounded-xl"
             />
             <span className="text-lg font-bold text-white tracking-tight">EnviroBase</span>
           </Link>

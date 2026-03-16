@@ -10,8 +10,8 @@ import {
   Settings, X, Database, UserPlus, Bell, MessageSquare, DollarSign,
   PanelLeftClose, PanelLeftOpen, Gift, Puzzle, Shield,
 } from "lucide-react";
-import Image from "next/image";
 import { useMobileNav } from "./MobileNavProvider";
+import Logo from "./Logo";
 import { useTranslation } from "./LanguageProvider";
 import ChatUnreadBadge from "./ChatUnreadBadge";
 import { useSidebarCollapse } from "./SidebarCollapseProvider";
@@ -130,8 +130,7 @@ export default function Sidebar({
     <>
       <div className={`${collapsed ? "px-2 py-5" : "px-5 py-5"} flex items-center justify-between`}>
         <div className={`flex items-center ${collapsed ? "justify-center w-full" : "gap-2.5"}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="EnviroBase" width={32} height={32} className="rounded-lg flex-shrink-0" />
+          <Logo size={32} className="rounded-lg" />
           {!collapsed && (
             <div>
               <h1 className="text-base font-bold text-white tracking-tight">{process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}</h1>
