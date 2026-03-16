@@ -16,30 +16,11 @@ import {
   Lock,
   Globe,
   Zap,
-  Shield,
   Star,
   Crown,
 } from "lucide-react";
 
 const PLANS = [
-  {
-    id: "free",
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    icon: Shield,
-    description: "For small teams getting started",
-    color: "slate",
-    features: [
-      "Up to 3 users",
-      "Up to 10 workers",
-      "CRM & contacts",
-      "Project management",
-      "Scheduling & time clock",
-      "Compliance tracking",
-    ],
-    limits: "3 users, 10 workers",
-  },
   {
     id: "starter",
     name: "Starter",
@@ -51,10 +32,12 @@ const PLANS = [
     features: [
       "Up to 10 users",
       "Up to 25 workers",
-      "Everything in Free, plus:",
+      "CRM & contacts",
+      "Project management",
+      "Scheduling & time clock",
+      "Compliance tracking",
       "Business metrics & analytics",
-      "Team chat",
-      "Lead pipeline",
+      "Team chat & lead pipeline",
     ],
     limits: "10 users, 25 workers",
   },
@@ -100,7 +83,7 @@ const PLANS = [
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState<"plan" | "details">("plan");
-  const [selectedPlan, setSelectedPlan] = useState("pro");
+  const [selectedPlan, setSelectedPlan] = useState("starter");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 

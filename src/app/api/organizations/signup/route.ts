@@ -14,7 +14,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
-const VALID_PLANS = ["free", "starter", "pro", "enterprise"];
+const VALID_PLANS = ["starter", "pro", "enterprise"];
 
 const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
   free: {
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     adminName,
     adminEmail,
     adminPassword,
-    plan = "free",
+    plan = "starter",
   } = body;
 
   // Validate required fields
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Validate plan
-  const selectedPlan = VALID_PLANS.includes(plan) ? plan : "free";
+  const selectedPlan = VALID_PLANS.includes(plan) ? plan : "starter";
 
   // Validate slug format
   const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, "");
@@ -169,8 +169,8 @@ export async function POST(req: NextRequest) {
 
   // Create org + admin user in a transaction
   const result = await prisma.$transaction(async (tx: any) => {
-    const limits = PLAN_LIMITS[selectedPlan] || PLAN_LIMITS.free;
-    const features = PLAN_FEATURES[selectedPlan] || PLAN_FEATURES.free;
+    const limits = PLAN_LIMITS[selectedPlan] || PLAN_LIMITS.starter;
+    const features = PLAN_FEATURES[selectedPlan] || PLAN_FEATURES.starter;
 
     const org = await tx.organization.create({
       data: {
