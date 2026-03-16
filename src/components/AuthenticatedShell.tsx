@@ -46,7 +46,7 @@ function ShellContent({
       />
 
       <div className="flex h-screen relative">
-        <Sidebar alertCount={alertCount} userRole={userRole} userName={userName} />
+        <Sidebar alertCount={alertCount} userRole={userRole} userName={userName} isDemo={isDemo} />
 
         {/* Main content — offset for floating sidebar on desktop */}
         <div

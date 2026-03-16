@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Building2,
@@ -52,12 +54,24 @@ const PLAN_PRICES: Record<string, number> = {
 };
 
 export default function AdminDashboard() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const isDemo = (session?.user as any)?.isDemo;
+
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    if (isDemo) {
+      router.replace("/dashboard");
+      return;
+    }
+  }, [isDemo, router]);
+
+  useEffect(() => {
+    if (isDemo) return;
     fetch("/api/organizations")
       .then((r) => {
         if (!r.ok) throw new Error("Failed to load organizations");
@@ -71,7 +85,9 @@ export default function AdminDashboard() {
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+  }, [isDemo]);
+
+  if (isDemo) return null;
 
   const filtered = orgs.filter(
     (o) =>

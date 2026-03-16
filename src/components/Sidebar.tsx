@@ -23,10 +23,12 @@ type NavItem = { href: string; labelKey: string; icon: any };
 export default function Sidebar({
   userRole,
   userName,
+  isDemo,
 }: {
   alertCount?: number;
   userRole?: string;
   userName?: string;
+  isDemo?: boolean;
 }) {
   const { t } = useTranslation();
   const pathname = usePathname();
@@ -173,7 +175,7 @@ export default function Sidebar({
             {sectionDivider}
             {sectionLabel("sidebar.settings")}
             {settingsNavItems.map((item) => renderNavItem(item))}
-            {userRole === "ADMIN" && (
+            {userRole === "ADMIN" && !isDemo && (
               <>
                 {sectionDivider}
                 {sectionLabel("sidebar.platform")}
