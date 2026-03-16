@@ -56,7 +56,7 @@ const PLAN_PRICES: Record<string, number> = {
 export default function AdminDashboard() {
   const { data: session } = useSession();
   const router = useRouter();
-  const isDemo = (session?.user as any)?.isDemo;
+  const isPlatformAdmin = (session?.user as any)?.isPlatformAdmin;
 
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,14 +64,14 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (isDemo) {
+    if (isPlatformAdmin === false) {
       router.replace("/dashboard");
       return;
     }
-  }, [isDemo, router]);
+  }, [isPlatformAdmin, router]);
 
   useEffect(() => {
-    if (isDemo) return;
+    if (!isPlatformAdmin) return;
     fetch("/api/organizations")
       .then((r) => {
         if (!r.ok) throw new Error("Failed to load organizations");
@@ -85,9 +85,9 @@ export default function AdminDashboard() {
         setError(err.message);
         setLoading(false);
       });
-  }, [isDemo]);
+  }, [isPlatformAdmin]);
 
-  if (isDemo) return null;
+  if (!isPlatformAdmin) return null;
 
   const filtered = orgs.filter(
     (o) =>

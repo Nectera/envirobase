@@ -24,11 +24,13 @@ export default function Sidebar({
   userRole,
   userName,
   isDemo,
+  isPlatformAdmin,
 }: {
   alertCount?: number;
   userRole?: string;
   userName?: string;
   isDemo?: boolean;
+  isPlatformAdmin?: boolean;
 }) {
   const { t } = useTranslation();
   const pathname = usePathname();
@@ -175,7 +177,7 @@ export default function Sidebar({
             {sectionDivider}
             {sectionLabel("sidebar.settings")}
             {settingsNavItems.map((item) => renderNavItem(item))}
-            {userRole === "ADMIN" && !isDemo && (
+            {isPlatformAdmin && (
               <>
                 {sectionDivider}
                 {sectionLabel("sidebar.platform")}

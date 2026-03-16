@@ -11,11 +11,11 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-async function requireSuperAdmin() {
+async function requirePlatformAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
   const user = session.user as any;
-  if (user.role !== "ADMIN") return null;
+  if (!user.isPlatformAdmin) return null;
   return user;
 }
 
@@ -23,7 +23,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireSuperAdmin();
+  const user = await requirePlatformAdmin();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

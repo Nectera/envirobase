@@ -8,6 +8,12 @@ import { logger } from "./logger";
 // Demo account email — this user gets read-only access
 export const DEMO_EMAIL = "demo@envirobase.app";
 
+// Platform admin emails — only these users can access /admin (tenant management, platform health, etc.)
+// Set PLATFORM_ADMIN_EMAILS as a comma-separated list in your environment variables
+const PLATFORM_ADMIN_EMAILS = (process.env.PLATFORM_ADMIN_EMAILS || "cody@envirobase.app")
+  .split(",")
+  .map((e) => e.trim().toLowerCase());
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
@@ -71,13 +77,15 @@ export const authOptions: NextAuthOptions = {
 
           logger.audit("login", { userId: user.id, email: user.email, ip: clientIp, organizationId: user.organizationId });
 
+          const normalizedEmail = user.email.toLowerCase();
           return {
             id: user.id,
             email: user.email,
             name: user.name,
             role: user.role,
             organizationId: user.organizationId,
-            isDemo: user.email.toLowerCase() === DEMO_EMAIL,
+            isDemo: normalizedEmail === DEMO_EMAIL,
+            isPlatformAdmin: PLATFORM_ADMIN_EMAILS.includes(normalizedEmail),
           };
         } catch (err: any) {
           logger.error("Login: database error", { error: err.message, email });
@@ -94,6 +102,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.organizationId = (user as any).organizationId;
         token.isDemo = (user as any).isDemo || false;
+        token.isPlatformAdmin = (user as any).isPlatformAdmin || false;
       }
       return token;
     },
@@ -103,6 +112,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).organizationId = token.organizationId;
         (session.user as any).isDemo = token.isDemo || false;
+        (session.user as any).isPlatformAdmin = token.isPlatformAdmin || false;
       }
       return session;
     },

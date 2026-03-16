@@ -12,17 +12,17 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// Only ADMIN users of the root EnviroBase org can manage organizations
-async function requireSuperAdmin() {
+// Only platform admins (defined by PLATFORM_ADMIN_EMAILS) can manage organizations
+async function requirePlatformAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
   const user = session.user as any;
-  if (user.role !== "ADMIN") return null;
+  if (!user.isPlatformAdmin) return null;
   return user;
 }
 
 export async function GET() {
-  const user = await requireSuperAdmin();
+  const user = await requirePlatformAdmin();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -40,7 +40,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await requireSuperAdmin();
+  const user = await requirePlatformAdmin();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

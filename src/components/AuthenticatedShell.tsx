@@ -17,6 +17,7 @@ interface AuthenticatedShellProps {
   userRole?: string;
   userName?: string;
   isDemo?: boolean;
+  isPlatformAdmin?: boolean;
   children: ReactNode;
 }
 
@@ -26,6 +27,7 @@ function ShellContent({
   userRole,
   userName,
   isDemo,
+  isPlatformAdmin,
   children,
 }: AuthenticatedShellProps) {
   const { collapsed } = useSidebarCollapse();
@@ -46,7 +48,7 @@ function ShellContent({
       />
 
       <div className="flex h-screen relative">
-        <Sidebar alertCount={alertCount} userRole={userRole} userName={userName} isDemo={isDemo} />
+        <Sidebar alertCount={alertCount} userRole={userRole} userName={userName} isDemo={isDemo} isPlatformAdmin={isPlatformAdmin} />
 
         {/* Main content — offset for floating sidebar on desktop */}
         <div
