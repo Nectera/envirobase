@@ -14,6 +14,78 @@ import { checkRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
+const VALID_PLANS = ["free", "starter", "pro", "enterprise"];
+
+const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
+  free: {
+    crm: true,
+    projects: true,
+    scheduling: true,
+    timeClock: true,
+    compliance: true,
+    metrics: false,
+    chat: false,
+    pipeline: false,
+    bonusPool: false,
+    contentInventory: false,
+    reviewRequests: false,
+    knowledgeBase: false,
+    aiAssistant: false,
+  },
+  starter: {
+    crm: true,
+    projects: true,
+    scheduling: true,
+    timeClock: true,
+    compliance: true,
+    metrics: true,
+    chat: true,
+    pipeline: true,
+    bonusPool: false,
+    contentInventory: false,
+    reviewRequests: false,
+    knowledgeBase: false,
+    aiAssistant: false,
+  },
+  pro: {
+    crm: true,
+    metrics: true,
+    chat: true,
+    pipeline: true,
+    projects: true,
+    scheduling: true,
+    timeClock: true,
+    compliance: true,
+    bonusPool: true,
+    contentInventory: true,
+    reviewRequests: true,
+    knowledgeBase: true,
+    aiAssistant: true,
+  },
+  enterprise: {
+    crm: true,
+    metrics: true,
+    chat: true,
+    pipeline: true,
+    projects: true,
+    scheduling: true,
+    timeClock: true,
+    compliance: true,
+    bonusPool: true,
+    contentInventory: true,
+    reviewRequests: true,
+    knowledgeBase: true,
+    aiAssistant: true,
+  },
+};
+
+const PLAN_LIMITS: Record<string, { maxUsers: number; maxWorkers: number }> = {
+  free: { maxUsers: 3, maxWorkers: 10 },
+  starter: { maxUsers: 10, maxWorkers: 25 },
+  pro: { maxUsers: 25, maxWorkers: 50 },
+  enterprise: { maxUsers: 100, maxWorkers: 500 },
+};
+
 export async function POST(req: NextRequest) {
   // Rate limit by IP
   let clientIp = "unknown";
@@ -33,13 +105,12 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const {
-    // Organization fields
     companyName,
     slug,
-    // Admin user fields
     adminName,
     adminEmail,
     adminPassword,
+    plan = "free",
   } = body;
 
   // Validate required fields
@@ -49,6 +120,9 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  // Validate plan
+  const selectedPlan = VALID_PLANS.includes(plan) ? plan : "free";
 
   // Validate slug format
   const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, "");
@@ -95,6 +169,9 @@ export async function POST(req: NextRequest) {
 
   // Create org + admin user in a transaction
   const result = await prisma.$transaction(async (tx: any) => {
+    const limits = PLAN_LIMITS[selectedPlan] || PLAN_LIMITS.free;
+    const features = PLAN_FEATURES[selectedPlan] || PLAN_FEATURES.free;
+
     const org = await tx.organization.create({
       data: {
         slug: cleanSlug,
@@ -102,24 +179,11 @@ export async function POST(req: NextRequest) {
         appName: companyName,
         companyName,
         companyShort: companyName,
-        status: "trialing",
-        plan: "pro",
-        features: {
-          crm: true,
-          metrics: true,
-          chat: true,
-          pipeline: true,
-          projects: true,
-          scheduling: true,
-          timeClock: true,
-          compliance: true,
-          bonusPool: false,
-          contentInventory: true,
-          reviewRequests: true,
-          knowledgeBase: true,
-          aiAssistant: true,
-        },
-        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
+        status: "active",
+        plan: selectedPlan,
+        features,
+        maxUsers: limits.maxUsers,
+        maxWorkers: limits.maxWorkers,
       },
     });
 
@@ -144,6 +208,7 @@ export async function POST(req: NextRequest) {
         id: result.org.id,
         slug: result.org.slug,
         name: result.org.name,
+        plan: result.org.plan,
       },
       user: {
         id: result.user.id,

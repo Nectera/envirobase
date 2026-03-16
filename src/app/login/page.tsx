@@ -152,12 +152,20 @@ export default function LoginPage() {
                 {process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}
               </span>
             </div>
-            <a
-              href="#login"
-              className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-400 border border-emerald-500/30 rounded-full hover:bg-emerald-500/10 transition-colors"
-            >
-              Sign In <ArrowRight className="w-3.5 h-3.5" />
-            </a>
+            <div className="hidden sm:flex items-center gap-3">
+              <Link
+                href="/signup"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-full hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-600/20"
+              >
+                Get Started <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <a
+                href="#login"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-400 border border-emerald-500/30 rounded-full hover:bg-emerald-500/10 transition-colors"
+              >
+                Sign In
+              </a>
+            </div>
           </nav>
 
           {/* Hero Content */}
@@ -282,6 +290,16 @@ export default function LoginPage() {
                       <p className="text-[10px] text-slate-500">demo@envirobase.app / demo123</p>
                     </div>
                   )}
+                </div>
+
+                {/* Signup link */}
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-slate-500">
+                    Don&apos;t have an account?{" "}
+                    <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 font-medium">
+                      Get started free
+                    </Link>
+                  </p>
                 </div>
 
                 {/* Language selector */}
