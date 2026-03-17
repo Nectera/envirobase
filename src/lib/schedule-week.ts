@@ -139,7 +139,10 @@ export async function calculateWeekSchedule(
 
   // 4. Get all active workers
   const workers = await prisma.worker.findMany({ include: { certifications: true } });
-  const activeWorkers = workers.filter((w: any) => w.status === "active");
+  const schedulablePositions = ["Technician", "Supervisor"];
+  const activeWorkers = workers.filter(
+    (w: any) => w.status === "active" && schedulablePositions.includes(w.position)
+  );
 
   // 5. Get existing schedule for the week (to avoid double-booking)
   const scheduleEntries = await prisma.scheduleEntry.findMany();

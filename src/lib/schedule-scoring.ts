@@ -167,7 +167,10 @@ export async function calculateWorkerScores(
 
   // 5. Workers
   const workers = await prisma.worker.findMany({ include: { certifications: true } });
-  const activeWorkers = workers.filter((w: any) => w.status === "active");
+  const schedulablePositions = ["Technician", "Supervisor"];
+  const activeWorkers = workers.filter(
+    (w: any) => w.status === "active" && schedulablePositions.includes(w.position)
+  );
 
   // 6. Existing schedule
   const scheduleEntries = await prisma.scheduleEntry.findMany();
