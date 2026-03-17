@@ -20,9 +20,11 @@ type PositionSplit = {
 export default function BonusPoolView({
   isAdmin,
   workers,
+  userPosition,
 }: {
   isAdmin: boolean;
   workers: Worker[];
+  userPosition?: string | null;
 }) {
   const router = useRouter();
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
@@ -297,8 +299,39 @@ export default function BonusPoolView({
             </div>
           </div>
 
-          {/* Position splits */}
-          <div className="bg-white border border-slate-200 rounded-xl mb-6">
+          {/* Non-admin: Your Estimated Bonus card */}
+          {!isAdmin && userPosition && (
+            <div className="bg-white border border-slate-200 rounded-xl mb-6 p-6">
+              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                <Gift size={16} className="text-indigo-500" />
+                Your Estimated Bonus
+              </h3>
+              {(() => {
+                const myEntry = splitEntries.find(([pos]) => pos === userPosition);
+                if (!myEntry) {
+                  return (
+                    <p className="text-sm text-slate-400">
+                      No bonus data for your position ({userPosition}) this month.
+                    </p>
+                  );
+                }
+                const [, split] = myEntry;
+                return (
+                  <div className="text-center py-4">
+                    <div className="text-3xl font-bold text-emerald-600 mb-1">
+                      {fmt(split.perPerson)}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      Per person for {userPosition} ({split.headcount} {split.headcount === 1 ? "person" : "people"})
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Position splits (admin only) */}
+          {isAdmin && <div className="bg-white border border-slate-200 rounded-xl mb-6">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                 <Users size={16} className="text-indigo-500" />
@@ -396,7 +429,7 @@ export default function BonusPoolView({
                 </div>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Google Reviews & High Performer (admin editable) */}
           {isAdmin ? (
@@ -578,8 +611,8 @@ export default function BonusPoolView({
             </div>
           )}
 
-          {/* Project breakdowns */}
-          {data?.projectBreakdowns?.length > 0 && (
+          {/* Project breakdowns (admin only) */}
+          {isAdmin && data?.projectBreakdowns?.length > 0 && (
             <div className="bg-white border border-slate-200 rounded-xl mb-6">
               <div className="px-4 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">

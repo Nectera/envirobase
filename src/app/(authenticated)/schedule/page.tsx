@@ -63,7 +63,7 @@ export default async function SchedulePage() {
     include: { certifications: true },
   });
   // Only field workers can be scheduled on projects
-  const schedulablePositions = ["Technician", "Supervisor", "Laborer"];
+  const schedulablePositions = ["Technician", "Supervisor"];
   const workers = (allWorkers as any[]).filter(
     (w: any) => schedulablePositions.includes(w.position)
   );
