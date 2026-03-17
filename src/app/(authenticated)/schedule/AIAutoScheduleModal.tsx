@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, Sparkles, MapPin, Clock, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Loader2, Users, Calendar, Navigation, Star } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 type Project = {
   id: string;
@@ -80,6 +81,7 @@ export default function AIAutoScheduleModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<"select" | "review" | "creating">("select");
   const [projectId, setProjectId] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -214,7 +216,7 @@ export default function AIAutoScheduleModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-purple-50">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-lg font-semibold text-slate-900">AI Auto-Schedule</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("schedule.aiAutoSchedule")}</h2>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded">
             <X className="w-5 h-5 text-slate-500" />
@@ -227,18 +229,18 @@ export default function AIAutoScheduleModal({
           {step === "select" && (
             <div className="space-y-4">
               <p className="text-sm text-slate-500">
-                Select a project and date range. The AI will recommend the best crew based on proximity, availability, and certifications.
+                {t("schedule.selectProject")}
               </p>
 
               {/* Project */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t("schedule.project")}</label>
                 <select
                   value={projectId}
                   onChange={(e) => handleProjectChange(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
-                  <option value="">Select a project...</option>
+                  <option value="">{t("schedule.selectProjectDropdown")}</option>
                   {activeProjects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({p.type}) — {p.address || "No address"}
@@ -250,7 +252,7 @@ export default function AIAutoScheduleModal({
               {/* Dates */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("schedule.startDate")}</label>
                   <input
                     type="date"
                     value={startDate}
@@ -259,30 +261,30 @@ export default function AIAutoScheduleModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("schedule.endDate")}</label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
-                  <p className="text-xs text-slate-400 mt-1">Leave blank to auto-detect from estimate</p>
+                  <p className="text-xs text-slate-400 mt-1">{t("schedule.leaveBlankAuto")}</p>
                 </div>
               </div>
 
               {/* Crew Size */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Crew Size</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t("schedule.crewSize")}</label>
                 <input
                   type="number"
                   min={1}
                   max={20}
                   value={crewSize}
                   onChange={(e) => setCrewSize(e.target.value ? parseInt(e.target.value) : "")}
-                  placeholder="Auto-detect from estimate"
+                  placeholder={t("schedule.autoDetectEstimate")}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
-                <p className="text-xs text-slate-400 mt-1">Leave blank to use estimate crew size</p>
+                <p className="text-xs text-slate-400 mt-1">{t("schedule.autoDetectEstimate")}</p>
               </div>
 
               {error && (
@@ -319,7 +321,7 @@ export default function AIAutoScheduleModal({
                   {result.project.difficultyRating && (
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-[10px] ${DIFFICULTY_COLORS[result.project.difficultyRating] || "bg-slate-100 text-slate-600"}`}>
                       Difficulty: {DIFFICULTY_LABELS[result.project.difficultyRating] || result.project.difficultyRating}
-                      {result.project.difficultyRating >= 4 && " — Skill weighted heavy"}
+                      {result.project.difficultyRating >= 4 && ` — ${t("schedule.skillWeightedHeavy")}`}
                     </span>
                   )}
                 </div>
@@ -328,10 +330,10 @@ export default function AIAutoScheduleModal({
               {/* Selection count */}
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">
-                  Recommendations ({result.recommendations.length})
+                  {t("schedule.recommendations")} ({result.recommendations.length})
                 </span>
                 <span className="text-xs text-indigo-600 font-medium">
-                  {selected.size} selected of {result.crewSizeNeeded} needed
+                  {selected.size} {t("schedule.selectedOf")} {result.crewSizeNeeded} {t("schedule.needed")}
                 </span>
               </div>
 
@@ -376,7 +378,7 @@ export default function AIAutoScheduleModal({
                             <span className="text-xs text-slate-500 capitalize">{rec.role}</span>
                             {rec.hasMatchingCertType && (
                               <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-medium">
-                                Cert Match
+                                {t("schedule.certMatch")}
                               </span>
                             )}
                             {!rec.hasMatchingCertType && (
@@ -393,7 +395,7 @@ export default function AIAutoScheduleModal({
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3" /> {rec.driveTime}
                             </span>
-                            <span>Avail: {rec.availableDays} days</span>
+                            <span>{t("schedule.availableDays")}: {rec.availableDays} {t("schedule.days")}</span>
                           </div>
                         </div>
 
@@ -417,28 +419,28 @@ export default function AIAutoScheduleModal({
                         <div className="px-3 pb-3 pt-1 border-t border-slate-100">
                           <div className="grid grid-cols-4 gap-2 text-xs">
                             <div className="text-center">
-                              <div className="text-slate-400 mb-0.5">Proximity</div>
+                              <div className="text-slate-400 mb-0.5">{t("schedule.excellentMatch")}</div>
                               <div className="font-semibold text-slate-700">{rec.breakdown.proximity}</div>
                               <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
                                 <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${rec.breakdown.proximity}%` }} />
                               </div>
                             </div>
                             <div className="text-center">
-                              <div className="text-slate-400 mb-0.5">Availability</div>
+                              <div className="text-slate-400 mb-0.5">{t("schedule.availableDays")}</div>
                               <div className="font-semibold text-slate-700">{rec.breakdown.availability}</div>
                               <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
                                 <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${rec.breakdown.availability}%` }} />
                               </div>
                             </div>
                             <div className="text-center">
-                              <div className="text-slate-400 mb-0.5">Cert Match</div>
+                              <div className="text-slate-400 mb-0.5">{t("schedule.certMatch")}</div>
                               <div className="font-semibold text-slate-700">{rec.breakdown.certMatch}</div>
                               <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
                                 <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${rec.breakdown.certMatch}%` }} />
                               </div>
                             </div>
                             <div className="text-center">
-                              <div className="text-slate-400 mb-0.5">Skill Match</div>
+                              <div className="text-slate-400 mb-0.5">{t("schedule.goodMatch")}</div>
                               <div className="font-semibold text-slate-700">{rec.breakdown.skillMatch}</div>
                               <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
                                 <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: `${rec.breakdown.skillMatch}%` }} />
@@ -470,7 +472,7 @@ export default function AIAutoScheduleModal({
                 <>
                   <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
                   <p className="text-sm text-slate-600">
-                    Creating assignments... {createdCount}/{creatingCount}
+                    {t("schedule.creatingAssignments")} {createdCount}/{creatingCount}
                   </p>
                 </>
               ) : (
@@ -479,9 +481,9 @@ export default function AIAutoScheduleModal({
                     <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                   </div>
                   <p className="text-sm font-medium text-slate-900">
-                    {createdCount} worker{createdCount !== 1 ? "s" : ""} assigned successfully!
+                    {createdCount} {t("schedule.workers")}{createdCount !== 1 ? "" : ""} {t("common.assigned")}!
                   </p>
-                  <p className="text-xs text-slate-500">Refreshing schedule...</p>
+                  <p className="text-xs text-slate-500">{t("schedule.refreshingSchedule")}</p>
                 </>
               )}
             </div>
@@ -494,7 +496,7 @@ export default function AIAutoScheduleModal({
             {step === "select" && (
               <>
                 <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
-                  Cancel
+                  {t("schedule.cancel")}
                 </button>
                 <button
                   onClick={handleGetRecommendations}
@@ -506,7 +508,7 @@ export default function AIAutoScheduleModal({
                   ) : (
                     <Sparkles className="w-4 h-4" />
                   )}
-                  {loading ? "Analyzing..." : "Get Recommendations"}
+                  {loading ? t("schedule.analyzingWorkforce") : t("schedule.recommendations")}
                 </button>
               </>
             )}
@@ -516,7 +518,7 @@ export default function AIAutoScheduleModal({
                   onClick={() => { setStep("select"); setResult(null); }}
                   className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
                 >
-                  Back
+                  {t("schedule.back")}
                 </button>
                 <button
                   onClick={handleCreate}
@@ -524,7 +526,7 @@ export default function AIAutoScheduleModal({
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Users className="w-4 h-4" />
-                  Assign {selected.size} Worker{selected.size !== 1 ? "s" : ""} ({result?.dateRange.workingDays} days)
+                  {t("schedule.assignWorkers")} {selected.size} {t("schedule.worker")}{selected.size !== 1 ? "s" : ""} ({result?.dateRange.workingDays} {t("schedule.days")})
                 </button>
               </>
             )}

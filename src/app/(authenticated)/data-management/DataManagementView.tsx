@@ -13,25 +13,25 @@ import {
 import { useTranslation } from "@/components/LanguageProvider";
 
 const DATA_TYPES = [
-  { key: "companies", label: "Companies", icon: Building2, color: "bg-blue-100 text-blue-700" },
-  { key: "contacts", label: "Contacts", icon: Users, color: "bg-green-100 text-green-700" },
-  { key: "leads", label: "Leads", icon: Target, color: "bg-amber-100 text-amber-700" },
-  { key: "estimates", label: "Estimates", icon: FileText, color: "bg-violet-100 text-violet-700" },
-  { key: "invoices", label: "Invoices", icon: Receipt, color: "bg-rose-100 text-rose-700" },
-  { key: "activities", label: "Activities", icon: Activity, color: "bg-slate-100 text-slate-700" },
+  { key: "companies", labelKey: "dataManagement.companies", icon: Building2, color: "bg-blue-100 text-blue-700" },
+  { key: "contacts", labelKey: "dataManagement.contacts", icon: Users, color: "bg-green-100 text-green-700" },
+  { key: "leads", labelKey: "dataManagement.leads", icon: Target, color: "bg-amber-100 text-amber-700" },
+  { key: "estimates", labelKey: "dataManagement.estimates", icon: FileText, color: "bg-violet-100 text-violet-700" },
+  { key: "invoices", labelKey: "dataManagement.invoices", icon: Receipt, color: "bg-rose-100 text-rose-700" },
+  { key: "activities", labelKey: "dataManagement.activities", icon: Activity, color: "bg-slate-100 text-slate-700" },
 ] as const;
 
 const KB_CATEGORIES = [
-  { key: "training_manual", label: "Training Manual", color: "bg-blue-100 text-blue-700" },
-  { key: "employee_handbook", label: "Employee Handbook", color: "bg-indigo-100 text-indigo-700" },
-  { key: "safety_procedures", label: "Safety Procedures", color: "bg-red-100 text-red-700" },
-  { key: "tips", label: "Tips & Best Practices", color: "bg-emerald-100 text-emerald-700" },
-  { key: "regulations", label: "Regulations", color: "bg-amber-100 text-amber-700" },
-  { key: "general", label: "General", color: "bg-slate-100 text-slate-700" },
-  { key: "material_invoice", label: "Material Invoice", color: "bg-orange-100 text-orange-700" },
+  { key: "training_manual", labelKey: "knowledgeBase.category.training_manual", color: "bg-blue-100 text-blue-700" },
+  { key: "employee_handbook", labelKey: "knowledgeBase.category.employee_handbook", color: "bg-indigo-100 text-indigo-700" },
+  { key: "safety_procedures", labelKey: "knowledgeBase.category.safety_procedures", color: "bg-red-100 text-red-700" },
+  { key: "tips", labelKey: "knowledgeBase.category.tips", color: "bg-emerald-100 text-emerald-700" },
+  { key: "regulations", labelKey: "knowledgeBase.category.regulations", color: "bg-amber-100 text-amber-700" },
+  { key: "general", labelKey: "knowledgeBase.category.general", color: "bg-slate-100 text-slate-700" },
+  { key: "material_invoice", labelKey: "knowledgeBase.category.material_invoice", color: "bg-orange-100 text-orange-700" },
 ] as const;
 
-// Target fields per data type
+// Xtract target fields per data type
 const XTRACT_FIELDS: Record<string, { key: string; label: string; required?: boolean }[]> = {
   companies: [
     { key: "name", label: "Company Name", required: true },
@@ -209,7 +209,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
       const dateStr = new Date().toISOString().split("T")[0];
       triggerDownload(blob, `${type === "all" ? "crm_export_all" : `${type}_export`}_${dateStr}.${ext}`);
     } catch {
-      alert("Export failed. Please try again.");
+      alert(t("dataManagement.exportFailed"));
     } finally {
       setExporting(null);
     }
@@ -258,7 +258,8 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
   const handleImportWithMapping = async () => {
     if (!uploadedFile) return;
     if (importMode === "replace") {
-      if (!confirm(`This will REPLACE all existing ${importType} data with the imported file. This cannot be undone. Continue?`)) return;
+      const dataTypeLabel = t(DATA_TYPES.find(dt => dt.key === importType)?.labelKey || "dataManagement.companies").toLowerCase();
+      if (!confirm(`${t("dataManagement.importConfirm")} ${dataTypeLabel} ${t("dataManagement.importConfirmEnd")}`)) return;
     }
     setImportStep("importing");
     setImporting(true);
@@ -282,13 +283,13 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
         setImportResult({ success: false, message: data.error || `Import failed (${res.status})`, details: data.details });
         setImportStep("mapping");
       } else {
-        const skippedMsg = data.skipped > 0 ? ` (${data.skipped} rows skipped due to missing required fields)` : "";
+        const skippedMsg = data.skipped > 0 ? ` (${data.skipped} ${t("dataManagement.rowsSkipped")})` : "";
         const errorMsg = data.errors?.length > 0 ? `. Errors: ${data.errors[0]}` : "";
         if (data.imported === 0 && data.errors?.length > 0) {
           setImportResult({ success: false, message: `Import failed — 0 rows imported${errorMsg}`, details: data.errors });
           setImportStep("mapping");
         } else {
-          setImportResult({ success: true, message: `Successfully imported ${data.imported} ${importType} (${data.mode} mode)${skippedMsg}${errorMsg}` });
+          setImportResult({ success: true, message: `${t("dataManagement.successImport")} ${data.imported} ${t(DATA_TYPES.find(dt => dt.key === importType)?.labelKey || "dataManagement.companies")} (${data.mode} mode)${skippedMsg}${errorMsg}` });
           setTimeout(() => window.location.reload(), 2000);
         }
       }
@@ -434,7 +435,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
         setArticles(arts);
       }
     } catch {
-      setInvoiceError("Network error — please try again");
+      setInvoiceError(t("dataManagement.exportFailed"));
     } finally {
       setInvoiceUploading(false);
       if (invoiceInputRef.current) invoiceInputRef.current.value = "";
@@ -525,8 +526,8 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                 <Database className="w-4.5 h-4.5 text-green-700" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900">CRM Database</h3>
-                <p className="text-xs text-slate-500">{totalRecords} total records across {DATA_TYPES.length} tables</p>
+                <h3 className="font-semibold text-slate-900">{t("dataManagement.crmDatabaseTitle")}</h3>
+                <p className="text-xs text-slate-500">{totalRecords} {t("dataManagement.totalRecords")} {DATA_TYPES.length} tables</p>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
@@ -536,7 +537,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                   <div key={dt.key} className="text-center p-3 bg-slate-50 rounded-xl">
                     <Icon size={18} className="mx-auto text-slate-400 mb-1" />
                     <p className="text-lg font-bold text-slate-900">{counts[dt.key] || 0}</p>
-                    <p className="text-[11px] text-slate-500">{dt.label}</p>
+                    <p className="text-[11px] text-slate-500">{t(dt.labelKey)}</p>
                   </div>
                 );
               })}
@@ -550,8 +551,8 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                 <Download className="w-4.5 h-4.5 text-green-700" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900">Export Data</h3>
-                <p className="text-xs text-slate-500">Download your CRM data as CSV, Excel, or JSON</p>
+                <h3 className="font-semibold text-slate-900">{t("dataManagement.exportDataTitle")}</h3>
+                <p className="text-xs text-slate-500">{t("dataManagement.downloadYourData")}</p>
               </div>
             </div>
             <div className="space-y-3">
@@ -562,11 +563,11 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                 </div>
                 <button onClick={() => handleExport("all")} disabled={!!exporting} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700 disabled:opacity-50">
                   {exporting === `all-${exportFormat}` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  Export All ({exportFormat === "xlsx" ? "Excel" : "CSV"})
+                  {t("dataManagement.exportAll")} ({exportFormat === "xlsx" ? t("dataManagement.excel") : t("dataManagement.csv")})
                 </button>
                 <button onClick={() => handleExport("all", "json")} disabled={!!exporting} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-full hover:bg-green-100 disabled:opacity-50">
                   {exporting === "all-json" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  Export All (JSON)
+                  {t("dataManagement.exportAll")} ({t("dataManagement.json")})
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -580,8 +581,8 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                         {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon size={15} />}
                       </div>
                       <div>
-                        <p className="font-medium text-slate-700">{dt.label}</p>
-                        <p className="text-[11px] text-slate-400">{count} records • {exportFormat === "xlsx" ? ".xlsx" : ".csv"}</p>
+                        <p className="font-medium text-slate-700">{t(dt.labelKey)}</p>
+                        <p className="text-[11px] text-slate-400">{count} {t("dataManagement.records")} • {exportFormat === "xlsx" ? ".xlsx" : ".csv"}</p>
                       </div>
                     </button>
                   );
@@ -598,17 +599,17 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                   <Upload className="w-4.5 h-4.5 text-amber-700" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-900">Import Data</h3>
+                  <h3 className="font-semibold text-slate-900">{t("dataManagement.importDataTitle")}</h3>
                   <p className="text-xs text-slate-500">
-                    {importStep === "select" && "Upload a CSV or Excel file — then map fields manually"}
-                    {importStep === "mapping" && `Mapping fields for ${previewData?.fileName}`}
-                    {importStep === "importing" && "Importing your data..."}
+                    {importStep === "select" && t("dataManagement.uploadCsv")}
+                    {importStep === "mapping" && `${t("dataManagement.mappingFieldsFor")} ${previewData?.fileName}`}
+                    {importStep === "importing" && t("dataManagement.importingData")}
                   </p>
                 </div>
               </div>
               {importStep !== "select" && (
                 <button onClick={resetImport} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
-                  <X className="w-3 h-3" /> Start Over
+                  <X className="w-3 h-3" /> {t("dataManagement.startOver")}
                 </button>
               )}
             </div>
@@ -617,17 +618,17 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
             <div className="flex items-center gap-2 mb-5">
               <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${importStep === "select" ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-700"}`}>
                 <span className="w-4 h-4 rounded-full bg-current/20 flex items-center justify-center text-[10px]">1</span>
-                Upload
+                {t("dataManagement.step1Upload")}
               </div>
               <ArrowRight className="w-3 h-3 text-slate-300" />
               <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${importStep === "mapping" ? "bg-amber-100 text-amber-800" : importStep === "importing" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400"}`}>
                 <span className="w-4 h-4 rounded-full bg-current/20 flex items-center justify-center text-[10px]">2</span>
-                Map Fields
+                {t("dataManagement.step2Map")}
               </div>
               <ArrowRight className="w-3 h-3 text-slate-300" />
               <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${importStep === "importing" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-400"}`}>
                 <span className="w-4 h-4 rounded-full bg-current/20 flex items-center justify-center text-[10px]">3</span>
-                Import
+                {t("dataManagement.step3Import")}
               </div>
             </div>
 
@@ -636,29 +637,29 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Data Type</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">{t("dataManagement.dataType")}</label>
                     <select value={importType} onChange={(e) => setImportType(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500">
-                      {DATA_TYPES.map((dt) => (<option key={dt.key} value={dt.key}>{dt.label}</option>))}
+                      {DATA_TYPES.map((dt) => (<option key={dt.key} value={dt.key}>{t(dt.labelKey)}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Import Mode</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">{t("dataManagement.importMode")}</label>
                     <select value={importMode} onChange={(e) => setImportMode(e.target.value as "append" | "replace")} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500">
-                      <option value="append">Append — add to existing data</option>
-                      <option value="replace">Replace — overwrite all existing data</option>
+                       <option value="append">{t("dataManagement.appendMode")}</option>
+                       <option value="replace">{t("dataManagement.replaceMode")}</option>
                     </select>
                   </div>
                 </div>
                 {importMode === "replace" && (
                   <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
                     <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-red-700"><strong>Warning:</strong> Replace mode will permanently delete all existing {importType} data and replace it with the imported file.</p>
+                    <p className="text-xs text-red-700"><strong>{t("common.warning")}:</strong> {t("dataManagement.replaceWarning")} {t(DATA_TYPES.find(dt => dt.key === importType)?.labelKey || "dataManagement.companies")} {t("dataManagement.replaceModeText")}</p>
                   </div>
                 )}
                 <div>
                   <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileSelect} disabled={previewLoading} className="hidden" id="file-upload" />
                   <label htmlFor="file-upload" className={`flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-green-400 hover:bg-green-50 transition-colors ${previewLoading ? "opacity-50 cursor-not-allowed" : ""}`}>
-                    {previewLoading ? (<><Loader2 className="w-4 h-4 animate-spin" />Reading file...</>) : (<><Upload className="w-4 h-4 text-slate-400" /><span className="text-slate-600">Click to select a CSV or Excel file</span></>)}
+                    {previewLoading ? (<><Loader2 className="w-4 h-4 animate-spin" />{t("dataManagement.readingFile")}</>) : (<><Upload className="w-4 h-4 text-slate-400" /><span className="text-slate-600">{t("dataManagement.clickToSelect")}</span></>)}
                   </label>
                 </div>
               </div>
@@ -671,24 +672,24 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-slate-400" />
                     <span className="text-sm font-medium text-slate-700">{previewData.fileName}</span>
-                    <span className="text-xs text-slate-400">• {previewData.totalRows} rows • {previewData.headers.length} columns</span>
+                    <span className="text-xs text-slate-400">• {previewData.totalRows} {t("dataManagement.rows")} • {previewData.headers.length} {t("dataManagement.columns")}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Shuffle className="w-3 h-3 text-slate-400" />
-                    <span className="text-xs text-slate-500">{Object.values(fieldMapping).filter((v) => v !== "__skip__").length} of {previewData.headers.length} mapped</span>
+                    <span className="text-xs text-slate-500">{Object.values(fieldMapping).filter((v) => v !== "__skip__").length} {t("dataManagement.of")} {previewData.headers.length} {t("dataManagement.mapped")}</span>
                   </div>
                 </div>
                 {!allRequiredMapped && (
                   <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-amber-700"><strong>Missing required fields:</strong> {requiredFields.filter((f) => !Object.values(fieldMapping).includes(f.key)).map((f) => f.label).join(", ")}. Map these to continue.</p>
+                    <p className="text-xs text-amber-700"><strong>{t("dataManagement.missingRequiredFields")}</strong> {requiredFields.filter((f) => !Object.values(fieldMapping).includes(f.key)).map((f) => f.label).join(", ")}. {t("dataManagement.mapTheseFields")}</p>
                   </div>
                 )}
                 <div className="border border-slate-200 rounded-xl overflow-hidden">
                   <div className="grid grid-cols-[1fr,auto,1fr] bg-slate-50 px-4 py-2 border-b border-slate-200">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Source Column</p>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("dataManagement.sourceColumn")}</p>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide w-8 text-center">&rarr;</p>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Target Field</p>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("dataManagement.xtractField")}</p>
                   </div>
                   <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
                     {previewData.headers.map((header) => {
@@ -707,7 +708,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                           </div>
                           <div className="relative">
                             <select value={currentMapping} onChange={(e) => setFieldMapping((prev) => ({ ...prev, [header]: e.target.value }))} className={`w-full px-3 py-1.5 pr-8 text-sm border rounded-lg appearance-none cursor-pointer transition-colors ${currentMapping === "__skip__" ? "border-slate-200 text-slate-400 bg-white" : isRequired ? "border-green-300 text-green-800 bg-green-50" : "border-green-200 text-slate-700 bg-green-50/50"} focus:outline-none focus:ring-2 focus:ring-green-500`}>
-                              <option value="__skip__">— Skip this column —</option>
+                              <option value="__skip__">{t("dataManagement.skipColumn")}</option>
                               {targetFields.map((tf) => (<option key={tf.key} value={tf.key}>{tf.label}{tf.required ? " *" : ""}</option>))}
                             </select>
                             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
@@ -719,7 +720,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                 </div>
                 {previewData.sampleRows.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Data Preview (first {previewData.sampleRows.length} rows)</p>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">{t("dataManagement.dataPreview")} {previewData.sampleRows.length} {t("dataManagement.rows")})</p>
                     <div className="border border-slate-200 rounded-xl overflow-auto max-h-48">
                       <table className="w-full text-xs">
                         <thead><tr className="bg-slate-50 border-b border-slate-200">{previewData.headers.slice(0, 8).map((h) => (<th key={h} className="px-3 py-2 text-left font-semibold text-slate-600 whitespace-nowrap">{h}</th>))}{previewData.headers.length > 8 && <th className="px-3 py-2 text-left font-semibold text-slate-400">+{previewData.headers.length - 8} more</th>}</tr></thead>
@@ -731,10 +732,10 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                 <div className="flex items-center gap-3 pt-2">
                   <button onClick={handleImportWithMapping} disabled={!allRequiredMapped || importing} className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    Import {previewData.totalRows} {importType}
+                    {t("dataManagement.importRecords")} {previewData.totalRows} {t(DATA_TYPES.find(dt => dt.key === importType)?.labelKey || "dataManagement.companies")}
                   </button>
-                  <button onClick={resetImport} className="px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">Cancel</button>
-                  {importMode === "replace" && <span className="text-xs text-red-500 font-medium">Replace mode — existing data will be overwritten</span>}
+                  <button onClick={resetImport} className="px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">{t("common.cancel")}</button>
+                  {importMode === "replace" && <span className="text-xs text-red-500 font-medium">{t("dataManagement.replaceModeWarning")}</span>}
                 </div>
               </div>
             )}
@@ -776,7 +777,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                 >
                   <Plus size={16} />
                   <span className="hidden sm:inline">{t("knowledgeBase.addArticle")}</span>
-                  <span className="sm:hidden">Add</span>
+                   <span className="sm:hidden">{t("common.addShort")}</span>
                 </button>
               )}
             </div>
@@ -797,7 +798,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                     kbCategoryFilter === cat.key ? "bg-slate-900 text-white" : `${cat.color} hover:opacity-80`
                   }`}
                 >
-                  {t(`knowledgeBase.category.${cat.key}`)}
+                  {t(cat.labelKey)}
                 </button>
               ))}
             </div>
@@ -812,8 +813,8 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                     <Receipt className="w-4 h-4 text-orange-700" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-semibold text-slate-900">Material Invoice Upload</h3>
-                    <p className="text-[11px] text-slate-400 hidden sm:block">Upload vendor invoices — AI extracts prices and updates estimates</p>
+                    <h3 className="text-sm font-semibold text-slate-900">{t("dataManagement.materialInvoiceUploadTitle")}</h3>
+                    <p className="text-[11px] text-slate-400 hidden sm:block">{t("dataManagement.materialInvoiceDesc")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-3">
@@ -830,9 +831,9 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                     className="flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 rounded-full transition-colors"
                   >
                     {invoiceUploading ? (
-                      <><Loader2 size={14} className="animate-spin" /> Parsing...</>
+                       <><Loader2 size={14} className="animate-spin" /> {t("dataManagement.parsing")}</>
                     ) : (
-                      <><FileUp size={14} /> Upload Invoice</>
+                       <><FileUp size={14} /> {t("dataManagement.uploadInvoiceButton")}</>
                     )}
                   </button>
                 </div>
@@ -854,24 +855,24 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                       {invoiceResult.invoiceNumber && ` #${invoiceResult.invoiceNumber}`}
                       {invoiceResult.invoiceDate && ` — ${invoiceResult.invoiceDate}`}
                       {" · "}
-                      {invoiceResult.itemCount} items extracted
+                      {invoiceResult.itemCount} {t("dataManagement.itemsExtracted")}
                     </span>
                   </div>
 
                   {invoiceResult.priceUpdates.length > 0 ? (
                     <div>
                       <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                        Price Changes Detected ({invoiceResult.priceUpdates.length})
+                        {t("dataManagement.priceChangesDetected")} ({invoiceResult.priceUpdates.length})
                       </div>
                       <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
                         <table className="w-full text-sm">
                           <thead className="bg-slate-100">
                             <tr>
-                              <th className="text-left px-4 py-2 text-xs font-medium text-slate-500">Material</th>
-                              <th className="text-right px-4 py-2 text-xs font-medium text-slate-500">Current</th>
-                              <th className="text-right px-4 py-2 text-xs font-medium text-slate-500">Invoice</th>
-                              <th className="text-right px-4 py-2 text-xs font-medium text-slate-500">Change</th>
-                              <th className="text-center px-4 py-2 text-xs font-medium text-slate-500">Match</th>
+                              <th className="text-left px-4 py-2 text-xs font-medium text-slate-500">{t("dataManagement.material")}</th>
+                              <th className="text-right px-4 py-2 text-xs font-medium text-slate-500">{t("dataManagement.current")}</th>
+                              <th className="text-right px-4 py-2 text-xs font-medium text-slate-500">{t("dataManagement.invoice")}</th>
+                              <th className="text-right px-4 py-2 text-xs font-medium text-slate-500">{t("dataManagement.change")}</th>
+                              <th className="text-center px-4 py-2 text-xs font-medium text-slate-500">{t("dataManagement.match")}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -908,7 +909,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                       {invoiceResult.appliedCount > 0 ? (
                         <div className="mt-3 flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                           <CheckCircle size={14} />
-                          {invoiceResult.appliedCount} price{invoiceResult.appliedCount === 1 ? "" : "s"} updated in estimate settings
+                          {invoiceResult.appliedCount} {t("dataManagement.priceUpdated")}
                         </div>
                       ) : (
                         <div className="mt-3 flex items-center gap-3">
@@ -919,15 +920,15 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#7BC143] hover:bg-[#6aad38] rounded-full transition-colors"
                           >
                             <DollarSign size={14} />
-                            Apply {invoiceResult.priceUpdates.filter((u) => u.confidence !== "low").length} Price Updates
+                             {t("dataManagement.applyUpdates")} {invoiceResult.priceUpdates.filter((u) => u.confidence !== "low").length} {t("dataManagement.priceUpdatesCount")}
                           </button>
-                          <span className="text-xs text-slate-500">Low-confidence matches are excluded</span>
+                           <span className="text-xs text-slate-500">{t("dataManagement.lowConfidenceExcluded")}</span>
                         </div>
                       )}
                     </div>
                   ) : (
                     <div className="text-sm text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                      No price changes detected — all invoice prices match current estimates.
+                      {t("dataManagement.noPriceChanges")} {t("dataManagement.allInvoices")}
                     </div>
                   )}
                 </div>
@@ -956,7 +957,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1.5">
                           <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full ${catInfo.color}`}>
-                            {t(`knowledgeBase.category.${article.category}`)}
+                            {t(catInfo.labelKey)}
                           </span>
                           {(article.tags || []).slice(0, 3).map((tag: string) => (
                             <span key={tag} className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-slate-500 bg-slate-100 rounded-full">
@@ -978,7 +979,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                           <button
                             onClick={() => openEditModal(article)}
                             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit"
+                            title={t("common.edit")}
                           >
                             <Edit2 size={15} />
                           </button>
@@ -986,7 +987,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                             onClick={() => handleDeleteArticle(article.id)}
                             disabled={deletingId === article.id}
                             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                            title="Delete"
+                            title={t("common.delete")}
                           >
                             {deletingId === article.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
                           </button>
@@ -1036,7 +1037,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   {KB_CATEGORIES.map((cat) => (
-                    <option key={cat.key} value={cat.key}>{t(`knowledgeBase.category.${cat.key}`)}</option>
+                       <option key={cat.key} value={cat.key}>{t(cat.labelKey)}</option>
                   ))}
                 </select>
               </div>

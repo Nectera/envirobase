@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, ChevronRight, Trash2, CheckSquare } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 type Estimate = {
   id: string;
@@ -67,6 +68,7 @@ function formatDate(d: string) {
 }
 
 export default function EstimatesTable({ estimates }: { estimates: Estimate[] }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -106,7 +108,9 @@ export default function EstimatesTable({ estimates }: { estimates: Estimate[] })
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Delete ${selectedIds.size} estimate${selectedIds.size > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    const count = selectedIds.size;
+    const plural = count > 1 ? "s" : "";
+    if (!confirm(t("estimates.deleteConfirm").replace("{count}", String(count)).replace("{plural}", plural))) return;
     setDeleting(true);
     try {
       const ids = Array.from(selectedIds);
@@ -130,7 +134,7 @@ export default function EstimatesTable({ estimates }: { estimates: Estimate[] })
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search estimate number or company..."
+            placeholder={t("estimates.searchPlaceholder")}
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
@@ -139,12 +143,12 @@ export default function EstimatesTable({ estimates }: { estimates: Estimate[] })
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white"
         >
-          <option value="all">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="sent">Sent</option>
-          <option value="accepted">Accepted</option>
-          <option value="rejected">Rejected</option>
-          <option value="expired">Expired</option>
+          <option value="all">{t("estimates.filterAllStatus")}</option>
+          <option value="draft">{t("estimates.statusDraft")}</option>
+          <option value="sent">{t("estimates.statusSent")}</option>
+          <option value="accepted">{t("estimates.statusAccepted")}</option>
+          <option value="rejected">{t("estimates.statusRejected")}</option>
+          <option value="expired">{t("estimates.statusExpired")}</option>
         </select>
       </div>
 
@@ -152,20 +156,20 @@ export default function EstimatesTable({ estimates }: { estimates: Estimate[] })
       {selectedIds.size > 0 && (
         <div className="mb-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5 flex items-center gap-3">
           <CheckSquare size={14} className="text-red-600" />
-          <span className="text-xs font-medium text-red-800">{selectedIds.size} selected</span>
+          <span className="text-xs font-medium text-red-800">{selectedIds.size} {t("estimates.selected")}</span>
           <div className="flex-1" />
           <button
             onClick={handleBulkDelete}
             disabled={deleting}
             className="flex items-center gap-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 disabled:bg-red-300 px-3 py-1.5 rounded-full transition"
           >
-            <Trash2 size={12} /> {deleting ? "Deleting..." : `Delete ${selectedIds.size}`}
+            <Trash2 size={12} /> {deleting ? t("estimates.deleting") : `Delete ${selectedIds.size}`}
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
             className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5"
           >
-            Clear
+            {t("estimates.clear")}
           </button>
         </div>
       )}
@@ -184,22 +188,22 @@ export default function EstimatesTable({ estimates }: { estimates: Estimate[] })
                 />
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Estimate #
+                {t("estimates.tableHeaderEstimate")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Company
+                {t("estimates.tableHeaderCompany")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Lead/Project
+                {t("estimates.tableHeaderLeadProject")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Status
+                {t("estimates.tableHeaderStatus")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Total
+                {t("estimates.tableHeaderTotal")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Date
+                {t("estimates.tableHeaderDate")}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase">
               </th>
@@ -222,11 +226,11 @@ export default function EstimatesTable({ estimates }: { estimates: Estimate[] })
                     <span className="font-medium text-slate-800">{estimate.estimateNumber || "—"}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-slate-800">{estimate.company?.name || "Unknown"}</div>
+                    <div className="text-slate-800">{estimate.company?.name || t("estimates.unknown")}</div>
                   </td>
                   <td className="px-4 py-3">
                     {estimate.lead ? (
-                      <div className="text-slate-800">{estimate.lead.projectType || "Project"}</div>
+                      <div className="text-slate-800">{estimate.lead.projectType || t("estimates.project")}</div>
                     ) : (
                       <div className="text-slate-400">—</div>
                     )}
@@ -249,7 +253,7 @@ export default function EstimatesTable({ estimates }: { estimates: Estimate[] })
                       href={`/estimates/${estimate.id}`}
                       className="text-indigo-600 hover:text-indigo-700 text-xs font-medium"
                     >
-                      View <ChevronRight size={12} className="inline" />
+                      {t("estimates.view")} <ChevronRight size={12} className="inline" />
                     </Link>
                   </td>
                 </tr>
@@ -259,7 +263,7 @@ export default function EstimatesTable({ estimates }: { estimates: Estimate[] })
         </table>
         {filtered.length === 0 && (
           <div className="px-4 py-8 text-center text-slate-400 text-sm">
-            No estimates found
+            {t("estimates.noEstimatesFound")}
           </div>
         )}
       </div>

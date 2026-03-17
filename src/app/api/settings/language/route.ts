@@ -23,7 +23,7 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
     const lang = body.language;
-    if (lang !== "en" && lang !== "es" && lang !== "pt") {
+    if (lang !== "en" && lang !== "es") {
       return NextResponse.json({ error: "Invalid language" }, { status: 400 });
     }
 

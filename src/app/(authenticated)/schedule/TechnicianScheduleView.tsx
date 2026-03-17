@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, MapPin, Clock, Calendar } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 type Entry = {
   id: string;
@@ -59,6 +60,7 @@ export default function TechnicianScheduleView({
   workerName: string;
   entries: Entry[];
 }) {
+  const { t } = useTranslation();
   // Default to next week
   const now = new Date();
   const nextMonday = getWeekStart(now);
@@ -117,11 +119,11 @@ export default function TechnicianScheduleView({
         <div className="flex items-center gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-1.5">
             <Calendar size={13} />
-            <span><strong className="text-slate-700">{daysScheduled}</strong> days scheduled</span>
+            <span><strong className="text-slate-700">{daysScheduled}</strong> {t("schedule.daysScheduled")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Clock size={13} />
-            <span><strong className="text-slate-700">{totalHours}</strong> hours</span>
+            <span><strong className="text-slate-700">{totalHours}</strong> {t("schedule.hoursScheduled")}</span>
           </div>
         </div>
       </div>
@@ -157,7 +159,7 @@ export default function TechnicianScheduleView({
                   </span>
                   {isToday && (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-600 text-white">
-                      TODAY
+                      {t("schedule.today")}
                     </span>
                   )}
                 </div>
@@ -172,7 +174,7 @@ export default function TechnicianScheduleView({
               <div className="px-4 py-2">
                 {dayEntries.length === 0 ? (
                   <div className="text-xs text-slate-400 py-2 italic">
-                    {day.isWeekend ? "Weekend" : "No assignments"}
+                    {day.isWeekend ? t("schedule.weekend") : t("schedule.noAssignments")}
                   </div>
                 ) : (
                   <div className="space-y-2">

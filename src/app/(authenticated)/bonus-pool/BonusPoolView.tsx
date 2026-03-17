@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/components/LanguageProvider";
 import {
   Gift, DollarSign, Clock, Users, ChevronLeft, ChevronRight,
   Settings, Save, Loader2, Star, CheckCircle2, TrendingUp,
@@ -26,6 +27,7 @@ export default function BonusPoolView({
   workers: Worker[];
   userPosition?: string | null;
 }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [data, setData] = useState<any>(null);
@@ -200,7 +202,7 @@ export default function BonusPoolView({
         <div className="min-w-0">
           <h1 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
             <Gift size={20} className="text-indigo-500 flex-shrink-0" />
-            Bonus Pool
+            {t("bonusPool.title")}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5 hidden sm:block">
             Hours saved on projects fund the team bonus pool
@@ -266,13 +268,13 @@ export default function BonusPoolView({
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4">
               <div className="text-[10px] sm:text-xs text-slate-400 font-medium mb-0.5 flex items-center gap-1">
-                <DollarSign size={11} /> Project Pool
+                <DollarSign size={11} /> {t("bonusPool.projectPool")}
               </div>
               <div className="text-lg sm:text-xl font-bold text-emerald-600">
                 {fmt(poolTotal)}
               </div>
               <div className="text-[10px] text-slate-400 mt-0.5">
-                @ {fmt(data?.ratePerHour || 17)}/hr saved
+                @ {fmt(data?.ratePerHour || 17)}{t("bonusPool.perHour")}
               </div>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4">
@@ -288,13 +290,13 @@ export default function BonusPoolView({
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4">
               <div className="text-[10px] sm:text-xs text-slate-400 font-medium mb-0.5 flex items-center gap-1">
-                <Gift size={11} /> Grand Total
+                <Gift size={11} /> {t("bonusPool.grandTotal")}
               </div>
               <div className="text-lg sm:text-xl font-bold text-indigo-600">
                 {fmt(grandTotal)}
               </div>
               <div className="text-[10px] text-slate-400 mt-0.5">
-                Pool + reviews + HP
+                {t("bonusPool.poolReviewsHP")}
               </div>
             </div>
           </div>
@@ -304,7 +306,7 @@ export default function BonusPoolView({
             <div className="bg-white border border-slate-200 rounded-xl mb-6 p-6">
               <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
                 <Gift size={16} className="text-indigo-500" />
-                Your Estimated Bonus
+                {t("bonusPool.yourEstimatedBonus")}
               </h3>
               {(() => {
                 const myEntry = splitEntries.find(([pos]) => pos === userPosition);
@@ -335,7 +337,7 @@ export default function BonusPoolView({
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                 <Users size={16} className="text-indigo-500" />
-                Position Breakdown
+                {t("bonusPool.positionBreakdown")}
               </h3>
               {isAdmin && (
                 <div className="flex items-center gap-2">
@@ -438,7 +440,7 @@ export default function BonusPoolView({
               <div className="bg-white border border-slate-200 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                   <Star size={14} className="text-amber-500" />
-                  Google Reviews
+                  {t("bonusPool.googleReviews")}
                 </h3>
                 <div className="flex items-center gap-3 mb-3">
                   <div>
@@ -528,7 +530,7 @@ export default function BonusPoolView({
               <div className="bg-white border border-slate-200 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                   <Award size={14} className="text-purple-500" />
-                  High Performer Nomination
+                  {t("bonusPool.highPerformerNomination")}
                 </h3>
                 <div className="space-y-2">
                   <div>
@@ -571,7 +573,7 @@ export default function BonusPoolView({
                 <div className="bg-white border border-slate-200 rounded-xl p-5">
                   <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                     <Star size={14} className="text-amber-500" />
-                    Google Reviews
+                    {t("bonusPool.googleReviews")}
                   </h3>
                   <div className="text-lg font-semibold text-amber-600">
                     {data.googleReviewCount} reviews ={" "}
@@ -583,7 +585,7 @@ export default function BonusPoolView({
                 <div className="bg-white border border-slate-200 rounded-xl p-5">
                   <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                     <Award size={14} className="text-purple-500" />
-                    High Performer
+                    {t("bonusPool.highPerformer")}
                   </h3>
                   <div className="text-sm text-slate-800">
                     {data.highPerformerName} —{" "}

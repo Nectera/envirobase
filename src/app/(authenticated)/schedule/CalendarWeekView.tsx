@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, XCircle } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -48,6 +49,7 @@ export default function CalendarWeekView({
   onEntryClick: (entry: any) => void;
   onClearDay?: (dateStr: string) => void;
 }) {
+  const { t } = useTranslation();
   // Calculate week range (Mon-Sun)
   const weekStart = new Date(date);
   const dayOfWeek = weekStart.getDay();
@@ -94,7 +96,7 @@ export default function CalendarWeekView({
         <thead>
           <tr className="bg-slate-50">
             <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 sticky left-0 bg-slate-50 z-10 w-[160px] min-w-[160px]">
-              Worker
+              {t("schedule.worker")}
             </th>
             {weekDates.map((d, i) => {
               const dayCount = dayEntryCounts.get(d.dateStr) || 0;
@@ -169,7 +171,7 @@ export default function CalendarWeekView({
           {sortedWorkers.length === 0 && (
             <tr>
               <td colSpan={8} className="text-center py-8 text-sm text-slate-400">
-                No workers in the system yet
+                {t("schedule.noWorkersYet")}
               </td>
             </tr>
           )}

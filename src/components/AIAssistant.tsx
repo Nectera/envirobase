@@ -238,7 +238,7 @@ export default function AIAssistant() {
 
     // Set language based on current app language
     const lang = localStorage.getItem("language") || "en";
-    recognition.lang = lang === "es" ? "es-US" : lang === "pt" ? "pt-BR" : "en-US";
+    recognition.lang = lang === "es" ? "es-US" : "en-US";
 
     recognition.onstart = () => {
       setIsListening(true);

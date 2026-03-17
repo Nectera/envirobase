@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Save, RotateCcw } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 import { DEFAULT_MATERIALS, LABOR_RATES, WASTE_RATE_PER_YARD, DEFAULT_OPS_RATE, DEFAULT_COGS_RATES, type COGSRates } from "@/lib/materials";
 
 interface PricingSettingsProps {
@@ -18,6 +19,7 @@ type LaborRateOverride = {
 };
 
 export default function PricingSettings({ open, onClose }: PricingSettingsProps) {
+  const { t } = useTranslation();
   const [materials, setMaterials] = useState<MaterialOverride[]>(
     DEFAULT_MATERIALS.map((m) => ({ name: m.name, price: m.defaultPrice }))
   );
@@ -118,18 +120,18 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
-      alert("Failed to save settings.");
+      alert(t("common.error"));
     }
     setSaving(false);
   };
 
   const handleResetMaterials = () => {
-    if (!confirm("Reset all material prices to defaults?")) return;
+    if (!confirm(t("common.confirm"))) return;
     setMaterials(DEFAULT_MATERIALS.map((m) => ({ name: m.name, price: m.defaultPrice })));
   };
 
   const handleResetLabor = () => {
-    if (!confirm("Reset labor rates to defaults?")) return;
+    if (!confirm(t("common.confirm"))) return;
     setLaborRates({
       supervisorHourly: LABOR_RATES.supervisor.hourly,
       supervisorTaxBurden: LABOR_RATES.supervisor.taxBurden,
@@ -154,8 +156,8 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Pricing Settings</h2>
-            <p className="text-sm text-slate-500">Adjust material prices, labor rates, and COGS defaults</p>
+            <h2 className="text-lg font-bold text-slate-900">{t("estimates.pricingSettings")}</h2>
+            <p className="text-sm text-slate-500">{t("estimates.pricingSettingsDesc")}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition">
             <X className="w-5 h-5" />
@@ -164,17 +166,17 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200 px-5">
-          {(["materials", "labor", "cogs"] as const).map((t) => (
+          {(["materials", "labor", "cogs"] as const).map((tabType) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabType}
+              onClick={() => setTab(tabType)}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
-                tab === t
+                tab === tabType
                   ? "border-indigo-600 text-indigo-600"
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
-              {t === "materials" ? "Materials" : t === "labor" ? "Labor Rates" : "COGS"}
+              {tabType === "materials" ? t("estimates.materialsTab") : tabType === "labor" ? t("estimates.laborRatesTab") : t("estimates.cogsTab")}
             </button>
           ))}
         </div>
@@ -182,13 +184,13 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
-            <p className="text-sm text-slate-500 text-center py-8">Loading settings...</p>
+            <p className="text-sm text-slate-500 text-center py-8">{t("estimates.loadingSettings")}</p>
           ) : tab === "materials" ? (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <input
                   type="text"
-                  placeholder="Search materials..."
+                  placeholder={t("estimates.searchMaterials")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -198,15 +200,15 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                   className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  Reset to Defaults
+                  {t("estimates.resetToDefaults")}
                 </button>
               </div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200">
-                    <th className="text-left py-2 px-2 text-xs font-medium text-slate-500 uppercase">Material</th>
-                    <th className="text-left py-2 px-2 text-xs font-medium text-slate-500 uppercase w-20">Unit</th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-slate-500 uppercase w-28">Price</th>
+                    <th className="text-left py-2 px-2 text-xs font-medium text-slate-500 uppercase">{t("estimates.materialColumn")}</th>
+                    <th className="text-left py-2 px-2 text-xs font-medium text-slate-500 uppercase w-20">{t("estimates.unitColumn")}</th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-slate-500 uppercase w-28">{t("estimates.priceColumn")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -217,7 +219,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                       <tr key={mat.name} className="border-b border-slate-100 hover:bg-slate-50">
                         <td className="py-2 px-2">
                           <span className={`text-slate-700 ${isChanged ? "font-semibold" : ""}`}>{mat.name}</span>
-                          {isChanged && <span className="ml-1 text-[10px] text-amber-500 font-medium">modified</span>}
+                          {isChanged && <span className="ml-1 text-[10px] text-amber-500 font-medium">{t("estimates.modified")}</span>}
                         </td>
                         <td className="py-2 px-2 text-xs text-slate-500">{def?.unit || ""}</td>
                         <td className="py-2 px-2 text-right">
@@ -247,15 +249,15 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                   className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  Reset to Defaults
+                  {t("estimates.resetToDefaults")}
                 </button>
               </div>
               <div className="space-y-6">
                 <div className="bg-slate-50 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Supervisor</h3>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">{t("estimates.supervisor")}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Hourly Rate</label>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.hourlyRate")}</label>
                       <div className="flex items-center gap-1">
                         <span className="text-slate-400 text-sm">$</span>
                         <input
@@ -269,7 +271,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Tax Burden</label>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.taxBurden")}</label>
                       <div className="flex items-center gap-1">
                         <span className="text-slate-400 text-sm">$</span>
                         <input
@@ -284,16 +286,16 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                     </div>
                   </div>
                   <p className="text-xs text-slate-400 mt-2">
-                    Effective rate: ${(laborRates.supervisorHourly + laborRates.supervisorTaxBurden).toFixed(2)}/hr
-                    &nbsp;·&nbsp;OT: ${(laborRates.supervisorHourly * 1.5 + laborRates.supervisorTaxBurden).toFixed(2)}/hr
+                    {t("estimates.effectiveRate")} ${(laborRates.supervisorHourly + laborRates.supervisorTaxBurden).toFixed(2)}/hr
+                    &nbsp;·&nbsp;{t("estimates.overtime")} ${(laborRates.supervisorHourly * 1.5 + laborRates.supervisorTaxBurden).toFixed(2)}/hr
                   </p>
                 </div>
 
                 <div className="bg-slate-50 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Technician</h3>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">{t("estimates.technician")}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Hourly Rate</label>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.hourlyRate")}</label>
                       <div className="flex items-center gap-1">
                         <span className="text-slate-400 text-sm">$</span>
                         <input
@@ -307,7 +309,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Tax Burden</label>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.taxBurden")}</label>
                       <div className="flex items-center gap-1">
                         <span className="text-slate-400 text-sm">$</span>
                         <input
@@ -322,8 +324,8 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                     </div>
                   </div>
                   <p className="text-xs text-slate-400 mt-2">
-                    Effective rate: ${(laborRates.technicianHourly + laborRates.technicianTaxBurden).toFixed(2)}/hr
-                    &nbsp;·&nbsp;OT: ${(laborRates.technicianHourly * 1.5 + laborRates.technicianTaxBurden).toFixed(2)}/hr
+                    {t("estimates.effectiveRate")} ${(laborRates.technicianHourly + laborRates.technicianTaxBurden).toFixed(2)}/hr
+                    &nbsp;·&nbsp;{t("estimates.overtime")} ${(laborRates.technicianHourly * 1.5 + laborRates.technicianTaxBurden).toFixed(2)}/hr
                   </p>
                 </div>
               </div>
@@ -333,7 +335,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
               {/* Waste & Ops */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Waste Rate / cubic yard</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.wasteRateLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -347,7 +349,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Operating Cost / hour</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.operatingCostLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -367,7 +369,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
               {/* Permit, Clearance, Per Diem */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Permit Cost (30-day)</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.permitCostLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -381,7 +383,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Clearance Cost</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.clearanceCostLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -395,7 +397,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Per Diem / person / day</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.perDiemLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -409,7 +411,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Per Diem Mile Threshold</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.perDiemMileThresholdLabel")}</label>
                   <input
                     type="number"
                     step="1"
@@ -418,7 +420,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                     onChange={(e) => setCogsRates((p) => ({ ...p, perDiemMileThreshold: parseFloat(e.target.value) || 0 }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
                   />
-                  <p className="text-xs text-slate-400 mt-1">miles from shop before per diem applies</p>
+                  <p className="text-xs text-slate-400 mt-1">{t("estimates.milesFromShop")}</p>
                 </div>
               </div>
 
@@ -427,7 +429,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
               {/* Hauling */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Hauling Rate Standard / yd</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.haulingRateStandardLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -441,7 +443,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Hauling Rate West Slope / yd</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.haulingRateWestLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -461,7 +463,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
               {/* Vehicle & Trailer */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Vehicle Mileage Rate / mile</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.vehicleMileageLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -473,10 +475,10 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">× 2 for round trip</p>
+                  <p className="text-xs text-slate-400 mt-1">{t("estimates.roundTrip")}</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Trailer Mileage Rate / mile</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.trailerMileageLabel")}</label>
                   <div className="flex items-center gap-1">
                     <span className="text-slate-400 text-sm">$</span>
                     <input
@@ -488,10 +490,10 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">× 2 for round trip</p>
+                  <p className="text-xs text-slate-400 mt-1">{t("estimates.roundTrip")}</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Default Trailer Trips</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.trailerTripsLabel")}</label>
                   <input
                     type="number"
                     step="1"
@@ -502,7 +504,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Fuel Surcharge</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.fuelSurchargeLabel")}</label>
                   <div className="flex items-center gap-1">
                     <input
                       type="number"
@@ -514,7 +516,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
                     />
                     <span className="text-slate-400 text-sm">%</span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">applied to material subtotal</p>
+                  <p className="text-xs text-slate-400 mt-1">{t("estimates.appliedToMaterial")}</p>
                 </div>
               </div>
             </div>
@@ -527,7 +529,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSave}
@@ -535,7 +537,7 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
             className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
-            {saving ? "Saving..." : saved ? "Saved!" : "Save Settings"}
+            {saving ? t("estimates.savingSettings") : saved ? t("estimates.settingsSaved") : t("estimates.saveSettings")}
           </button>
         </div>
       </div>

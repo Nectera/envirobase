@@ -112,10 +112,10 @@ export default function DashboardView({
 
       {/* === ROW 1: Key Stats === */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <StatCard icon={FolderOpen} label="Active Projects" value={activeProjects.length} color="text-blue-600" bg="bg-blue-50" href="/projects" />
-        <StatCard icon={ClipboardList} label="Open Tasks" value={openTasks.length} sub={overdueTasks.length > 0 ? `${overdueTasks.length} overdue` : undefined} color="text-indigo-600" bg="bg-indigo-50" href="/tasks" />
-        <StatCard icon={Clock} label="Hours This Week" value={weekHours.toFixed(0)} sub={`${uniqueWorkersThisWeek} workers`} color="text-sky-600" bg="bg-sky-50" href="/time-clock" />
-        <StatCard icon={ShieldAlert} label="Cert Issues" value={certIssues.length} sub={criticalAlerts.length > 0 ? `${criticalAlerts.length} critical alerts` : undefined} color="text-red-600" bg="bg-red-50" href="/workers" />
+        <StatCard icon={FolderOpen} label={t("dashboard.activeProjects")} value={activeProjects.length} color="text-blue-600" bg="bg-blue-50" href="/projects" />
+        <StatCard icon={ClipboardList} label={t("dashboard.openTasks")} value={openTasks.length} sub={overdueTasks.length > 0 ? `${overdueTasks.length} ${t("dashboard.overdue")}` : undefined} color="text-indigo-600" bg="bg-indigo-50" href="/tasks" />
+        <StatCard icon={Clock} label={t("dashboard.hoursThisWeek")} value={weekHours.toFixed(0)} sub={`${uniqueWorkersThisWeek} ${t("dashboard.workers")}`} color="text-sky-600" bg="bg-sky-50" href="/time-clock" />
+        <StatCard icon={ShieldAlert} label={t("dashboard.certIssues")} value={certIssues.length} sub={criticalAlerts.length > 0 ? `${criticalAlerts.length} ${t("dashboard.criticalAlerts")}` : undefined} color="text-red-600" bg="bg-red-50" href="/workers" />
         <BonusPoolWidget />
       </div>
 
@@ -124,27 +124,27 @@ export default function DashboardView({
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={16} className="text-red-600" />
-            <span className="text-sm font-bold text-red-800">Needs Attention</span>
+            <span className="text-sm font-bold text-red-800">{t("dashboard.needsAttention")}</span>
           </div>
           <div className="flex flex-wrap gap-4 text-xs">
             {expiredPermits.length > 0 && (
               <span className="flex items-center gap-1.5 text-red-700">
-                <FileText size={12} /> {expiredPermits.length} expired permit{expiredPermits.length > 1 ? "s" : ""}
+                <FileText size={12} /> {expiredPermits.length} {expiredPermits.length > 1 ? t("dashboard.expiredPermits") : t("dashboard.expiredPermit")}
               </span>
             )}
             {expiringPermits.length > 0 && (
               <span className="flex items-center gap-1.5 text-amber-700">
-                <Timer size={12} /> {expiringPermits.length} permit{expiringPermits.length > 1 ? "s" : ""} expiring within 14 days
+                <Timer size={12} /> {expiringPermits.length} {expiringPermits.length > 1 ? t("dashboard.permitsExpiringWithin") : t("dashboard.permitExpiringWithin")}
               </span>
             )}
             {openIncidents.length > 0 && (
               <span className="flex items-center gap-1.5 text-red-700">
-                <Flame size={12} /> {openIncidents.length} open incident{openIncidents.length > 1 ? "s" : ""}
+                <Flame size={12} /> {openIncidents.length} {openIncidents.length > 1 ? t("dashboard.openIncidents") : t("dashboard.openIncident")}
               </span>
             )}
             {overdueTasks.length > 0 && (
               <span className="flex items-center gap-1.5 text-orange-700">
-                <AlertCircle size={12} /> {overdueTasks.length} overdue task{overdueTasks.length > 1 ? "s" : ""}
+                <AlertCircle size={12} /> {overdueTasks.length} {overdueTasks.length > 1 ? t("dashboard.overdueTasks") : t("dashboard.overdueTask")}
               </span>
             )}
           </div>
@@ -156,11 +156,11 @@ export default function DashboardView({
         {/* Active Projects */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-5 py-3 border-b border-slate-100">
-            <SectionHeader title="Active Projects" href="/projects" />
+            <SectionHeader title={t("dashboard.activeProjects")} href="/projects" />
           </div>
           <div className="p-4">
             {activeProjects.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-6">No active projects</p>
+              <p className="text-sm text-slate-400 text-center py-6">{t("dashboard.noActiveProjects")}</p>
             ) : (
               <div className="space-y-3">
                 {activeProjects.slice(0, 6).map((p: any) => {
@@ -226,7 +226,7 @@ export default function DashboardView({
         {/* Tasks Overview */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-5 py-3 border-b border-slate-100">
-            <SectionHeader title="Tasks" href="/tasks" />
+            <SectionHeader title={t("dashboard.tasks")} href="/tasks" />
           </div>
           <div className="p-4">
             {/* Task donut-like summary */}
@@ -243,16 +243,16 @@ export default function DashboardView({
                 </div>
               </div>
               <div className="space-y-1 text-xs">
-                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#7BC143]" /> <span className="text-slate-500">Done:</span> <strong>{completedTaskCount}</strong></div>
-                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-400" /> <span className="text-slate-500">In Progress:</span> <strong>{tasks.filter((t: any) => t.status === "in_progress").length}</strong></div>
-                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-300" /> <span className="text-slate-500">To Do:</span> <strong>{tasks.filter((t: any) => t.status === "to_do").length}</strong></div>
+                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#7BC143]" /> <span className="text-slate-500">{t("dashboard.done")}:</span> <strong>{completedTaskCount}</strong></div>
+                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-400" /> <span className="text-slate-500">{t("dashboard.inProgress")}:</span> <strong>{tasks.filter((t: any) => t.status === "in_progress").length}</strong></div>
+                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-300" /> <span className="text-slate-500">{t("dashboard.toDo")}:</span> <strong>{tasks.filter((t: any) => t.status === "to_do").length}</strong></div>
               </div>
             </div>
 
             {/* Urgent / overdue tasks list */}
             {urgentTasks.length > 0 && (
               <div className="border-t border-slate-100 pt-3 mt-2">
-                <p className="text-[10px] uppercase text-slate-400 tracking-wider mb-2 font-semibold">High Priority</p>
+                <p className="text-[10px] uppercase text-slate-400 tracking-wider mb-2 font-semibold">{t("dashboard.highPriority")}</p>
                 <div className="space-y-1.5">
                   {urgentTasks.slice(0, 4).map((t: any) => (
                     <div key={t.id} className="flex items-start gap-2 text-xs">
@@ -269,11 +269,11 @@ export default function DashboardView({
         {/* Alerts */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-5 py-3 border-b border-slate-100">
-            <SectionHeader title="Recent Alerts" href="/alerts" />
+            <SectionHeader title={t("dashboard.recentAlerts")} href="/alerts" />
           </div>
           <div className="p-3 space-y-2">
             {alerts.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-6">No active alerts</p>
+              <p className="text-sm text-slate-400 text-center py-6">{t("dashboard.noActiveAlerts")}</p>
             ) : (
               alerts.slice(0, 6).map((a: any) => {
                 const borderColor =
@@ -294,18 +294,18 @@ export default function DashboardView({
         {/* Workforce & Scheduling */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-5 py-3 border-b border-slate-100">
-            <SectionHeader title="Workforce" href="/workers" />
+            <SectionHeader title={t("dashboard.workforce")} href="/workers" />
           </div>
           <div className="p-4 space-y-4">
             {/* Today's schedule */}
             <div>
               <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
                 <CalendarDays size={12} />
-                <span className="font-semibold">Today&apos;s Schedule</span>
+                <span className="font-semibold">{t("dashboard.todaysSchedule")}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-2xl font-bold text-[#7BC143]">{todaySchedule.length}</div>
-                <div className="text-xs text-slate-500">worker{todaySchedule.length !== 1 ? "s" : ""} scheduled</div>
+                <div className="text-xs text-slate-500">worker{todaySchedule.length !== 1 ? "s" : ""} {t("dashboard.scheduled")}</div>
               </div>
             </div>
 
@@ -313,20 +313,20 @@ export default function DashboardView({
             <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
               <div className="text-center">
                 <div className="text-lg font-bold text-sky-600">{weekHours.toFixed(0)}h</div>
-                <div className="text-[10px] text-slate-400">Hours This Week</div>
+                <div className="text-[10px] text-slate-400">{t("dashboard.hoursThisWeek")}</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-slate-700">{uniqueWorkersThisWeek}</div>
-                <div className="text-[10px] text-slate-400">Active Workers</div>
+                <div className="text-[10px] text-slate-400">{t("dashboard.activeWorkers")}</div>
               </div>
             </div>
 
             {/* Field worker summary */}
             <div className="pt-3 border-t border-slate-100">
               <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                <Users size={10} /> {fieldWorkers.length} field workers total
+                <Users size={10} /> {fieldWorkers.length} {t("dashboard.fieldWorkersTotal")}
                 {certIssues.length > 0 && (
-                  <span className="ml-auto text-red-500 font-medium">{certIssues.length} cert issue{certIssues.length !== 1 ? "s" : ""}</span>
+                  <span className="ml-auto text-red-500 font-medium">{certIssues.length} {certIssues.length !== 1 ? t("dashboard.certIssues") : t("dashboard.certIssue")}</span>
                 )}
               </div>
             </div>
@@ -392,13 +392,13 @@ export default function DashboardView({
         {/* Upcoming PTO */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-5 py-3 border-b border-slate-100">
-            <SectionHeader title="Upcoming PTO" href="/calendar" />
+            <SectionHeader title={t("dashboard.upcomingPTO")} href="/calendar" />
           </div>
           <div className="p-4">
             {upcomingTimeOffs.length === 0 ? (
               <div className="text-center py-6">
                 <CheckCircle2 size={24} className="mx-auto text-emerald-400 mb-2" />
-                <p className="text-sm text-slate-400">No upcoming PTO</p>
+                <p className="text-sm text-slate-400">{t("dashboard.noPTO")}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -432,7 +432,7 @@ export default function DashboardView({
         {/* Compliance & Permits */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
           <div className="px-5 py-3 border-b border-slate-100">
-            <SectionHeader title="Compliance & Permits" href="/projects" />
+            <SectionHeader title={t("dashboard.compliancePermits")} href="/projects" />
           </div>
           <div className="p-4">
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -441,7 +441,7 @@ export default function DashboardView({
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: (TYPE_COLORS as any)?.[tb.type] || "#6366f1" }} />
                   <div>
                     <div className="text-xs font-semibold text-slate-700">{TYPE_LABELS[tb.type] || tb.type}</div>
-                    <div className="text-[10px] text-slate-400">{tb.active} active / {tb.total} total</div>
+                    <div className="text-[10px] text-slate-400">{tb.active} {t("dashboard.active")} / {tb.total} {t("dashboard.total")}</div>
                   </div>
                 </div>
               )) : (
@@ -452,25 +452,25 @@ export default function DashboardView({
             <div className="border-t border-slate-100 pt-3">
               <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
                 <FileText size={12} />
-                <span className="font-semibold">Permit Status</span>
+                <span className="font-semibold">{t("dashboard.permitStatus")}</span>
               </div>
               <div className="flex gap-4 text-xs">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 size={12} className="text-emerald-500" />
                   <span className="text-slate-600">
-                    {activeProjects.length - expiredPermits.length - expiringPermits.length} current
+                    {activeProjects.length - expiredPermits.length - expiringPermits.length} {t("dashboard.current")}
                   </span>
                 </div>
                 {expiringPermits.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <Timer size={12} className="text-amber-500" />
-                    <span className="text-amber-700">{expiringPermits.length} expiring soon</span>
+                    <span className="text-amber-700">{expiringPermits.length} {t("dashboard.expiringSoon")}</span>
                   </div>
                 )}
                 {expiredPermits.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <Ban size={12} className="text-red-500" />
-                    <span className="text-red-700">{expiredPermits.length} expired</span>
+                    <span className="text-red-700">{expiredPermits.length} {t("dashboard.expired")}</span>
                   </div>
                 )}
               </div>

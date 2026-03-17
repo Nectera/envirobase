@@ -20,7 +20,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Read from localStorage for instant load
     const savedLanguage = localStorage.getItem("language") as Language | null;
-    if (savedLanguage && (savedLanguage === "en" || savedLanguage === "es" || savedLanguage === "pt")) {
+    if (savedLanguage && (savedLanguage === "en" || savedLanguage === "es")) {
       setLanguageState(savedLanguage);
     }
     setIsLoading(false);
@@ -29,7 +29,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     fetch("/api/settings/language")
       .then((res) => res.json())
       .then((data) => {
-        if (data.language && (data.language === "en" || data.language === "es" || data.language === "pt")) {
+        if (data.language && (data.language === "en" || data.language === "es")) {
           setLanguageState(data.language);
         }
       })

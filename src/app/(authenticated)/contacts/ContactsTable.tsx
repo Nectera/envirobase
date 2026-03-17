@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/components/LanguageProvider";
 import {
   Search,
   ChevronRight,
@@ -39,6 +40,7 @@ type SortField = "name" | "company" | "title" | "email" | "phone";
 type SortDir = "asc" | "desc";
 
 export default function ContactsTable({ contacts: initialContacts }: { contacts: Contact[] }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [contacts, setContacts] = useState(initialContacts);
   const [search, setSearch] = useState("");
@@ -166,7 +168,7 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
       setEditingId(null);
       router.refresh();
     } catch (err) {
-      alert("Failed to save changes. Please try again.");
+      alert(t("contacts.failedSave"));
     } finally {
       setSaving(false);
     }
@@ -191,7 +193,7 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
       setDeleteConfirmId(null);
       router.refresh();
     } catch (err) {
-      alert("Failed to delete contact. Please try again.");
+      alert(t("contacts.failedDelete"));
     } finally {
       setDeletingId(null);
     }
@@ -205,7 +207,7 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
           <Search size={18} className="absolute left-3 top-3 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by name, company, or title..."
+            placeholder={t("contacts.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-full text-sm focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]"
@@ -216,8 +218,8 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
           onChange={(e) => setCompanyFilter(e.target.value)}
           className="px-4 py-2 border border-slate-200 rounded-full text-sm bg-white focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]"
         >
-          <option value="all">All Companies</option>
-          <option value="none">No Company</option>
+          <option value="all">{t("contacts.allCompanies")}</option>
+          <option value="none">{t("contacts.noCompany")}</option>
           {companies.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -229,20 +231,20 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
       {/* Mobile List */}
       <div className="md:hidden space-y-2">
         {filteredContacts.length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-500">No contacts found</div>
+          <div className="text-center py-8 text-sm text-slate-500">{t("contacts.noContacts")}</div>
         ) : (
           filteredContacts.map((contact) => (
             <div key={contact.id} className="bg-white rounded-xl border border-slate-100 px-4 py-3">
               {deleteConfirmId === contact.id ? (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-red-600 font-medium">Delete this contact?</span>
+                  <span className="text-sm text-red-600 font-medium">{t("contacts.deleteConfirm")}</span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => executeDelete(contact.id)}
                       disabled={deletingId === contact.id}
                       className="px-3 py-1 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50"
                     >
-                      {deletingId === contact.id ? <Loader2 size={14} className="animate-spin" /> : "Yes, Delete"}
+                      {deletingId === contact.id ? <Loader2 size={14} className="animate-spin" /> : t("contacts.yesDelete")}
                     </button>
                     <button
                       onClick={cancelDelete}
@@ -292,40 +294,40 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
                 className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
                 onClick={() => handleSort("name")}
               >
-                <span className="inline-flex items-center">Name<SortIcon field="name" /></span>
+                <span className="inline-flex items-center">{t("common.name")}<SortIcon field="name" /></span>
               </th>
               <th
                 className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
                 onClick={() => handleSort("title")}
               >
-                <span className="inline-flex items-center">Title<SortIcon field="title" /></span>
+                <span className="inline-flex items-center">{t("contacts.title")}<SortIcon field="title" /></span>
               </th>
               <th
                 className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
                 onClick={() => handleSort("company")}
               >
-                <span className="inline-flex items-center">Company<SortIcon field="company" /></span>
+                <span className="inline-flex items-center">{t("contacts.company")}<SortIcon field="company" /></span>
               </th>
               <th
                 className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
                 onClick={() => handleSort("email")}
               >
-                <span className="inline-flex items-center">Email<SortIcon field="email" /></span>
+                <span className="inline-flex items-center">{t("common.email")}<SortIcon field="email" /></span>
               </th>
               <th
                 className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
                 onClick={() => handleSort("phone")}
               >
-                <span className="inline-flex items-center">Phone<SortIcon field="phone" /></span>
+                <span className="inline-flex items-center">{t("common.phone")}<SortIcon field="phone" /></span>
               </th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {filteredContacts.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
-                  No contacts found
+                  {t("contacts.noContacts")}
                 </td>
               </tr>
             ) : (
@@ -424,7 +426,7 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
                             {deletingId === contact.id ? (
                               <Loader2 size={14} className="animate-spin" />
                             ) : (
-                              "Yes, Delete"
+                              t("contacts.yesDelete")
                             )}
                           </button>
                           <button

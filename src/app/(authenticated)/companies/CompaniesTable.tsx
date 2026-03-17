@@ -34,22 +34,26 @@ interface Company {
   leads: any[];
 }
 
-const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  property_mgmt: { label: "Property Mgmt", color: "bg-blue-100 text-blue-800" },
-  school_district: { label: "School District", color: "bg-purple-100 text-purple-800" },
-  insurance: { label: "Insurance", color: "bg-teal-100 text-teal-800" },
-  general_contractor: { label: "General Contractor", color: "bg-orange-100 text-orange-800" },
-  homeowner: { label: "Homeowner", color: "bg-green-100 text-green-800" },
-  government: { label: "Government", color: "bg-slate-100 text-slate-800" },
-  commercial: { label: "Commercial", color: "bg-indigo-100 text-indigo-800" },
-  other: { label: "Other", color: "bg-gray-100 text-gray-800" },
+const TYPE_COLORS: Record<string, string> = {
+  property_mgmt: "bg-blue-100 text-blue-800",
+  school_district: "bg-purple-100 text-purple-800",
+  insurance: "bg-teal-100 text-teal-800",
+  general_contractor: "bg-orange-100 text-orange-800",
+  homeowner: "bg-green-100 text-green-800",
+  government: "bg-slate-100 text-slate-800",
+  commercial: "bg-indigo-100 text-indigo-800",
+  other: "bg-gray-100 text-gray-800",
 };
 
-const TYPE_OPTIONS = Object.entries(TYPE_LABELS).map(([value, { label }]) => ({ value, label }));
+const TYPE_KEYS = ["property_mgmt", "school_district", "insurance", "general_contractor", "homeowner", "government", "commercial", "other"];
 
 export default function CompaniesTable({ companies: initialCompanies }: { companies: Company[] }) {
   const { t } = useTranslation();
   const router = useRouter();
+
+  const getTypeLabel = (type: string) => t(`companies.type.${type}`) !== `companies.type.${type}` ? t(`companies.type.${type}`) : type;
+  const getTypeInfo = (type: string) => ({ label: getTypeLabel(type), color: TYPE_COLORS[type] || "bg-gray-100 text-gray-800" });
+  const typeOptions = TYPE_KEYS.map((value) => ({ value, label: getTypeLabel(value) }));
   const [companies, setCompanies] = useState(initialCompanies);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -159,7 +163,7 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
       setEditingId(null);
       router.refresh();
     } catch (err) {
-      alert("Failed to save changes. Please try again.");
+      alert(t("companies.failedSave"));
     } finally {
       setSaving(false);
     }
@@ -184,7 +188,7 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
       setDeleteConfirmId(null);
       router.refresh();
     } catch (err) {
-      alert("Failed to delete company. Please try again.");
+      alert(t("companies.failedDelete"));
     } finally {
       setDeletingId(null);
     }
@@ -212,7 +216,7 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
           <option value="all">{t("companies.allTypes")}</option>
           {types.map((type) => (
             <option key={type} value={type}>
-              {TYPE_LABELS[type]?.label || type}
+              {getTypeLabel(type)}
             </option>
           ))}
         </select>
@@ -224,25 +228,25 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
           <div className="text-center py-8 text-sm text-slate-500">{t("companies.noCompanies")}</div>
         ) : (
           filteredCompanies.map((company) => {
-            const typeInfo = TYPE_LABELS[company.type] || { label: company.type, color: "bg-gray-100 text-gray-800" };
+            const typeInfo = getTypeInfo(company.type);
             return (
               <div key={company.id} className="bg-white rounded-xl border border-slate-100 px-4 py-3">
                 {deleteConfirmId === company.id ? (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-red-600 font-medium">Delete this company?</span>
+                    <span className="text-sm text-red-600 font-medium">{t("companies.deleteConfirm")}</span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => executeDelete(company.id)}
                         disabled={deletingId === company.id}
                         className="px-3 py-1 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50"
                       >
-                        {deletingId === company.id ? <Loader2 size={14} className="animate-spin" /> : "Yes, Delete"}
+                        {deletingId === company.id ? <Loader2 size={14} className="animate-spin" /> : t("common.yesDelete")}
                       </button>
                       <button
                         onClick={cancelDelete}
                         className="px-3 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                     </div>
                   </div>
@@ -291,10 +295,10 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
                 <span className="inline-flex items-center">{t("companies.location")}<SortIcon field="location" /></span>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none" onClick={() => handleSort("contacts")}>
-                <span className="inline-flex items-center">Contacts<SortIcon field="contacts" /></span>
+                <span className="inline-flex items-center">{t("companies.contacts")}<SortIcon field="contacts" /></span>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none" onClick={() => handleSort("leads")}>
-                <span className="inline-flex items-center">Leads<SortIcon field="leads" /></span>
+                <span className="inline-flex items-center">{t("companies.leads")}<SortIcon field="leads" /></span>
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">{t("common.actions")}</th>
             </tr>
@@ -308,7 +312,7 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
               </tr>
             ) : (
               filteredCompanies.map((company) => {
-                const typeInfo = TYPE_LABELS[company.type] || { label: company.type, color: "bg-gray-100 text-gray-800" };
+                const typeInfo = getTypeInfo(company.type);
 
                 return (
                   <tr key={company.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -319,7 +323,7 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
                             type="text"
                             value={editData.name}
                             onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                            placeholder="Company name"
+                            placeholder={t("companies.companyName")}
                             className="w-full px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143]"
                           />
                         </td>
@@ -329,7 +333,7 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
                             onChange={(e) => setEditData({ ...editData, type: e.target.value })}
                             className="w-full px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143] bg-white"
                           >
-                            {TYPE_OPTIONS.map((opt) => (
+                            {typeOptions.map((opt) => (
                               <option key={opt.value} value={opt.value}>
                                 {opt.label}
                               </option>
@@ -342,14 +346,14 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
                               type="text"
                               value={editData.city}
                               onChange={(e) => setEditData({ ...editData, city: e.target.value })}
-                              placeholder="City"
+                              placeholder={t("companies.city")}
                               className="w-24 px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143]"
                             />
                             <input
                               type="text"
                               value={editData.state}
                               onChange={(e) => setEditData({ ...editData, state: e.target.value })}
-                              placeholder="State"
+                              placeholder={t("companies.state")}
                               className="w-16 px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143]"
                             />
                           </div>
@@ -372,14 +376,14 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
                               onClick={saveEdit}
                               disabled={saving}
                               className="p-1.5 text-[#7BC143] hover:bg-green-50 rounded transition disabled:opacity-50"
-                              title="Save"
+                              title={t("common.save")}
                             >
                               {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                             </button>
                             <button
                               onClick={cancelEdit}
                               className="p-1.5 text-slate-400 hover:bg-slate-100 rounded transition"
-                              title="Cancel"
+                              title={t("common.cancel")}
                             >
                               <X size={16} />
                             </button>
@@ -390,7 +394,7 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
                       <>
                         <td colSpan={4} className="px-6 py-4">
                           <span className="text-sm text-red-600 font-medium">
-                            Delete &quot;{company.name}&quot;? This will also remove associated contacts and leads.
+                            {t("companies.deleteConfirm")}
                           </span>
                         </td>
                         <td colSpan={2} className="px-6 py-4 text-right">
@@ -403,14 +407,14 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
                               {deletingId === company.id ? (
                                 <Loader2 size={14} className="animate-spin" />
                               ) : (
-                                "Yes, Delete"
+                                t("common.yesDelete")
                               )}
                             </button>
                             <button
                               onClick={cancelDelete}
                               className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition"
                             >
-                              Cancel
+                              {t("common.cancel")}
                             </button>
                           </div>
                         </td>
@@ -445,21 +449,21 @@ export default function CompaniesTable({ companies: initialCompanies }: { compan
                             <button
                               onClick={() => startEdit(company)}
                               className="p-1.5 text-slate-400 hover:text-[#7BC143] hover:bg-green-50 rounded transition"
-                              title="Edit"
+                              title={t("common.edit")}
                             >
                               <Pencil size={15} />
                             </button>
                             <button
                               onClick={() => confirmDelete(company.id)}
                               className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition"
-                              title="Delete"
+                              title={t("common.delete")}
                             >
                               <Trash2 size={15} />
                             </button>
                             <Link
                               href={`/companies/${company.id}`}
                               className="p-1.5 text-slate-400 hover:text-[#7BC143] hover:bg-green-50 rounded transition"
-                              title="View details"
+                              title={t("common.viewDetails")}
                             >
                               <ChevronRight size={15} />
                             </Link>

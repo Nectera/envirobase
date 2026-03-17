@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, MapPin, GripHorizontal, X, Check, Loader2, XCircle } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 type Worker = { id: string; name: string; role: string; city: string | null; state: string | null; types: string[] };
 type Project = { id: string; name: string; type: string; status: string; projectNumber?: string; address: string; startDate: string | null; estEndDate: string | null };
@@ -73,6 +74,7 @@ export default function ScheduleTimelineView({
   onEntryClick: (entry: Entry) => void;
   onClearDay?: (dateStr: string) => void;
 }) {
+  const { t } = useTranslation();
   const router = useRouter();
 
   // 28 day window
@@ -205,10 +207,10 @@ export default function ScheduleTimelineView({
     }
 
     // Type mismatch check
-    const workerTypes = pending.workerTypes.map((t) => t.toUpperCase());
+    const workerTypes = pending.workerTypes.map((wt) => wt.toUpperCase());
     const isMismatch = pending.projectType && !workerTypes.includes(pending.projectType.toUpperCase());
     if (isMismatch) {
-      if (!confirm(`${pending.workerName} is not ${pending.projectType}-certified. Assign to ${dates.length} day(s) anyway?`)) {
+      if (!confirm(`${pending.workerName} ${t("schedule.mismatchWarning")} ${pending.projectType}${t("schedule.certifiedAssignAnyway")} ${dates.length} ${t("schedule.dayAnyway")}`)) {
         setSaving(false);
         setPending(null);
         return;
@@ -259,9 +261,9 @@ export default function ScheduleTimelineView({
     <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto">
       {timelineProjects.length === 0 ? (
         <div className="py-12 text-center text-sm text-slate-400">
-          No active projects with start and end dates in this window.
+          {t("schedule.noAssignmentsActive")}
           <br />
-          <span className="text-xs">Set start and end dates on projects to see them here.</span>
+          <span className="text-xs">{t("schedule.setStartEndDates")}</span>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -421,7 +423,7 @@ export default function ScheduleTimelineView({
                               <div
                                 onMouseDown={handleExtendMouseDown}
                                 className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize flex items-center justify-center hover:bg-indigo-200/50 rounded-r"
-                                title="Drag to extend"
+                                title={t("schedule.dragToExtend")}
                               >
                                 <GripHorizontal size={8} className="text-indigo-500" />
                               </div>
@@ -452,14 +454,14 @@ export default function ScheduleTimelineView({
             <span className="text-slate-500 ml-1">
               ({dateCols[pending.startColIdx]?.label} – {dateCols[pending.endColIdx]?.label})
             </span>
-            <span className="text-slate-400 ml-2">Drag the handle right to extend</span>
+            <span className="text-slate-400 ml-2">{t("schedule.dragHandleRight")}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={cancelPending}
               className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50"
             >
-              <X size={12} /> Cancel
+              <X size={12} /> {t("schedule.cancel")}
             </button>
             <button
               onClick={confirmPending}
@@ -467,7 +469,7 @@ export default function ScheduleTimelineView({
               className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
             >
               {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-              Assign {pending.endColIdx - pending.startColIdx + 1} Day{pending.endColIdx !== pending.startColIdx ? "s" : ""}
+              {t("schedule.assign")} {pending.endColIdx - pending.startColIdx + 1} {t("schedule.day")}{pending.endColIdx !== pending.startColIdx ? "s" : ""}
             </button>
           </div>
         </div>
@@ -476,7 +478,7 @@ export default function ScheduleTimelineView({
       {/* Extending indicator */}
       {isExtending && (
         <div className="border-t border-indigo-300 px-4 py-2 bg-indigo-100 text-xs text-indigo-700 font-medium text-center">
-          Drag right to select more days… release to set range
+          {t("schedule.dragToSelectDays")}
         </div>
       )}
     </div>

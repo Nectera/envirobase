@@ -61,10 +61,10 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
     { key: "positions" as const, label: t("settings.positions"), icon: Users },
     { key: "certifications" as const, label: t("settings.certifications"), icon: Award },
     { key: "language" as const, label: t("settings.language"), icon: Globe },
-    { key: "pricing" as const, label: "Pricing", icon: Calculator },
-    { key: "reviews" as const, label: "Google Reviews", icon: Star },
-    { key: "estimateFollowUp" as const, label: "Estimate Follow-Up", icon: Mail },
-    { key: "certRequirements" as const, label: "Cert Requirements", icon: ShieldCheck },
+    { key: "pricing" as const, label: t("settings.pricing"), icon: Calculator },
+    { key: "reviews" as const, label: t("settings.googleReviews"), icon: Star },
+    { key: "estimateFollowUp" as const, label: t("settings.estimateFollowUp"), icon: Mail },
+    { key: "certRequirements" as const, label: t("settings.certRequirements"), icon: ShieldCheck },
     { key: "email" as const, label: "Email / SMTP", icon: ServerCog },
     { key: "billing" as const, label: "Billing", icon: CreditCard },
   ];
@@ -165,7 +165,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
             </div>
             <div>
               <h3 className="font-semibold text-slate-900">{t("settings.language")}</h3>
-              <p className="text-xs text-slate-500">Select your preferred language</p>
+              <p className="text-xs text-slate-500">{t("settings.selectYourPreferredLanguage")}</p>
             </div>
           </div>
 
@@ -178,12 +178,12 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                   name="language"
                   value="en"
                   checked={language === "en"}
-                  onChange={(e) => setLanguage(e.target.value as "en" | "es" | "pt")}
+                  onChange={(e) => setLanguage(e.target.value as "en" | "es")}
                   className="w-4 h-4"
                 />
                 <div className="flex-1">
-                  <p className="font-medium text-slate-900">English</p>
-                  <p className="text-xs text-slate-500">Use the application in English</p>
+                  <p className="font-medium text-slate-900">{t("settings.english")}</p>
+                  <p className="text-xs text-slate-500">{t("settings.useApplicationEnglish")}</p>
                 </div>
                 {language === "en" && <CheckCircle className="w-5 h-5 text-indigo-600" />}
               </label>
@@ -195,37 +195,21 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                   name="language"
                   value="es"
                   checked={language === "es"}
-                  onChange={(e) => setLanguage(e.target.value as "en" | "es" | "pt")}
+                  onChange={(e) => setLanguage(e.target.value as "en" | "es")}
                   className="w-4 h-4"
                 />
                 <div className="flex-1">
-                  <p className="font-medium text-slate-900">Español</p>
-                  <p className="text-xs text-slate-500">Utilizar la aplicación en español</p>
+                  <p className="font-medium text-slate-900">{t("settings.spanish")}</p>
+                  <p className="text-xs text-slate-500">{t("settings.useApplicationSpanish")}</p>
                 </div>
                 {language === "es" && <CheckCircle className="w-5 h-5 text-indigo-600" />}
               </label>
 
-              {/* Portuguese option */}
-              <label className="flex items-center gap-3 p-4 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors" style={{ borderColor: language === "pt" ? "#4f46e5" : undefined, backgroundColor: language === "pt" ? "#eef2ff" : undefined }}>
-                <input
-                  type="radio"
-                  name="language"
-                  value="pt"
-                  checked={language === "pt"}
-                  onChange={(e) => setLanguage(e.target.value as "en" | "es" | "pt")}
-                  className="w-4 h-4"
-                />
-                <div className="flex-1">
-                  <p className="font-medium text-slate-900">Português</p>
-                  <p className="text-xs text-slate-500">Utilizar o aplicativo em português</p>
-                </div>
-                {language === "pt" && <CheckCircle className="w-5 h-5 text-indigo-600" />}
-              </label>
             </div>
 
             {/* Preview */}
             <div className="mt-6 pt-6 border-t border-slate-200">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Preview</p>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">{t("settings.preview")}</p>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500">{t("sidebar.dashboard")}</p>
@@ -253,17 +237,17 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
               <Calculator className="w-5 h-5 text-indigo-700" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-900">Pricing & COGS Rates</h3>
-              <p className="text-xs text-slate-500">Configure hardcoded rates for cost calculations</p>
+              <h3 className="font-semibold text-slate-900">{t("settings.pricingTitle")}</h3>
+              <p className="text-xs text-slate-500">{t("settings.pricingDescription")}</p>
             </div>
           </div>
 
           {/* Labor Rates Section */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-slate-900 text-sm">Labor Rates</h4>
+            <h4 className="font-semibold text-slate-900 text-sm">{t("settings.laborRates")}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Supervisor Hourly Rate</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.supervisorHourlyRate")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -276,7 +260,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Supervisor Tax Burden</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.supervisorTaxBurden")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -289,7 +273,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Technician Hourly Rate</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.technicianHourlyRate")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -302,7 +286,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Technician Tax Burden</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.technicianTaxBurden")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -321,9 +305,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
           {/* Operating Costs Section */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-slate-900 text-sm">Operating Costs</h4>
+            <h4 className="font-semibold text-slate-900 text-sm">{t("settings.operatingCosts")}</h4>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Operating Cost Rate / hour</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.operatingCostRatePerHour")}</label>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-500">$</span>
                 <input
@@ -341,10 +325,10 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
           {/* COGS Rates Section */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-slate-900 text-sm">COGS Rates</h4>
+            <h4 className="font-semibold text-slate-900 text-sm">{t("settings.cogsRates")}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Permit Cost - 30 day</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.permitCost30Day")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -357,7 +341,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Clearance Cost</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.clearanceCost")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -370,7 +354,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Per Diem Rate / person / day</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.perDiemRatePerPersonPerDay")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -383,7 +367,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Per Diem Mile Threshold</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.perDiemMileThreshold")}</label>
                 <input
                   type="number"
                   step="1"
@@ -393,7 +377,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Waste Rate / cubic yard</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.wasteRatePerCubicYard")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -406,7 +390,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Hauling Rate Standard / yd</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.haulingRateStandard")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -419,7 +403,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Hauling Rate West Slope / yd</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.haulingRateWestSlope")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -438,10 +422,10 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
           {/* Vehicle & Trailer Section */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-slate-900 text-sm">Vehicle & Trailer</h4>
+            <h4 className="font-semibold text-slate-900 text-sm">{t("settings.vehicleAndTrailer")}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Vehicle Mileage Rate / mile</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.vehicleMileageRate")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -454,7 +438,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Trailer Mileage Rate / mile</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.trailerMileageRate")}</label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">$</span>
                   <input
@@ -467,7 +451,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Default Trailer Trips</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.defaultTrailerTrips")}</label>
                 <input
                   type="number"
                   step="1"
@@ -483,9 +467,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
           {/* Other Section */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-slate-900 text-sm">Other</h4>
+            <h4 className="font-semibold text-slate-900 text-sm">{t("settings.other")}</h4>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fuel Surcharge %</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.fuelSurchargePercent")}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -507,7 +491,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
               <Save size={14} />
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? t("settings.savingChanges") : t("settings.saveChanges")}
             </button>
             {saved === "pricing" && (
               <span className="text-sm text-green-600 font-medium">Saved!</span>
@@ -556,7 +540,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
           ))}
           {currentItems.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-slate-400">
-              No {activeTab} configured yet. Add one above.
+              {t("settings.nothingConfiguredYet")} {activeTab}
             </div>
           )}
         </div>
@@ -571,20 +555,20 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
               <Star className="w-5 h-5 text-yellow-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-900">Google Review Settings</h3>
-              <p className="text-xs text-slate-500">Configure feedback surveys and Google review prompts</p>
+              <h3 className="font-semibold text-slate-900">{t("settings.googleReviewSettings")}</h3>
+              <p className="text-xs text-slate-500">{t("settings.googleReviewDescription")}</p>
             </div>
           </div>
 
           {/* Locations */}
           <div>
-            <h4 className="text-sm font-semibold text-slate-800 mb-2">Google Business Locations</h4>
-            <p className="text-xs text-slate-500 mb-3">Add your Google review URLs for each location. Customers with high ratings will be redirected here.</p>
+            <h4 className="text-sm font-semibold text-slate-800 mb-2">{t("settings.googleBusinessLocations")}</h4>
+            <p className="text-xs text-slate-500 mb-3">{t("settings.googleBusinessLocationsDescription")}</p>
             <div className="space-y-3">
               {(reviewConfig.locations || []).map((loc: any, idx: number) => (
                 <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Location Name</label>
+                    <label className="block text-xs text-slate-500 mb-1">{t("settings.locationName")}</label>
                     <input
                       type="text"
                       value={loc.name}
@@ -597,7 +581,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs text-slate-500 mb-1">Google Review URL</label>
+                    <label className="block text-xs text-slate-500 mb-1">{t("settings.googleReviewUrl")}</label>
                     <div className="flex gap-2">
                       <input
                         type="url"
@@ -635,14 +619,14 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 }}
                 className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
               >
-                <Plus size={12} /> Add Location
+                <Plus size={12} /> {t("settings.addLocation")}
               </button>
             </div>
           </div>
 
           {/* Auto-send settings */}
           <div className="border-t border-slate-100 pt-4">
-            <h4 className="text-sm font-semibold text-slate-800 mb-3">Auto-Send Settings</h4>
+            <h4 className="text-sm font-semibold text-slate-800 mb-3">{t("settings.autoSendSettings")}</h4>
             <div className="space-y-3">
               <label className="flex items-center gap-3">
                 <input
@@ -651,19 +635,19 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                   onChange={(e) => setReviewConfig({ ...reviewConfig, autoSendEnabled: e.target.checked })}
                   className="rounded border-slate-300 text-indigo-600"
                 />
-                <span className="text-sm text-slate-700">Auto-send feedback survey when project is completed</span>
+                <span className="text-sm text-slate-700">{t("settings.autoSendFeedbackSurvey")}</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Default Send Method</label>
+                  <label className="block text-xs text-slate-500 mb-1">{t("settings.defaultSendMethod")}</label>
                   <select
                     value={reviewConfig.defaultMethod || "both"}
                     onChange={(e) => setReviewConfig({ ...reviewConfig, defaultMethod: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="both">Email & SMS</option>
-                    <option value="email">Email Only</option>
-                    <option value="sms">SMS Only</option>
+                    <option value="both">{t("settings.emailAndSms")}</option>
+                    <option value="email">{t("settings.emailOnly")}</option>
+                    <option value="sms">{t("settings.smsOnly")}</option>
                   </select>
                 </div>
               </div>
@@ -672,11 +656,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
           {/* 3-Touch Drip Sequence */}
           <div className="border-t border-slate-100 pt-4">
-            <h4 className="text-sm font-semibold text-slate-800 mb-1">3-Touch Follow-Up Sequence</h4>
+            <h4 className="text-sm font-semibold text-slate-800 mb-1">{t("settings.threePointFollowUpSequence")}</h4>
             <p className="text-xs text-slate-400 mb-4">
-              Optimized for maximum response: SMS first (90% read rate), email day 2, final SMS day 5.
-              Sequence stops if the customer responds.
-              Use {"{clientName}"} and {"{surveyUrl}"} as placeholders.
+              {t("settings.threePointFollowUpDescription")}
             </p>
             <div className="space-y-4">
               {(reviewConfig.sequence || []).map((step: any, idx: number) => (
@@ -686,10 +668,10 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                       {idx + 1}
                     </span>
                     <span className="text-sm font-semibold text-slate-700">
-                      {step.channel === "sms" ? "SMS" : "Email"}
+                      {step.channel === "sms" ? t("settings.sms") : t("settings.email")}
                     </span>
                     <span className="text-xs text-slate-400">
-                      {step.delayDays === 0 ? "Immediately" : `Day ${step.delayDays}`}
+                      {step.delayDays === 0 ? t("settings.immediately") : `${t("settings.day")} ${step.delayDays}`}
                     </span>
                   </div>
 
@@ -702,7 +684,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                         setReviewConfig({ ...reviewConfig, sequence: seq });
                       }}
                       rows={2}
-                      placeholder="SMS message..."
+                      placeholder={t("settings.smsMessage")}
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500 resize-none"
                     />
                   ) : (
@@ -715,7 +697,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                           seq[idx] = { ...seq[idx], emailSubject: e.target.value };
                           setReviewConfig({ ...reviewConfig, sequence: seq });
                         }}
-                        placeholder="Email subject line..."
+                        placeholder={t("settings.emailSubjectLine")}
                         className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500"
                       />
                       <textarea
@@ -726,7 +708,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                           setReviewConfig({ ...reviewConfig, sequence: seq });
                         }}
                         rows={3}
-                        placeholder="Email body..."
+                        placeholder={t("settings.emailBody")}
                         className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500 resize-none"
                       />
                     </div>
@@ -767,7 +749,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {reviewConfigSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {reviewConfigSaving ? "Saving..." : "Save Review Settings"}
+              {reviewConfigSaving ? t("common.saving") : t("settings.saveReviewSettings")}
             </button>
             {reviewConfigSaved && (
               <span className="text-sm text-green-600 font-medium flex items-center gap-1">
@@ -782,10 +764,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
       {activeTab === "estimateFollowUp" && efConfig && (
         <div className="space-y-6">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">Estimate Follow-Up Emails</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">{t("settings.estimateFollowUpEmails")}</h3>
             <p className="text-xs text-slate-500">
-              Automated email sequence sent after an estimate is marked as &quot;Sent&quot;.
-              Stops automatically if the estimate is approved or rejected.
+              {t("settings.estimateFollowUpDescription")}
             </p>
           </div>
 
@@ -797,14 +778,14 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
               onChange={(e) => setEfConfig({ ...efConfig, enabled: e.target.checked })}
               className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-slate-700">Auto-start follow-up sequence when estimate is sent</span>
+            <span className="text-sm text-slate-700">{t("settings.autoStartFollowUpSequence")}</span>
           </label>
 
           {/* Sequence Editor */}
           <div>
-            <h4 className="text-sm font-medium text-slate-800 mb-3">3-Touch Email Sequence</h4>
+            <h4 className="text-sm font-medium text-slate-800 mb-3">{t("settings.threePointEmailSequence")}</h4>
             <p className="text-xs text-slate-500 mb-3">
-              Emails are sent on the configured day after the estimate is sent. The sequence stops if the client responds (approves/rejects).
+              {t("settings.emailsScheduledDayAfter")}
             </p>
             <div className="space-y-4">
               {(efConfig.sequence || []).map((step: any, idx: number) => (
@@ -814,15 +795,15 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                       {idx + 1}
                     </span>
                     <span className="text-sm font-medium text-slate-800">
-                      Email
+                      {t("settings.email")}
                     </span>
                     <span className="text-xs text-slate-500">
-                      Day {step.delayDays}
+                      {t("settings.day")} {step.delayDays}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Subject</label>
+                    <label className="block text-xs text-slate-600 mb-1">{t("settings.subject")}</label>
                     <input
                       type="text"
                       value={step.subject || ""}
@@ -836,7 +817,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                   </div>
 
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Email Body</label>
+                    <label className="block text-xs text-slate-600 mb-1">{t("settings.emailBodyLabel")}</label>
                     <textarea
                       value={step.template || ""}
                       onChange={(e) => {
@@ -848,7 +829,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                       className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">
-                      Use {"{clientName}"} as a placeholder for the client&apos;s name.
+                      {t("settings.useClientNamePlaceholder")}
                     </p>
                   </div>
                 </div>
@@ -887,7 +868,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {efConfigSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {efConfigSaving ? "Saving..." : "Save Follow-Up Settings"}
+              {efConfigSaving ? t("common.saving") : t("settings.saveFollowUpSettings")}
             </button>
             {efConfigSaved && (
               <span className="text-sm text-green-600 font-medium flex items-center gap-1">
@@ -902,9 +883,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
       {activeTab === "certRequirements" && certReqConfig && (
         <div className="space-y-6">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">Certification Requirements</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">{t("settings.certRequirementsTitle")}</h3>
             <p className="text-xs text-slate-500">
-              Map project types to required certifications. Workers missing required certs will be blocked from scheduling.
+              {t("settings.certRequirementsDescription")}
             </p>
           </div>
 
@@ -916,12 +897,12 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
               onChange={(e) => setCertReqConfig({ ...certReqConfig, enforceOnScheduling: e.target.checked })}
               className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-slate-700">Hard-block uncertified workers from being scheduled</span>
+            <span className="text-sm text-slate-700">{t("settings.hardBlockUncertifiedWorkers")}</span>
           </label>
 
           {/* Expiring threshold */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Expiring Soon Threshold (days before expiry)</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1">{t("settings.expiringThreshold")}</label>
             <input
               type="number"
               min={1}
@@ -934,9 +915,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
           {/* Requirements mapping */}
           <div>
-            <h4 className="text-sm font-medium text-slate-800 mb-3">Project Type → Required Certs</h4>
+            <h4 className="text-sm font-medium text-slate-800 mb-3">{t("settings.projectTypeToRequiredCerts")}</h4>
             <p className="text-xs text-slate-500 mb-3">
-              For each project type, list the certifications a worker must hold to be scheduled on that type of project.
+              {t("settings.projectTypeDescription")}
             </p>
 
             {Object.entries(certReqConfig.requirements || {}).map(([projectType, certs]: [string, any]) => (
@@ -978,7 +959,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Add certification name..."
+                    placeholder={t("settings.addCertificationName")}
                     className="flex-1 px-2 py-1 border border-slate-200 rounded text-xs"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -1000,14 +981,14 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
             {/* Add new project type mapping */}
             <div className="border border-dashed border-slate-300 rounded-lg p-4 space-y-2">
-              <p className="text-xs font-medium text-slate-600">Add Project Type Requirement</p>
+              <p className="text-xs font-medium text-slate-600">{t("settings.addProjectTypeRequirement")}</p>
               <div className="flex gap-2">
                 <select
                   value={newCertReqType}
                   onChange={(e) => setNewCertReqType(e.target.value)}
                   className="flex-1 px-2 py-1.5 border border-slate-200 rounded text-xs"
                 >
-                  <option value="">Select project type...</option>
+                  <option value="">{t("settings.selectProjectType")}</option>
                   {["ASBESTOS", "LEAD", "METH", "MOLD", "SELECT_DEMO", "REBUILD"].filter(
                     (t) => !certReqConfig.requirements?.[t]
                   ).map((t) => (
@@ -1018,7 +999,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
                   type="text"
                   value={newCertReqCert}
                   onChange={(e) => setNewCertReqCert(e.target.value)}
-                  placeholder="First cert name..."
+                  placeholder={t("settings.firstCertName")}
                   className="flex-1 px-2 py-1.5 border border-slate-200 rounded text-xs"
                 />
                 <button
@@ -1071,7 +1052,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {certReqSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {certReqSaving ? "Saving..." : "Save Cert Requirements"}
+              {certReqSaving ? t("common.saving") : t("settings.saveCertRequirements")}
             </button>
             {certReqSaved && (
               <span className="text-sm text-green-600 font-medium flex items-center gap-1">
@@ -1097,7 +1078,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           <Save size={14} />
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? t("settings.savingChanges") : t("settings.saveChanges")}
         </button>
         {saved === activeTab && (
           <span className="text-sm text-green-600 font-medium">Saved!</span>

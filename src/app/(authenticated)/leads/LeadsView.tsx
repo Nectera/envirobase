@@ -316,7 +316,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
-          Active Leads
+          {t("leads.activeLead")}
         </button>
         <button
           onClick={() => setTab("archive")}
@@ -327,7 +327,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
           }`}
         >
           <Archive size={14} />
-          Archive
+          {t("leads.archive")}
           {archivedLeads.length > 0 && (
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
               tab === "archive" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-600"
@@ -370,7 +370,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 text-sm border border-slate-200 rounded-full bg-white min-w-0 flex-shrink"
           >
-            <option value="all">All Statuses</option>
+            <option value="all">{t("leads.allStatuses")}</option>
             {STAGES.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
             ))}
@@ -409,7 +409,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
           filtered.length === 0 ? (
             <div className="text-center py-12">
               <Archive size={28} className="mx-auto text-slate-300 mb-2" />
-              <p className="text-sm text-slate-500">No archived leads</p>
+              <p className="text-sm text-slate-500">{t("leads.noArchivedLeads")}</p>
             </div>
           ) : (
             <>
@@ -417,10 +417,10 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                 <Link key={lead.id} href={`/leads/${lead.id}`} className="flex items-center justify-between bg-white rounded-xl border border-slate-100 px-4 py-3 hover:bg-slate-50 transition">
                   <div className="min-w-0">
                     <div className="font-medium text-sm text-slate-800 truncate">
-                      {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unknown"}
+                      {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || t("leads.unknown")}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded border font-semibold bg-slate-100 border-slate-300 text-slate-600">Archived</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border font-semibold bg-slate-100 border-slate-300 text-slate-600">{t("leads.archived")}</span>
                       {lead.company && <span>{lead.company.name}</span>}
                     </div>
                   </div>
@@ -446,11 +446,11 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 px-1 py-1 transition"
           >
             {showClosed ? <EyeOff size={13} /> : <Eye size={13} />}
-            {showClosed ? "Hide" : "Show"} {closedCount} closed lead{closedCount !== 1 ? "s" : ""}
+            {showClosed ? t("leads.hideClosed") : t("leads.showClosed")} {closedCount} {closedCount !== 1 ? t("leads.closedLeads") : t("leads.closedLead")}
           </button>
         )}
         {mobileFiltered.length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-500">No leads found</div>
+          <div className="text-center py-8 text-sm text-slate-500">{t("leads.noLeads")}</div>
         ) : (
           mobilePaginatedLeads.map((lead) => {
             const stageInfo = STAGES.find((s) => s.key === lead.status);
@@ -458,7 +458,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
               <Link key={lead.id} href={`/leads/${lead.id}`} className="flex items-center justify-between bg-white rounded-xl border border-slate-100 px-4 py-3 hover:bg-slate-50 transition">
                 <div className="min-w-0">
                   <div className="font-medium text-sm text-slate-800 truncate">
-                    {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unknown"}
+                    {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || t("leads.unknown")}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
                     {stageInfo && (
@@ -489,7 +489,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
           {filtered.length === 0 ? (
             <div className="text-center py-16">
               <Archive size={32} className="mx-auto text-slate-300 mb-3" />
-              <p className="text-sm text-slate-500">No archived leads</p>
+              <p className="text-sm text-slate-500">{t("leads.noArchivedLeads")}</p>
               <p className="text-xs text-slate-400 mt-1">Leads are archived when their linked project is marked as completed.</p>
             </div>
           ) : (
@@ -497,10 +497,10 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
               <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Company</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Project</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">{t("leads.tableHeaderName")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">{t("leads.tableHeaderCompany")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">{t("common.type")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">{t("common.project")}</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase"></th>
                   </tr>
                 </thead>
@@ -509,7 +509,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                     <tr key={lead.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
                       <td className="px-4 py-3">
                         <Link href={`/leads/${lead.id}`} className="font-medium text-slate-800 hover:text-[#7BC143]">
-                          {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unknown"}
+                          {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || t("leads.unknown")}
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-600">{lead.company?.name || "—"}</td>
@@ -592,7 +592,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                       >
                         <Link href={`/leads/${lead.id}`} className="block">
                           <div className="text-sm font-medium text-slate-800 mb-0.5">
-                            {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unknown"}
+                            {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || t("leads.unknown")}
                           </div>
                           {lead.company?.name && (
                             <div className="text-[11px] text-slate-500 mb-1.5">{lead.company.name}</div>
@@ -651,7 +651,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                 disabled={bulkLoading}
                 className="flex items-center gap-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 disabled:bg-red-300 px-3 py-1.5 rounded-full transition"
               >
-                <XCircle size={12} /> Mark as Lost
+                <XCircle size={12} /> {t("leads.markAsLost")}
               </button>
 
               {/* Bulk Edit dropdown */}
@@ -661,11 +661,11 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                 className="text-xs px-2 py-1.5 border border-indigo-200 rounded-full bg-white text-indigo-700"
                 value={bulkEditField || ""}
               >
-                <option value="" disabled>Bulk Edit...</option>
-                <option value="projectType">Project Type</option>
-                <option value="office">Office</option>
-                <option value="source">Source</option>
-                <option value="assignedTo">Assigned To</option>
+                <option value="" disabled>{t("leads.bulkEdit")}</option>
+                <option value="projectType">{t("leads.projectType")}</option>
+                <option value="office">{t("leads.office")}</option>
+                <option value="source">{t("leads.source")}</option>
+                <option value="assignedTo">{t("leads.assignedTo")}</option>
               </select>
 
               {/* Status change dropdown */}
@@ -713,7 +713,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                   <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">{t("common.client")}</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">{t("common.type")}</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">{t("common.status")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Created</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">{t("leads.tableHeaderCreated")}</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase"></th>
                 </tr>
               </thead>
@@ -733,7 +733,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                       </td>
                       <td className="px-4 py-3">
                         <Link href={`/leads/${lead.id}`} className="font-medium text-slate-800 hover:text-[#7BC143]">
-                          {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unknown"}
+                          {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || t("leads.unknown")}
                         </Link>
                         {lead.phone && <a href={`tel:${lead.phone}`} className="block text-[11px] text-slate-400 hover:text-blue-600 transition">{lead.phone}</a>}
                       </td>
@@ -780,16 +780,16 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
       {showLostModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-[20px] shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">Mark {selectedIds.size} Lead{selectedIds.size > 1 ? "s" : ""} as Lost</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-1">{t("leads.markAsLostTitle")}</h3>
             <p className="text-sm text-slate-500 mb-4">
-              This will set the status to Lost and record today&apos;s date. Optionally add a reason.
+              {t("leads.markAsLostDescription")}
             </p>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Lost Reason (optional)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t("leads.lostReason")}</label>
               <textarea
                 value={lostReason}
                 onChange={(e) => setLostReason(e.target.value)}
-                placeholder="e.g. Went with competitor, budget cut, no response..."
+                placeholder={t("leads.lostReasonPlaceholder")}
                 rows={3}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-[#7BC143] focus:border-[#7BC143]"
                 autoFocus
@@ -800,14 +800,14 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                 onClick={() => { setShowLostModal(false); setLostReason(""); }}
                 className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleBulkMarkLost}
                 disabled={bulkLoading}
                 className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-full font-medium transition"
               >
-                {bulkLoading ? "Updating..." : `Mark ${selectedIds.size} as Lost`}
+                {bulkLoading ? t("common.updating") : t("leads.markAsLost")}
               </button>
             </div>
           </div>
@@ -819,10 +819,10 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-[20px] shadow-xl p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-semibold text-slate-900 mb-1">
-              Bulk Edit — {bulkEditField === "projectType" ? "Project Type" : bulkEditField === "office" ? "Office" : bulkEditField === "source" ? "Source" : "Assigned To"}
+              {t("leads.bulkEditTitle")}: {bulkEditField === "projectType" ? t("leads.projectType") : bulkEditField === "office" ? t("leads.office") : bulkEditField === "source" ? t("leads.source") : t("leads.assignedTo")}
             </h3>
             <p className="text-sm text-slate-500 mb-4">
-              Update {selectedIds.size} lead{selectedIds.size > 1 ? "s" : ""} at once.
+              {t("leads.bulkEditDescription")} ({selectedIds.size})
             </p>
             <div>
               {bulkEditField === "projectType" && (
@@ -831,14 +831,14 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                   onChange={(e) => setBulkEditValue(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-[#7BC143] focus:border-[#7BC143]"
                 >
-                  <option value="">Select type...</option>
-                  <option value="ASBESTOS">Asbestos</option>
-                  <option value="LEAD">Lead</option>
-                  <option value="METH">Meth</option>
-                  <option value="MOLD">Mold</option>
-                  <option value="SELECT_DEMO">Select Demo</option>
-                  <option value="REBUILD">Rebuild</option>
-                  <option value="SELECT_DEMO_REBUILD">Select Demo & Rebuild</option>
+                  <option value="">{t("leads.selectType")}</option>
+                  <option value="ASBESTOS">{t("types.asbestos")}</option>
+                  <option value="LEAD">{t("types.lead")}</option>
+                  <option value="METH">{t("types.meth")}</option>
+                  <option value="MOLD">{t("types.mold")}</option>
+                  <option value="SELECT_DEMO">{t("types.selectDemo")}</option>
+                  <option value="REBUILD">{t("types.rebuild")}</option>
+                  <option value="SELECT_DEMO_REBUILD">{t("types.selectDemoRebuild")}</option>
                 </select>
               )}
               {bulkEditField === "office" && (
@@ -847,9 +847,9 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                   onChange={(e) => setBulkEditValue(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-[#7BC143] focus:border-[#7BC143]"
                 >
-                  <option value="">Select office...</option>
-                  <option value="greeley">Greeley</option>
-                  <option value="grand_junction">Grand Junction</option>
+                  <option value="">{t("leads.selectOffice")}</option>
+                  <option value="greeley">{t("leads.greeley")}</option>
+                  <option value="grand_junction">{t("leads.grandJunction")}</option>
                 </select>
               )}
               {bulkEditField === "source" && (
@@ -858,15 +858,15 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                   onChange={(e) => setBulkEditValue(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-[#7BC143] focus:border-[#7BC143]"
                 >
-                  <option value="">Select source...</option>
-                  <option value="referral">Referral</option>
-                  <option value="website">Website</option>
-                  <option value="cold_call">Cold Call</option>
-                  <option value="repeat_client">Repeat Client</option>
-                  <option value="insurance">Insurance</option>
-                  <option value="property_manager">Property Manager</option>
-                  <option value="realtor">Realtor</option>
-                  <option value="other">Other</option>
+                  <option value="">{t("leads.selectSource")}</option>
+                  <option value="referral">{t("leads.referral")}</option>
+                  <option value="website">{t("leads.website")}</option>
+                  <option value="cold_call">{t("leads.coldCall")}</option>
+                  <option value="repeat_client">{t("leads.repeatClient")}</option>
+                  <option value="insurance">{t("leads.insurance")}</option>
+                  <option value="property_manager">{t("leads.propertyManager")}</option>
+                  <option value="realtor">{t("leads.realtor")}</option>
+                  <option value="other">{t("leads.other")}</option>
                 </select>
               )}
               {bulkEditField === "assignedTo" && (
@@ -875,7 +875,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                   onChange={(e) => setBulkEditValue(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-[#7BC143] focus:border-[#7BC143]"
                 >
-                  <option value="">Select person...</option>
+                  <option value="">{t("leads.selectPerson")}</option>
                   {fieldEstimators.map((w) => (
                     <option key={w.id} value={w.name}>
                       {w.name}{w.position ? ` (${w.position})` : ""}{w.office ? ` — ${w.office}` : ""}
@@ -889,14 +889,14 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                 onClick={() => { setBulkEditField(null); setBulkEditValue(""); }}
                 className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleBulkFieldUpdate}
                 disabled={bulkLoading || !bulkEditValue}
                 className="px-4 py-2 text-sm bg-[#7BC143] hover:bg-[#6aad38] disabled:bg-slate-300 text-white rounded-full font-medium transition"
               >
-                {bulkLoading ? "Updating..." : `Update ${selectedIds.size} Lead${selectedIds.size > 1 ? "s" : ""}`}
+                {bulkLoading ? t("common.updating") : `${t("leads.updateLeads")} (${selectedIds.size})`}
               </button>
             </div>
           </div>
@@ -907,15 +907,15 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
       {siteVisitModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-[20px] shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">Schedule Site Visit</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-1">{t("leads.scheduleSiteVisit")}</h3>
             <p className="text-sm text-slate-500 mb-4">
-              Set the date and time before moving <strong>{siteVisitModal.leadName}</strong> to Site Visit.
+              {t("leads.scheduleSiteVisitDescription")} — {siteVisitModal.leadName}
             </p>
 
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Visit Date <span className="text-red-500">*</span>
+                  {t("leads.visitDate")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -926,7 +926,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Visit Time</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t("leads.visitTime")}</label>
                 <input
                   type="time"
                   value={siteVisitTime}
@@ -935,23 +935,23 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t("leads.notes")}</label>
                 <textarea
                   value={siteVisitNotes}
                   onChange={(e) => setSiteVisitNotes(e.target.value)}
-                  placeholder="Access instructions, what to bring..."
+                  placeholder={t("leads.notesPlaceholder")}
                   rows={2}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-full focus:ring-[#7BC143] focus:border-[#7BC143]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Assign To</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t("leads.assignTo")}</label>
                 <select
                   value={siteVisitAssignee}
                   onChange={(e) => setSiteVisitAssignee(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-[#7BC143] focus:border-[#7BC143]"
                 >
-                  <option value="">Auto-assign</option>
+                  <option value="">{t("leads.autoAssign")}</option>
                   {fieldEstimators.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}{w.position ? ` (${w.position})` : ""}{w.office ? ` — ${w.office}` : ""}
@@ -966,14 +966,14 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                 onClick={() => setSiteVisitModal(null)}
                 className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleSiteVisitConfirm}
                 disabled={!siteVisitDate}
                 className="px-4 py-2 text-sm bg-[#7BC143] hover:bg-[#6aad38] disabled:bg-slate-300 text-white rounded-full font-medium transition"
               >
-                Schedule & Move
+{t("leads.scheduleAndMove")}
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Save, Trash2, Loader2, AlertTriangle, MapPin, Shield, ShieldX } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 type Cert = { id: string; name: string; expires: string | null; status: string };
 type Worker = { id: string; name: string; role: string; city: string | null; state: string | null; types: string[]; certifications?: Cert[] };
@@ -47,6 +48,7 @@ export default function ScheduleModal({
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [workerId, setWorkerId] = useState(entry?.workerId || "");
   const [projectId, setProjectId] = useState(entry?.projectId || "");
   const [date, setDate] = useState(entry?.date || prefillDate || new Date().toISOString().split("T")[0]);
@@ -129,7 +131,7 @@ export default function ScheduleModal({
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <h3 className="text-sm font-semibold text-slate-800">
-            {entry ? "Edit Assignment" : "New Assignment"}
+            {entry ? t("schedule.editAssignment") : t("schedule.newAssignment")}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X size={18} />
@@ -139,14 +141,14 @@ export default function ScheduleModal({
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-3">
           {/* Worker */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Worker</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1">{t("schedule.worker")}</label>
             <select
               value={workerId}
               onChange={(e) => setWorkerId(e.target.value)}
               required
               className="w-full border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
             >
-              <option value="">Select worker...</option>
+              <option value="">{t("schedule.selectWorker")}</option>
               {workers.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}{w.city || w.state ? ` – ${[w.city, w.state].filter(Boolean).join(", ")}` : ""}
@@ -184,14 +186,14 @@ export default function ScheduleModal({
 
           {/* Project */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Project</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1">{t("schedule.project")}</label>
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
               required
               className="w-full border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
             >
-              <option value="">Select project...</option>
+              <option value="">{t("schedule.selectProject")}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} ({TYPE_LABEL[p.type?.toUpperCase()] || p.type})
@@ -205,8 +207,8 @@ export default function ScheduleModal({
             <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
               <AlertTriangle size={14} className="flex-shrink-0" />
               <span>
-                {selectedWorker?.name} is missing {missingTypes.join(", ").toLowerCase()} certification{missingTypes.length > 1 ? "s" : ""}. Their types:{" "}
-                {workerTypes.join(", ") || "none"}.
+                {selectedWorker?.name} {t("schedule.isMissing")} {missingTypes.join(", ").toLowerCase()} {t("schedule.certification")}{missingTypes.length > 1 ? t("schedule.certifications").slice(-1) : ""}. {t("schedule.theirTypes")}:{" "}
+                {workerTypes.join(", ") || t("schedule.none")}.
               </span>
             </div>
           )}
@@ -215,12 +217,12 @@ export default function ScheduleModal({
             <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
               <ShieldX size={14} className="flex-shrink-0 mt-0.5" />
               <div>
-                <span className="font-semibold">Blocked — missing required certifications</span>
+                <span className="font-semibold">{t("schedule.blockedMissingCerts")}</span>
                 {certBlock!.missing.length > 0 && (
-                  <div className="mt-1">Missing: {certBlock!.missing.join(", ")}</div>
+                  <div className="mt-1">{t("schedule.missing")}: {certBlock!.missing.join(", ")}</div>
                 )}
                 {certBlock!.expired.length > 0 && (
-                  <div className="mt-1">Expired: {certBlock!.expired.join(", ")}</div>
+                  <div className="mt-1">{t("schedule.expired")}: {certBlock!.expired.join(", ")}</div>
                 )}
               </div>
             </div>
@@ -229,13 +231,13 @@ export default function ScheduleModal({
           {conflict && (
             <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
               <AlertTriangle size={14} className="flex-shrink-0" />
-              <span>This worker already has an assignment for this date and shift.</span>
+              <span>{t("schedule.conflict")}</span>
             </div>
           )}
 
           {/* Date */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Date</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1">{t("schedule.date")}</label>
             <input
               type="date"
               value={date}
@@ -248,19 +250,19 @@ export default function ScheduleModal({
           {/* Shift + Hours */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Shift</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{t("schedule.shift")}</label>
               <select
                 value={shift}
                 onChange={(e) => setShift(e.target.value)}
                 className="w-full border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
               >
-                <option value="full">Full Day</option>
-                <option value="morning">Morning (AM)</option>
-                <option value="afternoon">Afternoon (PM)</option>
+                <option value="full">{t("schedule.fullDay")}</option>
+                <option value="morning">{t("schedule.morning")}</option>
+                <option value="afternoon">{t("schedule.afternoon")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Hours</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{t("schedule.hours")}</label>
               <input
                 type="number"
                 min="1"
@@ -275,11 +277,11 @@ export default function ScheduleModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1">{t("schedule.notes")}</label>
             <input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional notes..."
+              placeholder={t("schedule.optionalNotes")}
               className="w-full border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
@@ -293,7 +295,7 @@ export default function ScheduleModal({
                   onClick={onDelete}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100"
                 >
-                  <Trash2 size={12} /> Remove
+                  <Trash2 size={12} /> {t("schedule.remove")}
                 </button>
               )}
             </div>
@@ -303,7 +305,7 @@ export default function ScheduleModal({
                 onClick={onClose}
                 className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-md hover:bg-slate-200"
               >
-                Cancel
+                {t("schedule.cancel")}
               </button>
               <button
                 type="submit"
@@ -311,7 +313,7 @@ export default function ScheduleModal({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
               >
                 {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                {entry ? "Update" : "Assign"}
+                {entry ? t("schedule.update") : t("schedule.assign")}
               </button>
             </div>
           </div>

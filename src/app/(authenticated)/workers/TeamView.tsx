@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "@/components/LanguageProvider";
 import {
   Plus,
   Search,
@@ -48,6 +49,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function TeamView({ workers: initialWorkers, positions: initialPositions }: TeamViewProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -475,16 +477,16 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Team</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("team.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Manage team members, roles, and contact info
+            {t("team.subtitle")}
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => setShowSettingsPanel(true)}
             className="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors"
-            title="Settings"
+            title={t("common.settings")}
           >
             <Settings className="w-5 h-5" />
           </button>
@@ -493,7 +495,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add Team Member
+            {t("team.addMember")}
           </button>
         </div>
       </div>
@@ -520,7 +522,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
           <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by name, email, or phone..."
+            placeholder={t("team.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -534,34 +536,34 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Name
+                {t("team.tableHeaderName")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Position
+                {t("team.tableHeaderPosition")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Skill
+                {t("team.tableHeaderSkill")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Role
+                {t("team.tableHeaderRole")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Contact
+                {t("team.tableHeaderContact")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Emergency
+                {t("team.tableHeaderEmergency")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Types
+                {t("team.tableHeaderTypes")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Status
+                {t("team.tableHeaderStatus")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Account
+                {t("team.tableHeaderAccount")}
               </th>
               <th className="px-6 py-3 text-right text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                Actions
+                {t("team.tableHeaderActions")}
               </th>
             </tr>
           </thead>
@@ -569,7 +571,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
             {filteredWorkers.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-6 py-8 text-center text-slate-500">
-                  No team members found
+                  {t("team.noTeamMembers")}
                 </td>
               </tr>
             ) : (
@@ -696,12 +698,12 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                       {workerStatus === "active" ? (
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">
                           <UserCheck className="w-3 h-3" />
-                          Active
+                          {t("common.active")}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
                           <UserX className="w-3 h-3" />
-                          Inactive
+                          {t("common.inactive")}
                         </span>
                       )}
                     </td>
@@ -711,7 +713,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                       {worker.user ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
                           <Shield className="w-3 h-3" />
-                          Has Login
+                          {t("team.hasLogin")}
                         </span>
                       ) : (
                         <button
@@ -724,7 +726,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                         >
                           <UserPlus className="w-3 h-3" />
-                          Create Account
+                          {t("team.createAccount")}
                         </button>
                       )}
                     </td>
@@ -771,14 +773,14 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors border-b border-slate-200 rounded-t-lg"
                 disabled={isLoading}
               >
-                <Edit2 className="w-4 h-4" /> Edit
+                <Edit2 className="w-4 h-4" /> {t("team.edit")}
               </button>
               <button
                 onClick={() => { handleToggleStatus(menuWorker.id, mStatus); setMenuPosition(null); }}
                 className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors border-b border-slate-200"
                 disabled={isLoading}
               >
-                {mStatus === "active" ? <><UserX className="w-4 h-4" /> Deactivate</> : <><UserCheck className="w-4 h-4" /> Activate</>}
+                {mStatus === "active" ? <><UserX className="w-4 h-4" /> {t("team.deactivate")}</> : <><UserCheck className="w-4 h-4" /> {t("team.activate")}</>}
               </button>
               {!menuWorker.user && (
                 <button
@@ -793,7 +795,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                   className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors border-b border-slate-200"
                   disabled={isLoading}
                 >
-                  <UserPlus className="w-4 h-4" /> Create Account
+                  <UserPlus className="w-4 h-4" /> {t("team.createAccount")}
                 </button>
               )}
               {menuWorker.user && (
@@ -809,14 +811,14 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                     className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors border-b border-slate-200"
                     disabled={isLoading}
                   >
-                    <KeyRound className="w-4 h-4" /> Reset Password
+                    <KeyRound className="w-4 h-4" /> {t("team.resetPassword")}
                   </button>
                   <button
                     onClick={() => { handleRemoveAccount(menuWorker); setOpenActionMenu(null); setMenuPosition(null); }}
                     className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 transition-colors border-b border-slate-200"
                     disabled={isLoading}
                   >
-                    <Unlink className="w-4 h-4" /> Remove Account
+                    <Unlink className="w-4 h-4" /> {t("team.deleteMember")}
                   </button>
                 </>
               )}
@@ -825,7 +827,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors rounded-b-lg"
                 disabled={isLoading}
               >
-                <Trash2 className="w-4 h-4" /> Delete
+                <Trash2 className="w-4 h-4" /> {t("common.delete")}
               </button>
             </div>
           </>
@@ -839,7 +841,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
             {/* Modal Header */}
             <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
               <h2 className="text-xl font-bold text-slate-900">
-                {editingWorker ? "Edit Team Member" : "Add Team Member"}
+                {editingWorker ? t("team.editMember") : t("team.addMember")}
               </h2>
               <button
                 onClick={() => {
@@ -866,7 +868,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 <div>
                   <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer text-sm font-medium">
                     <Camera className="w-4 h-4" />
-                    {photoPreview ? "Change Photo" : "Upload Photo"}
+                    {photoPreview ? t("team.changePhoto") : t("team.uploadPhoto")}
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -874,21 +876,21 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                       className="hidden"
                     />
                   </label>
-                  <p className="text-xs text-slate-500 mt-1">JPEG, PNG, or WebP</p>
+                  <p className="text-xs text-slate-500 mt-1">{t("team.photoFormats")}</p>
                 </div>
               </div>
 
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-slate-900 mb-2">
-                  Name <span className="text-red-500">*</span>
+                  {t("common.name")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleFormChange}
-                  placeholder="Enter full name"
+                  placeholder={t("team.enterFullName")}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -897,7 +899,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    Position
+                    {t("workers.position")}
                   </label>
                   <select
                     name="position"
@@ -905,7 +907,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                     onChange={handleFormChange}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="">Select position</option>
+                    <option value="">{t("team.selectPosition")}</option>
                     {positions.map((pos) => (
                       <option key={pos} value={pos}>
                         {pos}
@@ -916,7 +918,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
 
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    Role
+                    {t("workers.role")}
                   </label>
                   <select
                     name="role"
@@ -937,7 +939,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               {["Technician", "Supervisor", "Laborer"].includes(formData.position) && (
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    Skill Rating
+                    {t("team.skillRating")}
                   </label>
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((level) => (
@@ -957,12 +959,12 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                       </button>
                     ))}
                     <span className="ml-2 text-sm text-slate-500">
-                      {formData.skillRating === 0 && "Not rated"}
-                      {formData.skillRating === 1 && "Novice"}
-                      {formData.skillRating === 2 && "Basic"}
-                      {formData.skillRating === 3 && "Competent"}
-                      {formData.skillRating === 4 && "Skilled"}
-                      {formData.skillRating === 5 && "Expert"}
+                      {formData.skillRating === 0 && t("team.notRated")}
+                      {formData.skillRating === 1 && t("team.novice")}
+                      {formData.skillRating === 2 && t("team.basic")}
+                      {formData.skillRating === 3 && t("team.competent")}
+                      {formData.skillRating === 4 && t("team.skilled")}
+                      {formData.skillRating === 5 && t("team.expert")}
                     </span>
                   </div>
                 </div>
@@ -972,21 +974,21 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    Phone
+                    {t("team.phoneLabel")}
                   </label>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleFormChange}
-                    placeholder="(555) 123-4567"
+                    placeholder={t("team.phoneLabel")}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    Email
+                    {t("team.emailLabel")}
                     {formData.role !== "TECHNICIAN" && (
                       <span className="text-red-500 ml-1">*</span>
                     )}
@@ -996,14 +998,14 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                     name="email"
                     value={formData.email}
                     onChange={handleFormChange}
-                    placeholder={formData.role !== "TECHNICIAN" ? "required@company.com" : "worker@example.com"}
+                    placeholder={formData.role !== "TECHNICIAN" ? t("team.requiredEmail") : t("team.emailPlaceholder")}
                     className={`w-full px-3 py-2 border rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       formData.role !== "TECHNICIAN" && !formData.email.trim() ? "border-red-300" : "border-slate-200"
                     }`}
                     required={formData.role !== "TECHNICIAN"}
                   />
                   {formData.role !== "TECHNICIAN" && !formData.email.trim() && (
-                    <p className="text-xs text-red-500 mt-1">Work email required for {formData.role.toLowerCase()} roles</p>
+                    <p className="text-xs text-red-500 mt-1">{t("team.workEmailRequired").replace("{role}", formData.role.toLowerCase())}</p>
                   )}
                 </div>
               </div>
@@ -1012,21 +1014,21 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    Emergency Contact Name
+                    {t("team.emergencyContactName")}
                   </label>
                   <input
                     type="text"
                     name="emergencyContactName"
                     value={formData.emergencyContactName}
                     onChange={handleFormChange}
-                    placeholder="Name"
+                    placeholder={t("common.name")}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    Emergency Contact Phone
+                    {t("team.emergencyContactPhone")}
                   </label>
                   <input
                     type="tel"
@@ -1042,7 +1044,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               {/* Home Address */}
               <div>
                 <label className="block text-sm font-medium text-slate-900 mb-2">
-                  <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> Home Address</span>
+                  <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {t("team.homeAddress")}</span>
                 </label>
                 <AddressAutocomplete
                   value={formData.address}
@@ -1063,40 +1065,40 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    City
+                    {t("team.cityLabel")}
                   </label>
                   <input
                     type="text"
                     name="homeCity"
                     value={formData.homeCity}
                     onChange={handleFormChange}
-                    placeholder="City"
+                    placeholder={t("team.cityLabel")}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    State
+                    {t("team.stateLabel")}
                   </label>
                   <input
                     type="text"
                     name="homeState"
                     value={formData.homeState}
                     onChange={handleFormChange}
-                    placeholder="State"
+                    placeholder={t("team.stateLabel")}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
-                    Zip
+                    {t("team.zipLabel")}
                   </label>
                   <input
                     type="text"
                     name="homeZip"
                     value={formData.homeZip}
                     onChange={handleFormChange}
-                    placeholder="Zip"
+                    placeholder={t("team.zipLabel")}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -1105,7 +1107,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               {/* Worker Types */}
               <div>
                 <label className="block text-sm font-medium text-slate-900 mb-3">
-                  Types
+                  {t("team.types")}
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {WORKER_TYPES.map((type) => (
@@ -1128,7 +1130,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               {/* Status Toggle */}
               <div className="flex items-center gap-3">
                 <label className="text-sm font-medium text-slate-900">
-                  Status
+                  {t("team.statusLabel")}
                 </label>
                 <button
                   onClick={() =>
@@ -1147,7 +1149,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                   />
                 </button>
                 <span className="text-sm text-slate-600">
-                  {formData.status === "active" ? "Active" : "Inactive"}
+                  {formData.status === "active" ? t("common.active") : t("common.inactive")}
                 </span>
               </div>
             </div>
@@ -1162,7 +1164,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 className="px-4 py-2 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
                 disabled={isLoading}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleSubmitWorker}
@@ -1170,7 +1172,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {editingWorker ? "Update" : "Add"}
+                {editingWorker ? t("common.update") : t("common.add")}
               </button>
             </div>
           </div>
@@ -1187,11 +1189,10 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-slate-900">
-                  Delete Team Member
+                  {t("team.deleteMember")}
                 </h3>
                 <p className="text-sm text-slate-600 mt-2">
-                  Are you sure you want to delete this team member? This action
-                  cannot be undone.
+                  {t("team.deleteConfirm")}
                 </p>
               </div>
             </div>
@@ -1201,7 +1202,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 className="px-4 py-2 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
                 disabled={isLoading}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => handleDeleteWorker(deleteConfirm)}
@@ -1209,7 +1210,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Delete
+                {t("common.delete")}
               </button>
             </div>
           </div>
@@ -1221,7 +1222,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-bold text-slate-900">Create Login Account</h2>
+              <h2 className="text-lg font-bold text-slate-900">{t("team.createLoginAccount")}</h2>
               <button
                 onClick={() => { setCreateAccountWorker(null); setAccountError(""); }}
                 className="text-slate-500 hover:text-slate-700 transition-colors"
@@ -1231,7 +1232,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
             </div>
             <div className="px-6 py-4 space-y-4">
               <p className="text-sm text-slate-600">
-                Create a login account for <strong>{createAccountWorker.name}</strong> so they can sign into the app.
+                {t("team.createLoginDescription").replace("{name}", createAccountWorker.name)}
               </p>
               {accountError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -1239,22 +1240,22 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">Email</label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">{t("team.emailLabel")}</label>
                 <input
                   type="email"
                   value={accountEmail}
                   onChange={(e) => setAccountEmail(e.target.value)}
-                  placeholder="user@company.com"
+                  placeholder="user@xtractes.com"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">Password</label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">{t("team.passwordLabel")}</label>
                 <input
                   type="password"
                   value={accountPassword}
                   onChange={(e) => setAccountPassword(e.target.value)}
-                  placeholder="Min. 6 characters"
+                  placeholder={t("team.passwordPlaceholder")}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -1265,7 +1266,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 className="px-4 py-2 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
                 disabled={isLoading}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleCreateAccount}
@@ -1273,7 +1274,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Create Account
+                {t("team.createAccount")}
               </button>
             </div>
           </div>
@@ -1285,7 +1286,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-bold text-slate-900">Reset Password</h2>
+              <h2 className="text-lg font-bold text-slate-900">{t("team.resetPassword")}</h2>
               <button
                 onClick={() => { setResetPwWorker(null); setResetPwError(""); }}
                 className="text-slate-500 hover:text-slate-700 transition-colors"
@@ -1295,7 +1296,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
             </div>
             <div className="px-6 py-4 space-y-4">
               <p className="text-sm text-slate-600">
-                Reset password for <strong>{resetPwWorker.name}</strong> ({resetPwWorker.user?.email}).
+                {t("team.resetPasswordDescription").replace("{name}", resetPwWorker.name).replace("{email}", resetPwWorker.user?.email)}
               </p>
               {resetPwError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -1309,21 +1310,21 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               >
                 <Mail className="w-5 h-5 text-blue-500 flex-shrink-0" />
                 <div>
-                  <div className="text-sm font-medium text-slate-900">Send Reset Email</div>
-                  <div className="text-xs text-slate-500">Sends a password reset link to their email</div>
+                  <div className="text-sm font-medium text-slate-900">{t("team.sendResetEmail")}</div>
+                  <div className="text-xs text-slate-500">{t("team.sendResetEmailDesc")}</div>
                 </div>
               </button>
               <div className="relative">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-                <div className="relative flex justify-center"><span className="px-3 bg-white text-xs text-slate-400">or set manually</span></div>
+                <div className="relative flex justify-center"><span className="px-3 bg-white text-xs text-slate-400">{t("team.orSetManually")}</span></div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">New Password</label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">{t("team.newPassword")}</label>
                 <input
                   type="password"
                   value={resetPwValue}
                   onChange={(e) => setResetPwValue(e.target.value)}
-                  placeholder="Min. 6 characters"
+                  placeholder={t("team.passwordPlaceholder")}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -1334,7 +1335,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 className="px-4 py-2 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
                 disabled={isLoading}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleResetPassword}
@@ -1342,7 +1343,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Set Password
+                {t("team.setPassword")}
               </button>
             </div>
           </div>
@@ -1356,7 +1357,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
             {/* Panel Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <h2 className="text-xl font-bold text-slate-900">
-                Manage Positions
+                {t("team.managePositions")}
               </h2>
               <button
                 onClick={() => setShowSettingsPanel(false)}
@@ -1371,11 +1372,11 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               {/* Current Positions */}
               <div>
                 <h3 className="text-sm font-medium text-slate-900 mb-3">
-                  Current Positions
+                  {t("team.currentPositions")}
                 </h3>
                 <div className="space-y-2">
                   {positions.length === 0 ? (
-                    <p className="text-sm text-slate-500">No positions yet</p>
+                    <p className="text-sm text-slate-500">{t("team.noPositions")}</p>
                   ) : (
                     positions.map((pos) => (
                       <div
@@ -1399,7 +1400,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
               {/* Add New Position */}
               <div>
                 <h3 className="text-sm font-medium text-slate-900 mb-3">
-                  Add New Position
+                  {t("team.addNewPosition")}
                 </h3>
                 <div className="flex gap-2">
                   <input
@@ -1409,7 +1410,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                     onKeyPress={(e) => {
                       if (e.key === "Enter") handleAddPositionClick();
                     }}
-                    placeholder="e.g., Project Manager"
+                    placeholder={t("team.positionPlaceholder")}
                     className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={isLoading}
                   />
@@ -1431,7 +1432,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 className="px-4 py-2 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
                 disabled={isLoading}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleSavePositions}
@@ -1439,7 +1440,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Save
+                {t("common.save")}
               </button>
             </div>
           </div>

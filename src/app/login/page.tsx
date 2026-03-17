@@ -386,7 +386,7 @@ export default function LoginPage() {
                   "Custom branding — your logo, colors, and domain",
                   "Plug-in marketplace — connect your own accounting, phone, and payroll tools",
                   "Role-based access — Admin, Office, Supervisor, and Technician roles",
-                  "Multi-language support — English, Spanish, and Portuguese",
+                  "Multi-language support — English and Spanish",
                   "Mobile-ready — works on any device with PWA support",
                   "API-first architecture — integrate with anything",
                 ].map((item) => (

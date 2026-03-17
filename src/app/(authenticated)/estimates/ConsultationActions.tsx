@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pencil, Copy, Trash2 } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 export default function ConsultationActions({
   id,
@@ -11,19 +12,21 @@ export default function ConsultationActions({
   id: string;
   customerName: string;
 }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm(`Delete consultation estimate for "${customerName}"? This cannot be undone.`)) return;
+    const msg = t("estimates.deleteConsultationConfirm").replace("{customerName}", customerName);
+    if (!confirm(msg)) return;
     setDeleting(true);
     try {
       await fetch(`/api/consultation-estimates/${id}`, { method: "DELETE" });
       router.refresh();
     } catch {
-      alert("Failed to delete.");
+      alert(t("estimates.failedDeleteConsultation"));
     }
     setDeleting(false);
     setOpen(false);
@@ -46,7 +49,7 @@ export default function ConsultationActions({
         router.push(`/estimates/consultation/${newItem.id}`);
       }
     } catch {
-      alert("Failed to duplicate.");
+      alert(t("estimates.failedDuplicate"));
     }
     setDuplicating(false);
     setOpen(false);
@@ -73,7 +76,7 @@ export default function ConsultationActions({
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
             >
               <Pencil className="w-3.5 h-3.5" />
-              Edit
+              {t("estimates.edit")}
             </button>
             <button
               onClick={handleDuplicate}
@@ -81,7 +84,7 @@ export default function ConsultationActions({
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
             >
               <Copy className="w-3.5 h-3.5" />
-              {duplicating ? "Duplicating..." : "Duplicate"}
+              {duplicating ? t("estimates.duplicating") : t("estimates.duplicate")}
             </button>
             <div className="border-t border-slate-100 my-1" />
             <button
@@ -90,7 +93,7 @@ export default function ConsultationActions({
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition disabled:opacity-50"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              {deleting ? "Deleting..." : "Delete"}
+              {deleting ? t("estimates.deleting") : t("estimates.delete")}
             </button>
           </div>
         </>

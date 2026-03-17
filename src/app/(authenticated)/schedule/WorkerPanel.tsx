@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, MapPin, AlertTriangle, ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 type Cert = { id: string; name: string; expires: string | null; status: string };
 type Worker = {
@@ -41,6 +42,7 @@ export default function WorkerPanel({
   collapsed: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
   const filtered = workers.filter((w) => {
@@ -57,7 +59,7 @@ export default function WorkerPanel({
   if (collapsed) {
     return (
       <div className="w-10 flex-shrink-0 bg-white border border-slate-200 rounded-lg flex flex-col items-center py-3">
-        <button onClick={onToggle} className="text-slate-400 hover:text-indigo-600 mb-3" title="Expand worker panel">
+        <button onClick={onToggle} className="text-slate-400 hover:text-indigo-600 mb-3" title={t("schedule.expand")}>
           <ChevronRight size={16} />
         </button>
         {workers.slice(0, 8).map((w) => (
@@ -86,8 +88,8 @@ export default function WorkerPanel({
     <div className="w-[240px] flex-shrink-0 bg-white border border-slate-200 rounded-lg flex flex-col max-h-[calc(100vh-200px)]">
       {/* Header */}
       <div className="px-3 py-2.5 border-b border-slate-200 flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-slate-700">Workers</h3>
-        <button onClick={onToggle} className="text-slate-400 hover:text-indigo-600" title="Collapse">
+        <h3 className="text-xs font-semibold text-slate-700">{t("schedule.workers")}</h3>
+        <button onClick={onToggle} className="text-slate-400 hover:text-indigo-600" title={t("schedule.collapse")}>
           <ChevronLeft size={14} />
         </button>
       </div>
@@ -99,7 +101,7 @@ export default function WorkerPanel({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, type, city..."
+            placeholder={t("schedule.searchNameType")}
             className="w-full pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
@@ -158,16 +160,16 @@ export default function WorkerPanel({
                 <div className="flex items-center gap-1.5 text-[10px]">
                   <Shield size={9} className="text-slate-400" />
                   {activeCerts > 0 && (
-                    <span className="text-emerald-600">{activeCerts} active</span>
+                    <span className="text-emerald-600">{activeCerts} {t("schedule.active")}</span>
                   )}
                   {expiringCerts > 0 && (
                     <span className="flex items-center gap-0.5 text-amber-600">
-                      <AlertTriangle size={8} /> {expiringCerts} expiring
+                      <AlertTriangle size={8} /> {expiringCerts} {t("schedule.expiring")}
                     </span>
                   )}
                   {expiredCerts > 0 && (
                     <span className="flex items-center gap-0.5 text-red-600">
-                      <AlertTriangle size={8} /> {expiredCerts} expired
+                      <AlertTriangle size={8} /> {expiredCerts} {t("schedule.expired")}
                     </span>
                   )}
                 </div>
@@ -177,12 +179,12 @@ export default function WorkerPanel({
         })}
 
         {filtered.length === 0 && (
-          <div className="text-center py-4 text-xs text-slate-400">No workers match</div>
+          <div className="text-center py-4 text-xs text-slate-400">{t("common.noMatches")}</div>
         )}
       </div>
 
       <div className="px-3 py-1.5 border-t border-slate-100 text-[10px] text-slate-400 text-center">
-        Drag a worker onto the timeline
+        {t("schedule.dragWorkerTimeline")}
       </div>
     </div>
   );
