@@ -45,7 +45,7 @@ const FEATURES = [
   {
     icon: ClipboardCheck,
     title: "Compliance & Certifications",
-    description: "Track CDPHE, EPA, OSHA, and IICRC certifications. Auto-alerts before expiration dates.",
+    description: "Track EPA, OSHA, IICRC, and state-level certifications. Auto-alerts before expiration dates.",
   },
   {
     icon: FileText,
@@ -402,7 +402,7 @@ export default function LoginPage() {
                 { label: "Active Integrations", value: "13+", sub: "and growing" },
                 { label: "User Roles", value: "4", sub: "with granular permissions" },
                 { label: "Languages", value: "3", sub: "EN / ES / PT" },
-                { label: "Compliance Frameworks", value: "5+", sub: "CDPHE, EPA, OSHA..." },
+                { label: "Compliance Frameworks", value: "5+", sub: "EPA, OSHA, IICRC..." },
               ].map((stat) => (
                 <div
                   key={stat.label}
