@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isTechnician, canAccessRoute } from "@/lib/roles";
 import AuthenticatedShell from "@/components/AuthenticatedShell";
+import CrispChat from "@/components/CrispChat";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
       isPlatformAdmin={isPlatformAdmin}
     >
       {children}
+      <CrispChat />
     </AuthenticatedShell>
   );
 }
