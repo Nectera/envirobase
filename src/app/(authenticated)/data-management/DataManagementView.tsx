@@ -755,32 +755,9 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
       {/* ═══════════════ AI KNOWLEDGE BASE TAB ═══════════════ */}
       {activeTab === "knowledge-base" && (
         <>
-          {/* Header card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl flex items-center justify-center">
-                  <Brain className="w-4.5 h-4.5 text-green-700" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-900">{t("knowledgeBase.title")}</h3>
-                  <p className="text-xs text-slate-500">{t("knowledgeBase.description")}</p>
-                </div>
-              </div>
-              {isAdmin && (
-                <button
-                  onClick={openCreateModal}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-full transition-colors"
-                  style={{ backgroundColor: "#7BC143" }}
-                >
-                  <Plus size={16} />
-                  {t("knowledgeBase.addArticle")}
-                </button>
-              )}
-            </div>
-
-            {/* Search & filter */}
-            <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search, filters & actions */}
+          <div className="mb-5">
+            <div className="flex items-center gap-3 mb-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
@@ -788,70 +765,77 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                   value={kbSearch}
                   onChange={(e) => setKbSearch(e.target.value)}
                   placeholder={t("knowledgeBase.searchPlaceholder")}
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400"
                 />
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              {isAdmin && (
                 <button
-                  onClick={() => setKbCategoryFilter("all")}
+                  onClick={openCreateModal}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-full transition-colors flex-shrink-0"
+                  style={{ backgroundColor: "#7BC143" }}
+                >
+                  <Plus size={16} />
+                  <span className="hidden sm:inline">{t("knowledgeBase.addArticle")}</span>
+                  <span className="sm:hidden">Add</span>
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setKbCategoryFilter("all")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                  kbCategoryFilter === "all" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {t("knowledgeBase.allCategories")}
+              </button>
+              {KB_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.key}
+                  onClick={() => setKbCategoryFilter(cat.key)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                    kbCategoryFilter === "all" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    kbCategoryFilter === cat.key ? "bg-slate-900 text-white" : `${cat.color} hover:opacity-80`
                   }`}
                 >
-                  {t("knowledgeBase.allCategories")}
+                  {t(`knowledgeBase.category.${cat.key}`)}
                 </button>
-                {KB_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.key}
-                    onClick={() => setKbCategoryFilter(cat.key)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                      kbCategoryFilter === cat.key ? "bg-slate-900 text-white" : `${cat.color} hover:opacity-80`
-                    }`}
-                  >
-                    {t(`knowledgeBase.category.${cat.key}`)}
-                  </button>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
 
           {/* ─── Material Invoice Upload ─── */}
           {isAdmin && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center">
-                    <Receipt className="w-4.5 h-4.5 text-orange-700" />
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Receipt className="w-4 h-4 text-orange-700" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Material Invoice Upload</h3>
-                    <p className="text-xs text-slate-500">Upload vendor invoices — AI will extract prices and update your estimates</p>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-slate-900">Material Invoice Upload</h3>
+                    <p className="text-[11px] text-slate-400 hidden sm:block">Upload vendor invoices — AI extracts prices and updates estimates</p>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  ref={invoiceInputRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.webp"
-                  onChange={handleInvoiceUpload}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => invoiceInputRef.current?.click()}
-                  disabled={invoiceUploading}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 rounded-full transition-colors"
-                >
-                  {invoiceUploading ? (
-                    <><Loader2 size={16} className="animate-spin" /> Parsing Invoice...</>
-                  ) : (
-                    <><FileUp size={16} /> Upload Invoice (PDF or Image)</>
-                  )}
-                </button>
-                {invoiceUploading && (
-                  <span className="text-xs text-slate-500">AI is reading the invoice and extracting prices...</span>
-                )}
+                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                  <input
+                    ref={invoiceInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={handleInvoiceUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => invoiceInputRef.current?.click()}
+                    disabled={invoiceUploading}
+                    className="flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 rounded-full transition-colors"
+                  >
+                    {invoiceUploading ? (
+                      <><Loader2 size={14} className="animate-spin" /> Parsing...</>
+                    ) : (
+                      <><FileUp size={14} /> Upload Invoice</>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {invoiceError && (
@@ -953,8 +937,8 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
 
           {/* Articles list */}
           {filteredArticles.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
-              <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+              <BookOpen className="w-9 h-9 text-slate-300 mx-auto mb-2" />
               <p className="text-sm text-slate-500">{kbSearch || kbCategoryFilter !== "all" ? t("knowledgeBase.noResults") : t("knowledgeBase.noArticles")}</p>
               {isAdmin && !kbSearch && kbCategoryFilter === "all" && (
                 <button onClick={openCreateModal} className="mt-3 text-sm font-medium text-green-600 hover:text-green-700">

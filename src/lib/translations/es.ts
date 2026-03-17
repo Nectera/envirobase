@@ -666,6 +666,7 @@ export const es: Record<string, string> = {
   "knowledgeBase.category.tips": "Consejos y Mejores Prácticas",
   "knowledgeBase.category.regulations": "Regulaciones",
   "knowledgeBase.category.general": "General",
+  "knowledgeBase.category.material_invoice": "Factura de Materiales",
   "knowledgeBase.noArticles": "Aún no hay artículos. Cree uno para comenzar.",
   "knowledgeBase.noResults": "Ningún artículo coincide con su búsqueda.",
   "knowledgeBase.addFirstArticle": "Cree su primer artículo",
