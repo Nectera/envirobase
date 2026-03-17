@@ -741,7 +741,6 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
               <p className="text-[10px] text-slate-400 text-center py-1">Documents transfer to Projects when the lead is won.</p>
             )}
           </div>
-        </div>
 
           {/* Notes */}
           <div className="bg-white rounded-lg border border-slate-200 p-4">
