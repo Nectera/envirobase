@@ -743,6 +743,12 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
           </div>
         </div>
 
+          {/* Notes */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <NotesTab entityType="lead" entityId={lead.id} />
+          </div>
+        </div>
+
         {/* Right Column */}
         <div className="space-y-4">
           {/* Estimates */}
@@ -831,11 +837,6 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
             {consultationEstimates.length === 0 && (!lead.estimates || lead.estimates.length === 0) && (
               <p className="text-xs text-slate-400">No estimates yet</p>
             )}
-          </div>
-
-          {/* Notes */}
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <NotesTab entityType="lead" entityId={lead.id} />
           </div>
 
           {/* Activity Log */}

@@ -6,7 +6,7 @@ import { signOut } from "next-auth/react";
 import {
   Home, FolderOpen, Users, ClipboardCheck, LogOut,
   Clock, ClipboardList, Building2, Calendar, CalendarDays, FileText,
-  Target, LayoutDashboard, Receipt, CheckSquare, TrendingUp, BarChart3,
+  Target, LayoutDashboard, Receipt, CheckSquare, TrendingUp,
   Settings, X, Database, UserPlus, Bell, MessageSquare, DollarSign,
   PanelLeftClose, PanelLeftOpen, Gift, Puzzle, Shield,
 } from "lucide-react";
@@ -16,7 +16,7 @@ import { useTranslation } from "./LanguageProvider";
 import ChatUnreadBadge from "./ChatUnreadBadge";
 import { useSidebarCollapse } from "./SidebarCollapseProvider";
 
-const crmPaths = ["/crm", "/leads", "/companies", "/contacts", "/metrics", "/pipeline", "/estimates"];
+const crmPaths = ["/crm", "/leads", "/companies", "/contacts", "/pipeline", "/estimates"];
 
 type NavItem = { href: string; labelKey: string; icon: any };
 
@@ -47,13 +47,12 @@ export default function Sidebar({
     { href: "/estimates", labelKey: "sidebar.estimates", icon: Receipt },
     { href: "/companies", labelKey: "sidebar.companies", icon: Building2 },
     { href: "/contacts", labelKey: "sidebar.contacts", icon: Users },
-    { href: "/metrics", labelKey: "sidebar.metrics", icon: BarChart3 },
     { href: "/tasks", labelKey: "sidebar.tasks", icon: CheckSquare },
     { href: "/calendar", labelKey: "sidebar.calendar", icon: CalendarDays },
   ];
 
-  // Hide Estimates and Metrics on mobile
-  const mobileHiddenCrmPaths = ["/estimates", "/metrics"];
+  // Hide Estimates on mobile
+  const mobileHiddenCrmPaths = ["/estimates"];
 
   const pmNavItems: NavItem[] = [
     { href: "/dashboard", labelKey: "sidebar.dashboard", icon: Home },

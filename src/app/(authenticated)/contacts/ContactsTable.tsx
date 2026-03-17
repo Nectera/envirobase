@@ -1,8 +1,22 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { Search, ChevronRight, Badge, Mail, Phone } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Search,
+  ChevronRight,
+  Mail,
+  Phone,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Pencil,
+  Trash2,
+  X,
+  Check,
+  Loader2,
+} from "lucide-react";
 
 interface Company {
   id: string;
@@ -21,11 +35,61 @@ interface Contact {
   company: Company | null;
 }
 
-export default function ContactsTable({ contacts }: { contacts: Contact[] }) {
+type SortField = "name" | "company" | "title" | "email" | "phone";
+type SortDir = "asc" | "desc";
+
+export default function ContactsTable({ contacts: initialContacts }: { contacts: Contact[] }) {
+  const router = useRouter();
+  const [contacts, setContacts] = useState(initialContacts);
   const [search, setSearch] = useState("");
+  const [companyFilter, setCompanyFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<{
+    firstName: string;
+    lastName: string;
+    title: string;
+    email: string;
+    phone: string;
+  }>({ firstName: "", lastName: "", title: "", email: "", phone: "" });
+  const [saving, setSaving] = useState(false);
+
+  // Delete state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown size={14} className="text-slate-300 ml-1" />;
+    return sortDir === "asc"
+      ? <ArrowUp size={14} className="text-[#7BC143] ml-1" />
+      : <ArrowDown size={14} className="text-[#7BC143] ml-1" />;
+  };
+
+  // Unique companies for filter dropdown
+  const companies = useMemo(() => {
+    const companyMap = new Map<string, string>();
+    contacts.forEach((c) => {
+      if (c.company) companyMap.set(c.company.id, c.company.name);
+    });
+    return Array.from(companyMap.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [contacts]);
 
   const filteredContacts = useMemo(() => {
-    return contacts.filter((contact) => {
+    const filtered = contacts.filter((contact) => {
       const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ");
       const q = search.toLowerCase();
       const matchesSearch =
@@ -35,15 +99,109 @@ export default function ContactsTable({ contacts }: { contacts: Contact[] }) {
         (contact.email || "").toLowerCase().includes(q) ||
         (contact.phone || "").toLowerCase().includes(q);
 
-      return matchesSearch;
+      const matchesCompany =
+        companyFilter === "all" ||
+        (companyFilter === "none" ? !contact.company : contact.company?.id === companyFilter);
+
+      return matchesSearch && matchesCompany;
     });
-  }, [contacts, search]);
+
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case "name": {
+          const aName = [a.firstName, a.lastName].filter(Boolean).join(" ");
+          const bName = [b.firstName, b.lastName].filter(Boolean).join(" ");
+          cmp = aName.localeCompare(bName);
+          break;
+        }
+        case "company":
+          cmp = (a.company?.name || "").localeCompare(b.company?.name || "");
+          break;
+        case "title":
+          cmp = (a.title || "").localeCompare(b.title || "");
+          break;
+        case "email":
+          cmp = (a.email || "").localeCompare(b.email || "");
+          break;
+        case "phone":
+          cmp = (a.phone || "").localeCompare(b.phone || "");
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [contacts, search, companyFilter, sortField, sortDir]);
+
+  // Edit handlers
+  const startEdit = useCallback((contact: Contact) => {
+    setEditingId(contact.id);
+    setEditData({
+      firstName: contact.firstName || "",
+      lastName: contact.lastName || "",
+      title: contact.title || "",
+      email: contact.email || "",
+      phone: contact.phone || "",
+    });
+    setDeleteConfirmId(null);
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (!editingId) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/contacts/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editData),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      const updated = await res.json();
+      setContacts((prev) =>
+        prev.map((c) => (c.id === editingId ? { ...c, ...updated } : c))
+      );
+      setEditingId(null);
+      router.refresh();
+    } catch (err) {
+      alert("Failed to save changes. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }, [editingId, editData, router]);
+
+  // Delete handlers
+  const confirmDelete = useCallback((id: string) => {
+    setDeleteConfirmId(id);
+    setEditingId(null);
+  }, []);
+
+  const cancelDelete = useCallback(() => {
+    setDeleteConfirmId(null);
+  }, []);
+
+  const executeDelete = useCallback(async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/contacts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setContacts((prev) => prev.filter((c) => c.id !== id));
+      setDeleteConfirmId(null);
+      router.refresh();
+    } catch (err) {
+      alert("Failed to delete contact. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  }, [router]);
 
   return (
     <div>
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative">
+      {/* Filters */}
+      <div className="mb-6 flex gap-4">
+        <div className="flex-1 relative">
           <Search size={18} className="absolute left-3 top-3 text-slate-400" />
           <input
             type="text"
@@ -53,6 +211,19 @@ export default function ContactsTable({ contacts }: { contacts: Contact[] }) {
             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-full text-sm focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]"
           />
         </div>
+        <select
+          value={companyFilter}
+          onChange={(e) => setCompanyFilter(e.target.value)}
+          className="px-4 py-2 border border-slate-200 rounded-full text-sm bg-white focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]"
+        >
+          <option value="all">All Companies</option>
+          <option value="none">No Company</option>
+          {companies.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Mobile List */}
@@ -61,18 +232,53 @@ export default function ContactsTable({ contacts }: { contacts: Contact[] }) {
           <div className="text-center py-8 text-sm text-slate-500">No contacts found</div>
         ) : (
           filteredContacts.map((contact) => (
-            <Link key={contact.id} href={`/contacts/${contact.id}`} className="flex items-center justify-between bg-white rounded-xl border border-slate-100 px-4 py-3 hover:bg-slate-50 transition">
-              <div className="min-w-0">
-                <div className="font-medium text-sm text-slate-800 truncate">
-                  {[contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+            <div key={contact.id} className="bg-white rounded-xl border border-slate-100 px-4 py-3">
+              {deleteConfirmId === contact.id ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-red-600 font-medium">Delete this contact?</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => executeDelete(contact.id)}
+                      disabled={deletingId === contact.id}
+                      className="px-3 py-1 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50"
+                    >
+                      {deletingId === contact.id ? <Loader2 size={14} className="animate-spin" /> : "Yes, Delete"}
+                    </button>
+                    <button
+                      onClick={cancelDelete}
+                      className="px-3 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
-                  {contact.company && <span>{contact.company.name}</span>}
-                  {contact.title && <span>{contact.company ? "·" : ""} {contact.title}</span>}
+              ) : (
+                <div className="flex items-center justify-between">
+                  <Link href={`/contacts/${contact.id}`} className="min-w-0 flex-1">
+                    <div className="font-medium text-sm text-slate-800 truncate">
+                      {[contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
+                      {contact.company && <span>{contact.company.name}</span>}
+                      {contact.title && <span>{contact.company ? "·" : ""} {contact.title}</span>}
+                    </div>
+                  </Link>
+                  <div className="flex items-center gap-1 ml-2">
+                    <Link href={`/contacts/${contact.id}`}>
+                      <button className="p-1.5 text-slate-400 hover:text-[#7BC143] transition">
+                        <Pencil size={14} />
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => confirmDelete(contact.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-500 transition"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <ChevronRight size={16} className="text-slate-300 flex-shrink-0 ml-2" />
-            </Link>
+              )}
+            </div>
           ))
         )}
       </div>
@@ -82,74 +288,211 @@ export default function ContactsTable({ contacts }: { contacts: Contact[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Title</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Primary</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">Action</th>
+              <th
+                className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
+                onClick={() => handleSort("name")}
+              >
+                <span className="inline-flex items-center">Name<SortIcon field="name" /></span>
+              </th>
+              <th
+                className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
+                onClick={() => handleSort("title")}
+              >
+                <span className="inline-flex items-center">Title<SortIcon field="title" /></span>
+              </th>
+              <th
+                className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
+                onClick={() => handleSort("company")}
+              >
+                <span className="inline-flex items-center">Company<SortIcon field="company" /></span>
+              </th>
+              <th
+                className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
+                onClick={() => handleSort("email")}
+              >
+                <span className="inline-flex items-center">Email<SortIcon field="email" /></span>
+              </th>
+              <th
+                className="px-4 py-2.5 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer hover:text-slate-900 select-none"
+                onClick={() => handleSort("phone")}
+              >
+                <span className="inline-flex items-center">Phone<SortIcon field="phone" /></span>
+              </th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredContacts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-sm text-slate-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
                   No contacts found
                 </td>
               </tr>
             ) : (
               filteredContacts.map((contact) => (
                 <tr key={contact.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <Link href={`/contacts/${contact.id}`} className="font-medium text-[#7BC143] hover:text-[#6aad38]">
-                      {[contact.firstName, contact.lastName].filter(Boolean).join(" ")}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{contact.title}</td>
-                  <td className="px-6 py-4 text-sm">
-                    {contact.company ? (
-                      <Link href={`/companies/${contact.company.id}`} className="text-[#7BC143] hover:text-[#6aad38] font-medium">
-                        {contact.company.name}
-                      </Link>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {contact.email ? (
-                      <div className="flex items-center gap-1">
-                        <Mail size={14} className="text-slate-400" />
-                        {contact.email}
-                      </div>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {contact.phone ? (
-                      <div className="flex items-center gap-1">
-                        <Phone size={14} className="text-slate-400" />
-                        <a href={`tel:${contact.phone}`} className="hover:text-blue-600 transition">{contact.phone}</a>
-                      </div>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {contact.primary && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded bg-amber-100 text-amber-800">
-                        <Badge size={12} />
-                        Primary
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="inline-flex items-center gap-1 text-[#7BC143] hover:text-[#6aad38] font-medium text-sm transition-colors">
-                      Edit
-                      <ChevronRight size={16} />
-                    </button>
-                  </td>
+                  {editingId === contact.id ? (
+                    <>
+                      <td className="px-4 py-2">
+                        <div className="flex gap-1">
+                          <input
+                            type="text"
+                            value={editData.firstName}
+                            onChange={(e) => setEditData({ ...editData, firstName: e.target.value })}
+                            placeholder="First"
+                            className="w-20 px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143]"
+                          />
+                          <input
+                            type="text"
+                            value={editData.lastName}
+                            onChange={(e) => setEditData({ ...editData, lastName: e.target.value })}
+                            placeholder="Last"
+                            className="w-20 px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143]"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={editData.title}
+                          onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                          placeholder="Title"
+                          className="w-full px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143]"
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-sm text-slate-600">
+                        {contact.company ? (
+                          <Link href={`/companies/${contact.company.id}`} className="text-[#7BC143] hover:text-[#6aad38] font-medium">
+                            {contact.company.name}
+                          </Link>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="email"
+                          value={editData.email}
+                          onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                          placeholder="Email"
+                          className="w-full px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143]"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="tel"
+                          value={editData.phone}
+                          onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                          placeholder="Phone"
+                          className="w-full px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-[#7BC143]"
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={saveEdit}
+                            disabled={saving}
+                            className="p-1.5 text-[#7BC143] hover:bg-green-50 rounded transition disabled:opacity-50"
+                            title="Save"
+                          >
+                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="p-1.5 text-slate-400 hover:bg-slate-100 rounded transition"
+                            title="Cancel"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : deleteConfirmId === contact.id ? (
+                    <>
+                      <td colSpan={4} className="px-4 py-3">
+                        <span className="text-sm text-red-600 font-medium">
+                          Delete &quot;{[contact.firstName, contact.lastName].filter(Boolean).join(" ")}&quot;?
+                        </span>
+                      </td>
+                      <td colSpan={2} className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => executeDelete(contact.id)}
+                            disabled={deletingId === contact.id}
+                            className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50 transition"
+                          >
+                            {deletingId === contact.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              "Yes, Delete"
+                            )}
+                          </button>
+                          <button
+                            onClick={cancelDelete}
+                            className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-4 py-3">
+                        <Link href={`/contacts/${contact.id}`} className="font-medium text-[#7BC143] hover:text-[#6aad38] text-sm">
+                          {[contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{contact.title}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {contact.company ? (
+                          <Link href={`/companies/${contact.company.id}`} className="text-[#7BC143] hover:text-[#6aad38] font-medium">
+                            {contact.company.name}
+                          </Link>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {contact.email ? (
+                          <div className="flex items-center gap-1">
+                            <Mail size={13} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{contact.email}</span>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {contact.phone ? (
+                          <div className="flex items-center gap-1">
+                            <Phone size={13} className="text-slate-400 shrink-0" />
+                            <a href={`tel:${contact.phone}`} className="hover:text-blue-600 transition">{contact.phone}</a>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => startEdit(contact)}
+                            className="p-1.5 text-slate-400 hover:text-[#7BC143] hover:bg-green-50 rounded transition"
+                            title="Edit"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => confirmDelete(contact.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition"
+                            title="Delete"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))
             )}
