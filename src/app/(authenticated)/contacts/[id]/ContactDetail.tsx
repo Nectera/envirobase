@@ -8,11 +8,11 @@ import {
   Pencil, Check, X, Loader2,
 } from "lucide-react";
 import ActivityFeed from "@/components/ActivityFeed";
+import NotesTab from "@/components/NotesTab";
 import EmailCompose from "@/components/EmailCompose";
 import ClickToCall from "@/components/ClickToCall";
 import SMSCompose from "@/components/SMSCompose";
 import PandaDocSend from "@/components/PandaDocSend";
-import NotesTab from "@/components/NotesTab";
 import { useTranslation } from "@/components/LanguageProvider";
 
 function formatDate(d: string) {
@@ -52,7 +52,7 @@ export default function ContactDetail({
 }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"details" | "activity" | "notes">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "notes" | "activity">("details");
   const [showEmailCompose, setShowEmailCompose] = useState(false);
   const [showSMSCompose, setShowSMSCompose] = useState(false);
   const [showPandaDoc, setShowPandaDoc] = useState(false);
@@ -223,16 +223,6 @@ export default function ContactDetail({
           {t("common.details")}
         </button>
         <button
-          onClick={() => setActiveTab("activity")}
-          className={`pb-3 text-sm font-medium transition-colors ${
-            activeTab === "activity"
-              ? "border-b-2 border-indigo-600 text-indigo-600"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          {t("activity.title")} ({activities.length + companyActivities.length})
-        </button>
-        <button
           onClick={() => setActiveTab("notes")}
           className={`pb-3 text-sm font-medium transition-colors ${
             activeTab === "notes"
@@ -242,11 +232,17 @@ export default function ContactDetail({
         >
           Notes
         </button>
+        <button
+          onClick={() => setActiveTab("activity")}
+          className={`pb-3 text-sm font-medium transition-colors ${
+            activeTab === "activity"
+              ? "border-b-2 border-indigo-600 text-indigo-600"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          {t("activity.title")} ({activities.length + companyActivities.length})
+        </button>
       </div>
-
-      {activeTab === "notes" && (
-        <NotesTab entityType="contact" entityId={contactData.id} />
-      )}
 
       {/* Details Tab */}
       {activeTab === "details" && (
@@ -344,10 +340,7 @@ export default function ContactDetail({
                   {contactData.company && (
                     <div className="flex items-center gap-2 text-sm">
                       <Building2 size={14} className="text-slate-400" />
-                      <Link
-                        href={`/companies/${contactData.company.id}`}
-                        className="text-indigo-600 hover:text-indigo-700"
-                      >
+                      <Link href={`/companies/${contactData.company.id}`} className="text-indigo-600 hover:text-indigo-700">
                         {contactData.company.name}
                       </Link>
                     </div>
@@ -374,197 +367,202 @@ export default function ContactDetail({
               )}
             </div>
 
-          {/* Address / Location */}
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">
-              Location
-            </h3>
-            {editing ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Street Address</label>
-                  <input type="text" value={editForm.address} onChange={(e) => updateField("address", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
+            {/* Address / Location */}
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Location
+              </h3>
+              {editing ? (
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">City</label>
-                    <input type="text" value={editForm.city} onChange={(e) => updateField("city", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    <label className="block text-[11px] text-slate-400 mb-1">Street Address</label>
+                    <input type="text" value={editForm.address} onChange={(e) => updateField("address", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">City</label>
+                      <input type="text" value={editForm.city} onChange={(e) => updateField("city", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">State</label>
+                      <input type="text" value={editForm.state} onChange={(e) => updateField("state", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">State</label>
-                    <input type="text" value={editForm.state} onChange={(e) => updateField("state", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    <label className="block text-[11px] text-slate-400 mb-1">ZIP Code</label>
+                    <input type="text" value={editForm.zip} onChange={(e) => updateField("zip", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1">Location Notes</label>
+                    <textarea value={editForm.locationNotes} onChange={(e) => updateField("locationNotes", e.target.value)} rows={2} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143] resize-y" />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">ZIP Code</label>
-                  <input type="text" value={editForm.zip} onChange={(e) => updateField("zip", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+              ) : hasAddress ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 text-sm">
+                    <MapPin size={14} className="text-slate-400 mt-0.5" />
+                    <div>
+                      {contactData.address && <div className="text-slate-700">{contactData.address}</div>}
+                      {(contactData.city || contactData.state) && (
+                        <div className="text-slate-700">
+                          {[contactData.city, contactData.state].filter(Boolean).join(", ")}
+                          {contactData.zip && ` ${contactData.zip}`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {contactData.locationNotes && (
+                    <div className="pt-2 border-t border-slate-100">
+                      <div className="text-[11px] text-slate-400 mb-1">Location Notes</div>
+                      <div className="text-sm text-slate-700 whitespace-pre-wrap">{contactData.locationNotes}</div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Location Notes</label>
-                  <textarea value={editForm.locationNotes} onChange={(e) => updateField("locationNotes", e.target.value)} rows={2} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143] resize-y" />
-                </div>
-              </div>
-            ) : hasAddress ? (
-              <div className="space-y-3">
-                <div className="flex items-start gap-2 text-sm">
-                  <MapPin size={14} className="text-slate-400 mt-0.5" />
-                  <div>
-                    {contactData.address && <div className="text-slate-700">{contactData.address}</div>}
-                    {(contactData.city || contactData.state) && (
-                      <div className="text-slate-700">
-                        {[contactData.city, contactData.state].filter(Boolean).join(", ")}
-                        {contactData.zip && ` ${contactData.zip}`}
+              ) : (
+                <p className="text-sm text-slate-400">No address on file</p>
+              )}
+            </div>
+
+            {/* Insurance Information */}
+            {(hasInsurance || editing) && (
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <Shield size={14} className="text-slate-400" />
+                  Insurance Information
+                </h3>
+                {editing ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Insurance Carrier</label>
+                      <input type="text" value={editForm.insuranceCarrier} onChange={(e) => updateField("insuranceCarrier", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Claim #</label>
+                      <input type="text" value={editForm.claimNumber} onChange={(e) => updateField("claimNumber", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Adjuster Name</label>
+                      <input type="text" value={editForm.adjusterName} onChange={(e) => updateField("adjusterName", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Adjuster Contact</label>
+                      <input type="text" value={editForm.adjusterContact} onChange={(e) => updateField("adjusterContact", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    {contactData.insuranceCarrier && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Carrier</span>
+                        <span className="text-slate-800 font-medium">{contactData.insuranceCarrier}</span>
+                      </div>
+                    )}
+                    {contactData.claimNumber && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Claim #</span>
+                        <span className="text-slate-800 font-medium">{contactData.claimNumber}</span>
+                      </div>
+                    )}
+                    {contactData.adjusterName && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Adjuster</span>
+                        <span className="text-slate-800 font-medium">{contactData.adjusterName}</span>
+                      </div>
+                    )}
+                    {contactData.adjusterContact && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Adjuster Contact</span>
+                        <span className="text-slate-800 font-medium">{contactData.adjusterContact}</span>
+                      </div>
+                    )}
+                    {contactData.dateOfLoss && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Date of Loss</span>
+                        <span className="text-slate-800 font-medium">{formatDate(contactData.dateOfLoss)}</span>
                       </div>
                     )}
                   </div>
-                </div>
-                {contactData.locationNotes && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <div className="text-[11px] text-slate-400 mb-1">Location Notes</div>
-                    <div className="text-sm text-slate-700 whitespace-pre-wrap">{contactData.locationNotes}</div>
+                )}
+              </div>
+            )}
+
+            {/* Referral & Testing */}
+            {(contactData.referredForTesting || contactData.referralSource || editing) && (
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                  Referral & Testing
+                </h3>
+                {editing ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Source</label>
+                      <select value={editForm.source} onChange={(e) => updateField("source", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143] bg-white">
+                        <option value="">None</option>
+                        {Object.entries(SOURCE_LABEL).map(([key, label]) => (
+                          <option key={key} value={key}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Referral Source</label>
+                      <input type="text" value={editForm.referralSource} onChange={(e) => updateField("referralSource", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    {contactData.referralSource && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Referred By</span>
+                        <span className="text-slate-800 font-medium">{contactData.referralSource}</span>
+                      </div>
+                    )}
+                    {contactData.referredForTesting && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Referred for Testing</span>
+                        <span className="text-slate-800 font-medium">{contactData.referredTestingTo || "Yes"}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            ) : (
-              <p className="text-sm text-slate-400">No address on file</p>
             )}
-          </div>
 
-          {/* Insurance Information */}
-          {(hasInsurance || editing) && (
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                <Shield size={14} className="text-slate-400" />
-                Insurance Information
-              </h3>
-              {editing ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Insurance Carrier</label>
-                    <input type="text" value={editForm.insuranceCarrier} onChange={(e) => updateField("insuranceCarrier", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Claim #</label>
-                    <input type="text" value={editForm.claimNumber} onChange={(e) => updateField("claimNumber", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Adjuster Name</label>
-                    <input type="text" value={editForm.adjusterName} onChange={(e) => updateField("adjusterName", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Adjuster Contact</label>
-                    <input type="text" value={editForm.adjusterContact} onChange={(e) => updateField("adjusterContact", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2 text-sm">
-                  {contactData.insuranceCarrier && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Carrier</span>
-                      <span className="text-slate-800 font-medium">{contactData.insuranceCarrier}</span>
-                    </div>
-                  )}
-                  {contactData.claimNumber && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Claim #</span>
-                      <span className="text-slate-800 font-medium">{contactData.claimNumber}</span>
-                    </div>
-                  )}
-                  {contactData.adjusterName && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Adjuster</span>
-                      <span className="text-slate-800 font-medium">{contactData.adjusterName}</span>
-                    </div>
-                  )}
-                  {contactData.adjusterContact && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Adjuster Contact</span>
-                      <span className="text-slate-800 font-medium">{contactData.adjusterContact}</span>
-                    </div>
-                  )}
-                  {contactData.dateOfLoss && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Date of Loss</span>
-                      <span className="text-slate-800 font-medium">{formatDate(contactData.dateOfLoss)}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Referral & Testing */}
-          {(contactData.referredForTesting || contactData.referralSource || editing) && (
+            {/* Related Leads */}
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Referral & Testing
+                {t("sidebar.leads")} ({relatedLeads.length})
               </h3>
-              {editing ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Source</label>
-                    <select value={editForm.source} onChange={(e) => updateField("source", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143] bg-white">
-                      <option value="">None</option>
-                      {Object.entries(SOURCE_LABEL).map(([key, label]) => (
-                        <option key={key} value={key}>{label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Referral Source</label>
-                    <input type="text" value={editForm.referralSource} onChange={(e) => updateField("referralSource", e.target.value)} className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-[#7BC143] focus:ring-1 focus:ring-[#7BC143]" />
-                  </div>
+              {relatedLeads.length > 0 ? (
+                <div className="space-y-2">
+                  {relatedLeads.map((lead: any) => (
+                    <Link
+                      key={lead.id}
+                      href={`/leads/${lead.id}`}
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition"
+                    >
+                      <div>
+                        <div className="text-sm font-medium text-slate-800">
+                          {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Lead"}
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {lead.status?.replace(/_/g, " ")} — {lead.projectType}
+                        </div>
+                      </div>
+                      <Target size={14} className="text-slate-400" />
+                    </Link>
+                  ))}
                 </div>
               ) : (
-                <div className="space-y-2 text-sm">
-                  {contactData.referralSource && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Referred By</span>
-                      <span className="text-slate-800 font-medium">{contactData.referralSource}</span>
-                    </div>
-                  )}
-                  {contactData.referredForTesting && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Referred for Testing</span>
-                      <span className="text-slate-800 font-medium">{contactData.referredTestingTo || "Yes"}</span>
-                    </div>
-                  )}
-                </div>
+                <p className="text-sm text-slate-400">No related leads</p>
               )}
             </div>
-          )}
-
-          {/* Related Leads */}
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">
-              {t("sidebar.leads")} ({relatedLeads.length})
-            </h3>
-            {relatedLeads.length > 0 ? (
-              <div className="space-y-2">
-                {relatedLeads.map((lead: any) => (
-                  <Link
-                    key={lead.id}
-                    href={`/leads/${lead.id}`}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition"
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-slate-800">
-                        {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Lead"}
-                      </div>
-                      <div className="text-[11px] text-slate-400">
-                        {lead.status?.replace(/_/g, " ")} — {lead.projectType}
-                      </div>
-                    </div>
-                    <Target size={14} className="text-slate-400" />
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400">No related leads</p>
-            )}
-          </div>
           </div>
         </div>
+      )}
+
+      {/* Notes Tab */}
+      {activeTab === "notes" && (
+        <NotesTab entityType="contact" entityId={contactData.id} />
       )}
 
       {/* Activity Tab */}
