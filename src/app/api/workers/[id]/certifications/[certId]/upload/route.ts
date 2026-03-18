@@ -65,23 +65,36 @@ export async function POST(
 
     // Upload to Supabase Storage
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { data, error } = await supabase.storage
+    let { data, error } = await supabase.storage
       .from(CERTIFICATIONS_BUCKET)
       .upload(storagePath, buffer, {
         contentType: file.type,
         upsert: true,
       });
 
+    // If bucket doesn't exist, create it and retry
+    if (error && (error.message?.includes("not found") || error.message?.includes("Bucket") || (error as any).statusCode === 404)) {
+      console.log("Certifications bucket not found, creating...");
+      await supabase.storage.createBucket(CERTIFICATIONS_BUCKET, { public: true });
+      const retry = await supabase.storage
+        .from(CERTIFICATIONS_BUCKET)
+        .upload(storagePath, buffer, {
+          contentType: file.type,
+          upsert: true,
+        });
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) {
-      const errorMsg = error?.message || "Upload failed";
-      console.error("Supabase cert upload error:", errorMsg);
-      return NextResponse.json({ error: errorMsg }, { status: 500 });
+      console.error("Supabase cert upload error:", error);
+      return NextResponse.json({ error: `Upload failed: ${error.message}` }, { status: 500 });
     }
 
     // Get public URL
     const { data: urlData } = supabase.storage
       .from(CERTIFICATIONS_BUCKET)
-      .getPublicUrl(data.path);
+      .getPublicUrl(data!.path);
 
     const publicUrl = urlData.publicUrl;
 
