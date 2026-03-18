@@ -84,6 +84,7 @@ model Organization {
   activities             Activity[]
   settings               Setting[]
   notes                  Note[]
+  methDeconReports       MethDeconReport[]
 
   @@map("organizations")
 }
@@ -237,6 +238,7 @@ model Project {
   leads              Lead[]
   reviewRequests     ReviewRequest[]
   budgetLines        ProjectBudgetLine[]
+  methDeconReport    MethDeconReport?
 
   @@index([organizationId])
   @@map("projects")
@@ -1294,6 +1296,46 @@ model ReviewRequest {
   @@index([sentAt])
   @@index([nextTouchAt])
   @@map("review_requests")
+}
+
+// ─── Methamphetamine Decontamination Report ──────────────────────
+
+model MethDeconReport {
+  id        String   @id @default(uuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  status    String   @default("draft") // draft, complete, submitted
+  date      String?  // Report date (YYYY-MM-DD)
+
+  // Personnel (JSON array of { workerId, name, role, certNumber, certExpires })
+  personnel         Json?
+
+  // Report text sections
+  deconProcedure     String?  @db.Text
+  removalProcedure   String?  @db.Text
+  encapsulation      String?  @db.Text
+  wasteManagement    String?  @db.Text
+  variationsFromStd  String?  @db.Text
+
+  // Completion info
+  completionDate     String?  // Date decon process completed
+  signedByName       String?
+  signedByTitle      String?
+  signedDate         String?
+
+  // Photo/file uploads (JSON arrays of { url, name, uploadedAt })
+  wasteManifestPhotos Json?   // Waste manifest images
+  projectPhotos       Json?   // Project/site photos
+  certificationFiles  Json?   // Auto-populated cert file URLs
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([organizationId])
+  @@map("meth_decon_reports")
 }
 
 // ─── Notes ──────────────────────────────────────────────────────

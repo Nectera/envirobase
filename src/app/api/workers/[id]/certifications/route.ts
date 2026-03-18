@@ -20,41 +20,48 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const body = await req.json();
 
-    const expires = new Date(body.expires);
-    const now = new Date();
-    const daysUntilExpiry = Math.ceil((expires.getTime() - now.getTime()) / 86400000);
+    // Schema stores dates as strings (YYYY-MM-DD), not Date objects
+    const expiresStr = body.expires || null;
+    const issuedStr = body.issued || null;
+
     let status = "active";
-    if (daysUntilExpiry <= 0) status = "expired";
-    else if (daysUntilExpiry <= 30) status = "expiring_soon";
+    if (expiresStr) {
+      const expires = new Date(expiresStr);
+      const now = new Date();
+      const daysUntilExpiry = Math.ceil((expires.getTime() - now.getTime()) / 86400000);
+      if (daysUntilExpiry <= 0) status = "expired";
+      else if (daysUntilExpiry <= 30) status = "expiring_soon";
+    }
 
     const cert = await prisma.certification.create({
       data: orgData(orgId, {
         workerId: params.id,
         name: body.name,
-        number: body.number,
-        issued: new Date(body.issued),
-        expires,
+        number: body.number || null,
+        issued: issuedStr,
+        expires: expiresStr,
         status,
       }),
     });
 
     // Create alert if expiring soon or expired
-    if (status !== "active") {
+    if (status !== "active" && expiresStr) {
+      const expiresDate = new Date(expiresStr);
       const worker = await prisma.worker.findUnique({ where: orgWhere(orgId, { id: params.id }) });
       await prisma.alert.create({
         data: orgData(orgId, {
           type: "certification",
           severity: status === "expired" ? "critical" : "warning",
           title: `${status === "expired" ? "EXPIRED" : "EXPIRING"}: ${worker?.name} - ${body.name}`,
-          message: `Certification ${body.number} ${status === "expired" ? "has expired" : "expires soon"}. ${status === "expired" ? "Worker cannot perform work until renewed." : "Schedule renewal ASAP."}`,
-          date: expires,
+          message: `Certification ${body.number || ""} ${status === "expired" ? "has expired" : "expires soon"}. ${status === "expired" ? "Worker cannot perform work until renewed." : "Schedule renewal ASAP."}`,
+          date: expiresDate,
           workerId: params.id,
         }),
       });
 
       // Email notification to the worker and admins
       try {
-        const expiryDate = expires.toISOString().split("T")[0];
+        const expiryDate = expiresStr;
         const certStatus = status as "expiring_soon" | "expired";
         const notifBody = buildCertExpiryBody(worker?.name || "Worker", body.name, expiryDate, certStatus);
         const subject = `Certification ${status === "expired" ? "Expired" : "Expiring Soon"}: ${body.name}`;

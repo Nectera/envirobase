@@ -12,6 +12,7 @@ import TaskDetailModal from "@/components/TaskDetailModal";
 import ContentInventoryTab from "@/components/ContentInventoryTab";
 import NotesTab from "@/components/NotesTab";
 import ProjectBudgetTab from "./ProjectBudgetTab";
+import MethDeconReportSection from "./MethDeconReportSection";
 import type { ChecklistSection } from "@/lib/regulations";
 
 type Task = { id: string; name: string; status: string; date: Date | null; sortOrder: number };
@@ -147,7 +148,7 @@ export default function ProjectTabs({
   officeManagerId?: string | null;
   linkedConsultationEstimate?: any;
 }) {
-  const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "documents" | "activity" | "inventory" | "notes" | "budget">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "decon_report" | "documents" | "activity" | "inventory" | "notes" | "budget">("dashboard");
   const router = useRouter();
   const { data: sessionData } = useSession();
   const userRole = (sessionData?.user as any)?.role;
@@ -212,6 +213,7 @@ export default function ProjectTabs({
     { key: "dashboard" as const, label: "Dashboard" },
     { key: "tasks" as const, label: "Tasks" },
     { key: "reports" as const, label: `Reports (${reportsCount})` },
+    ...(project.type === "METH" ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
     { key: "documents" as const, label: `Documents (${projectDocuments.length})` },
     { key: "activity" as const, label: `Activity (${(activities || []).length + (linkedActivities || []).length})` },
     { key: "inventory" as const, label: "Inventory" },
@@ -1357,6 +1359,16 @@ export default function ProjectTabs({
             </div>
           )}
         </div>
+      )}
+
+      {/* ───── Meth Decon Report (METH projects only) ───── */}
+      {tab === "decon_report" && (
+        <MethDeconReportSection
+          projectId={project.id}
+          projectType={project.type}
+          projectName={project.name}
+          projectAddress={project.address || ""}
+        />
       )}
 
       {/* ───── Documents (Permits, Sampling Reports, etc.) ───── */}

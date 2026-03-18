@@ -64,7 +64,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.phone !== undefined) data.phone = body.phone;
     if (body.email !== undefined) data.email = body.email;
     if (body.website !== undefined) data.website = body.website;
-    if (body.industry !== undefined) data.industry = body.industry;
     if (body.notes !== undefined) data.notes = body.notes;
     if (body.referralFeeEnabled !== undefined) data.referralFeeEnabled = body.referralFeeEnabled;
     if (body.referralFeePercent !== undefined) data.referralFeePercent = body.referralFeePercent;

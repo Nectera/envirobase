@@ -73,8 +73,9 @@ export async function POST(
       });
 
     if (error) {
-      console.error("Supabase cert upload error:", error);
-      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+      const errorMsg = error?.message || "Upload failed";
+      console.error("Supabase cert upload error:", errorMsg);
+      return NextResponse.json({ error: errorMsg }, { status: 500 });
     }
 
     // Get public URL
@@ -99,7 +100,8 @@ export async function POST(
       fileName: file.name,
     }, { status: 200 });
   } catch (error: any) {
-    console.error("Cert upload error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const errorMsg = error?.message || "Internal server error";
+    console.error("Cert upload error:", errorMsg);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

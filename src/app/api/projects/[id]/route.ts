@@ -117,6 +117,28 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           });
         }
       }
+
+      // Auto-create task for METH projects to complete decon report
+      if (currentProject.type === "METH") {
+        // Check if task already exists
+        const existingTask = await prisma.projectTask.findFirst({
+          where: {
+            projectId: params.id,
+            name: "Complete Meth Decontamination Report",
+          },
+        });
+
+        if (!existingTask) {
+          await prisma.projectTask.create({
+            data: {
+              projectId: params.id,
+              name: "Complete Meth Decontamination Report",
+              status: "pending",
+              sortOrder: 0,
+            },
+          });
+        }
+      }
     }
 
     return NextResponse.json(project);
