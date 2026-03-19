@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
@@ -23,6 +24,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "10mb",
     },
+    instrumentationHook: true,
   },
 
   // Image optimization configuration
@@ -51,4 +53,12 @@ const nextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+export default withSentryConfig(withPWA(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+  tunnelRoute: "/monitoring",
+});
