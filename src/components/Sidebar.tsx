@@ -15,6 +15,7 @@ import Logo from "./Logo";
 import { useTranslation } from "./LanguageProvider";
 import ChatUnreadBadge from "./ChatUnreadBadge";
 import { useSidebarCollapse } from "./SidebarCollapseProvider";
+import type { OrgBranding } from "@/lib/org-branding";
 
 const crmPaths = ["/crm", "/leads", "/companies", "/contacts", "/pipeline", "/estimates"];
 
@@ -25,12 +26,14 @@ export default function Sidebar({
   userName,
   isDemo,
   isPlatformAdmin,
+  branding,
 }: {
   alertCount?: number;
   userRole?: string;
   userName?: string;
   isDemo?: boolean;
   isPlatformAdmin?: boolean;
+  branding?: OrgBranding;
 }) {
   const { t } = useTranslation();
   const pathname = usePathname();
@@ -132,7 +135,7 @@ export default function Sidebar({
   const sidebarContent = (
     <>
       <div className={`${collapsed ? "px-2 py-5" : "px-5 py-5"} flex items-center justify-center relative`}>
-        <Logo size={collapsed ? 36 : 72} />
+        <Logo size={collapsed ? 36 : 72} src={branding?.logoUrl} />
         {/* Close button — mobile only */}
         <button onClick={close} className="md:hidden absolute right-4 p-1.5 text-slate-400 hover:text-white rounded-xl">
           <X size={20} />

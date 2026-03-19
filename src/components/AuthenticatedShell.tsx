@@ -10,6 +10,7 @@ import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import PullToRefresh from "@/components/PullToRefresh";
 import ErrorBoundaryWrapper from "@/components/ErrorBoundaryWrapper";
 import GlobalNotesPanel from "@/components/GlobalNotesPanel";
+import type { OrgBranding } from "@/lib/org-branding";
 
 interface AuthenticatedShellProps {
   alertCount: number;
@@ -18,6 +19,7 @@ interface AuthenticatedShellProps {
   userName?: string;
   isDemo?: boolean;
   isPlatformAdmin?: boolean;
+  branding?: OrgBranding;
   children: ReactNode;
 }
 

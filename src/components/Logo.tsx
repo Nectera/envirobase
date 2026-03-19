@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
-export default function Logo({ size = 32, className = "" }: { size?: number; className?: string }) {
+export default function Logo({ size = 32, className = "", src, alt }: { size?: number; className?: string; src?: string; alt?: string }) {
   return (
     <img
-      src="/logo.png"
-      alt="EnviroBase"
+      src={src || "/logo.png"}
+      alt={alt || "Logo"}
       width={size}
       height={size}
       className={`flex-shrink-0 ${className}`}
