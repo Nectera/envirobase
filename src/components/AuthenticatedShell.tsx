@@ -30,6 +30,7 @@ function ShellContent({
   userName,
   isDemo,
   isPlatformAdmin,
+  branding,
   children,
 }: AuthenticatedShellProps) {
   const { collapsed } = useSidebarCollapse();
@@ -39,7 +40,7 @@ function ShellContent({
       {/* Clean background — gradient is applied via globals.css body */}
 
       <div className="flex h-screen relative">
-        <Sidebar alertCount={alertCount} userRole={userRole} userName={userName} isDemo={isDemo} isPlatformAdmin={isPlatformAdmin} />
+        <Sidebar alertCount={alertCount} userRole={userRole} userName={userName} isDemo={isDemo} isPlatformAdmin={isPlatformAdmin} branding={branding} />
 
         {/* Main content — offset for floating sidebar on desktop */}
         <div
@@ -60,7 +61,7 @@ function ShellContent({
               </a>
             </div>
           )}
-          <AlertsHeader alertCount={alertCount} alerts={recentAlerts} userName={userName} />
+          <AlertsHeader alertCount={alertCount} alerts={recentAlerts} userName={userName} branding={branding} />
           <main className="flex-1 overflow-auto p-3 md:p-6 relative z-[1]">
             <ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
           </main>

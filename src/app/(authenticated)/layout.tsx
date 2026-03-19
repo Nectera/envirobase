@@ -23,6 +23,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
   // Load org-specific branding
   const branding = await getOrgBranding(orgId);
 
+
   // Route protection for technicians
   const headersList = headers();
   const pathname = (headersList.get("x-next-pathname") || headersList.get("x-invoke-path") || "");

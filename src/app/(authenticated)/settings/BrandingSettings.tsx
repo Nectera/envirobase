@@ -67,7 +67,7 @@ export default function BrandingSettings() {
       const res = await fetch("/api/settings/branding/logo", { method: "POST", body: formData });
       if (!res.ok) { const data = await res.json(); throw new Error(data.error || "Upload failed"); }
       const { logoUrl, brandColor, accentColor } = await res.json();
-      setBranding((prev) => { if (!prev) return prev; const updates = { logoUrl }; if (brandColor) updates.brandColor = brandColor; if (accentColor) updates.accentColor = accentColor; return { ...prev, ...updates }; });
+      setBranding((prev) => { if (!prev) return prev; const updates: Partial<BrandingData> = { logoUrl }; if (brandColor) updates.brandColor = brandColor; if (accentColor) updates.accentColor = accentColor; return { ...prev, ...updates }; });
     } catch (err: any) {
       setError(err.message || "Failed to upload logo");
     } finally {

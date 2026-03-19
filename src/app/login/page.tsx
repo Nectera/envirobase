@@ -291,10 +291,16 @@ export default function LoginPage() {
                   )}
                 </div>
 
-                {/* Contact sales link */}
+                {/* Contact sales / Sign up links */}
                 <div className="mt-4 text-center">
                   <p className="text-xs text-slate-500">
                     Interested in EnviroBase?{" "}
+                  <p className="text-xs text-slate-500">
+                    Don&apos;t have an account?{" "}
+                    <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 font-medium">
+                      Create your organization
+                    </Link>
+                  </p>
                     <a href="mailto:sales@envirobase.app" className="text-emerald-400 hover:text-emerald-300 font-medium">
                       Contact sales
                     </a>
