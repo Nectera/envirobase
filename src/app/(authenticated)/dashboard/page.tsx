@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import DashboardView from "./DashboardView";
+import { Suspense } from "react";
+import UpgradeBanner from "@/components/UpgradeBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +91,10 @@ export default async function DashboardPage() {
   const fieldWorkers = workers.filter((w: any) => fieldPositions.includes(w.position));
 
   return (
+    <>
+    <Suspense fallback={null}>
+      <UpgradeBanner />
+    </Suspense>
     <DashboardView
       projects={projects}
       activeProjects={activeProjects}
@@ -114,5 +120,6 @@ export default async function DashboardPage() {
       weekSchedule={weekSchedule}
       upcomingTimeOffs={upcomingTimeOffs}
     />
+    </>
   );
 }

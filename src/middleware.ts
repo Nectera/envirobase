@@ -2,6 +2,29 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+// ── Feature-flag route map (inlined for Edge runtime compatibility) ──
+const FEATURE_ROUTE_MAP: Record<string, string> = {
+  "/metrics": "metrics",
+  "/chat": "chat",
+  "/pipeline": "pipeline",
+  "/bonus-pool": "bonusPool",
+  "/content-inventory": "contentInventory",
+  "/knowledge-base": "knowledgeBase",
+  "/review-requests": "reviewRequests",
+  "/api/assistant": "aiAssistant",
+};
+
+const FEATURE_LABELS: Record<string, string> = {
+  metrics: "Business Metrics",
+  chat: "Team Chat",
+  pipeline: "Sales Pipeline",
+  bonusPool: "Bonus Pool",
+  contentInventory: "Content Inventory",
+  knowledgeBase: "Knowledge Base",
+  reviewRequests: "Review Requests",
+  aiAssistant: "AI Assistant",
+};
+
 // Routes technicians are allowed to access
 const TECHNICIAN_ALLOWED = ["/schedule", "/time-clock", "/my-documents", "/tasks"];
 
@@ -36,7 +59,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com",
       "img-src 'self' data: blob: https: https://maps.gstatic.com https://maps.googleapis.com https://*.gstatic.com https://*.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com https://*.gstatic.com",
-      "connect-src 'self' https://api.anthropic.com https://*.anthropic.com https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com",
+      "connect-src 'self' https://api.anthropic.com https://*.anthropic.com https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com https://*.sentry.io https://*.ingest.sentry.io",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -97,6 +120,30 @@ export async function middleware(request: NextRequest) {
           )
         );
       }
+    }
+  }
+
+  // ── Feature flag enforcement ──
+  // Block routes that require features the org hasn't paid for
+  const features = (token.features as Record<string, boolean>) || {};
+  for (const [route, featureKey] of Object.entries(FEATURE_ROUTE_MAP)) {
+    if (pathname === route || pathname.startsWith(route + "/")) {
+      if (features[featureKey] !== true) {
+        const label = FEATURE_LABELS[featureKey] || featureKey;
+        if (isApi) {
+          return addSecurityHeaders(
+            NextResponse.json(
+              { error: `${label} is not included in your current plan. Please upgrade to access this feature.` },
+              { status: 403 }
+            )
+          );
+        }
+        // Redirect to dashboard with upgrade param
+        const upgradeUrl = new URL("/dashboard", request.url);
+        upgradeUrl.searchParams.set("upgrade", featureKey);
+        return addSecurityHeaders(NextResponse.redirect(upgradeUrl));
+      }
+      break; // matched route, no need to check further
     }
   }
 

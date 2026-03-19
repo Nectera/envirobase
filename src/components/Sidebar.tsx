@@ -8,8 +8,9 @@ import {
   Clock, ClipboardList, Building2, Calendar, CalendarDays, FileText,
   Target, LayoutDashboard, Receipt, CheckSquare, TrendingUp,
   Settings, X, Database, UserPlus, Bell, MessageSquare, DollarSign,
-  PanelLeftClose, PanelLeftOpen, Gift, Puzzle, Shield,
+  PanelLeftClose, PanelLeftOpen, Gift, Puzzle, Shield, Lock,
 } from "lucide-react";
+import { FEATURE_ROUTE_MAP, hasFeature } from "@/lib/feature-flags";
 import { useMobileNav } from "./MobileNavProvider";
 import Logo from "./Logo";
 import { useTranslation } from "./LanguageProvider";
@@ -99,19 +100,25 @@ export default function Sidebar({
     );
   };
 
+  const features = branding?.features || {};
+
   const renderNavItem = (item: NavItem, mobileHidden = false) => {
     const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
     const Icon = item.icon;
+    // Check if this route requires a feature the org doesn't have
+    const requiredFeature = FEATURE_ROUTE_MAP[item.href];
+    const isLocked = requiredFeature && !hasFeature(features, requiredFeature as any);
     return (
       <Link
         key={item.href}
         href={item.href}
         onClick={close}
-        className={`sidebar-item ${isActive ? "sidebar-item-active" : ""}${mobileHidden ? " hidden md:flex" : ""} ${collapsed ? "sidebar-item-collapsed" : ""}`}
+        className={`sidebar-item ${isActive ? "sidebar-item-active" : ""}${mobileHidden ? " hidden md:flex" : ""} ${collapsed ? "sidebar-item-collapsed" : ""}${isLocked ? " opacity-40" : ""}`}
         title={collapsed ? t(item.labelKey) : undefined}
       >
         <Icon size={16} />
         {!collapsed && <span className="flex-1">{t(item.labelKey)}</span>}
+        {!collapsed && isLocked && <Lock size={12} className="text-slate-500" />}
       </Link>
     );
   };

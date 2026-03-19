@@ -103,6 +103,19 @@ export const authOptions: NextAuthOptions = {
         token.organizationId = (user as any).organizationId;
         token.isDemo = (user as any).isDemo || false;
         token.isPlatformAdmin = (user as any).isPlatformAdmin || false;
+        // Load org features for feature gating
+        if ((user as any).organizationId) {
+          try {
+            const org = await prisma.organization.findUnique({
+              where: { id: (user as any).organizationId },
+              select: { plan: true, features: true },
+            });
+            if (org) {
+              token.plan = org.plan;
+              token.features = (org.features as Record<string, boolean>) || {};
+            }
+          } catch { /* ignore */ }
+        }
       }
       return token;
     },
@@ -113,6 +126,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).organizationId = token.organizationId;
         (session.user as any).isDemo = token.isDemo || false;
         (session.user as any).isPlatformAdmin = token.isPlatformAdmin || false;
+        (session.user as any).plan = token.plan || "starter";
+        (session.user as any).features = token.features || {};
       }
       return session;
     },
