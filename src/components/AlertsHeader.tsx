@@ -146,7 +146,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
       {/* Green accent strip */}
       <div className="h-[3px] bg-gradient-to-r from-[#7BC143] via-[#7BC143] to-[#0068B5]" />
       <div
-        className="flex items-center gap-4 px-3 md:px-8 py-2.5"
+        className="flex items-center gap-3 px-3 md:px-6 py-2.5"
         style={{
           background: "rgba(255, 255, 255, 0.92)",
           backdropFilter: "blur(16px)",
