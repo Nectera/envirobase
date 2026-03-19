@@ -3,6 +3,7 @@ import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 import { invalidateOrgBrandingCache } from "@/lib/org-branding";
+import { extractDominantColors } from "@/lib/extract-colors";
 
 export const dynamic = "force-dynamic";
 
@@ -42,13 +43,22 @@ export async function POST(req: NextRequest) {
 
     const { data: urlData } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(data.path);
 
-    await prisma.organization.update({
-      where: { id: orgId },
-      data: { logoUrl: urlData.publicUrl },
-    });
+    const colors = await extractDominantColors(buffer, file.type);
 
+    const updateData: Record<string, any> = { logoUrl: urlData.publicUrl };
+    if (colors) {
+      updateData.brandColor = colors.primary;
+      updateData.accentColor = colors.accent;
+    }
+
+    await prisma.organization.update({ where: { id: orgId }, data: updateData });
     invalidateOrgBrandingCache(orgId);
-    return NextResponse.json({ logoUrl: urlData.publicUrl });
+
+    return NextResponse.json({
+      logoUrl: urlData.publicUrl,
+      brandColor: colors?.primary || null,
+      accentColor: colors?.accent || null,
+    });
   } catch (error: any) {
     console.error("Logo upload error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
