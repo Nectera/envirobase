@@ -183,7 +183,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
         </div>
 
         {/* Notification bell with dropdown */}
-        <div className="relative" ref={panelRef}>
+        <div className="relative flex-shrink-0" ref={panelRef}>
         <button
           onClick={() => setShowPanel(!showPanel)}
           className="relative inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
