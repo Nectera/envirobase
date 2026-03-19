@@ -1,0 +1,91 @@
+From 1809176e7323a9afce8cafbee52c481be5104243 Mon Sep 17 00:00:00 2001
+From: Cody Gordon <cody@necteraholdings.com>
+Date: Thu, 19 Mar 2026 08:52:44 -0600
+Subject: [PATCH 1/3] fix: tighten gap between sidebar and main content
+
+Reduced main content left margin from 264px to 248px (104px to 88px
+collapsed) so the content sits closer to the floating sidebar.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+---
+ src/components/AuthenticatedShell.tsx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/components/AuthenticatedShell.tsx b/src/components/AuthenticatedShell.tsx
+index b2d3e9d..8a6a655 100644
+--- a/src/components/AuthenticatedShell.tsx
++++ b/src/components/AuthenticatedShell.tsx
+@@ -42,7 +42,7 @@ function ShellContent({
+         {/* Main content — offset for floating sidebar on desktop */}
+         <div
+           className={`flex-1 flex flex-col overflow-hidden min-w-0 transition-all duration-300 ease-in-out ${
+-            collapsed ? "md:ml-[104px]" : "md:ml-[264px]"
++            collapsed ? "md:ml-[88px]" : "md:ml-[248px]"
+           }`}
+         >
+           {/* Demo Read-Only Banner */}
+-- 
+2.34.1
+
+
+From ec2febafbd527c4fe8aed853785dcee661adc31a Mon Sep 17 00:00:00 2001
+From: Cody Gordon <cody@necteraholdings.com>
+Date: Thu, 19 Mar 2026 09:34:57 -0600
+Subject: [PATCH 2/3] fix: match Xtract sidebar margin values (264px/104px)
+
+Revert to the exact same floating sidebar margins used in Xtract.
+The small gap is intentional in the floating sidebar design.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+---
+ src/components/AuthenticatedShell.tsx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/components/AuthenticatedShell.tsx b/src/components/AuthenticatedShell.tsx
+index 8a6a655..b2d3e9d 100644
+--- a/src/components/AuthenticatedShell.tsx
++++ b/src/components/AuthenticatedShell.tsx
+@@ -42,7 +42,7 @@ function ShellContent({
+         {/* Main content — offset for floating sidebar on desktop */}
+         <div
+           className={`flex-1 flex flex-col overflow-hidden min-w-0 transition-all duration-300 ease-in-out ${
+-            collapsed ? "md:ml-[88px]" : "md:ml-[248px]"
++            collapsed ? "md:ml-[104px]" : "md:ml-[264px]"
+           }`}
+         >
+           {/* Demo Read-Only Banner */}
+-- 
+2.34.1
+
+
+From 4abd6755e118a187921c738ca5ebb6af4a60a26e Mon Sep 17 00:00:00 2001
+From: Cody Gordon <cody@necteraholdings.com>
+Date: Thu, 19 Mar 2026 09:37:56 -0600
+Subject: [PATCH 3/3] fix: remove stray 'relative' class from sidebar aside
+ element
+
+The desktop sidebar <aside> had both 'fixed' and 'relative' classes,
+which caused extra spacing between sidebar and content. Removed
+'relative' to match the Xtract implementation exactly.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+---
+ src/components/Sidebar.tsx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/components/Sidebar.tsx b/src/components/Sidebar.tsx
+index 418e9a9..45c8df2 100644
+--- a/src/components/Sidebar.tsx
++++ b/src/components/Sidebar.tsx
+@@ -219,7 +219,7 @@ export default function Sidebar({
+     <>
+       {/* Desktop sidebar — floating translucent panel */}
+       <aside
+-        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 overflow-hidden transition-all duration-300 ease-in-out relative ${
++        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 overflow-hidden transition-all duration-300 ease-in-out ${
+           collapsed ? "w-[72px]" : "w-[232px]"
+         }`}
+         style={{
+-- 
+2.34.1
+
