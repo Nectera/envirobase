@@ -146,7 +146,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
       {/* Green accent strip */}
       <div className="h-[3px] bg-gradient-to-r from-[#7BC143] via-[#7BC143] to-[#0068B5]" />
       <div
-        className="flex items-center gap-3 px-3 md:px-6 py-2.5"
+        className="flex items-center flex-nowrap gap-3 px-3 md:px-6 py-2.5"
         style={{
           background: "rgba(255, 255, 255, 0.92)",
           backdropFilter: "blur(16px)",
@@ -178,12 +178,12 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
         <div className="flex-1" />
 
         {/* Company name — desktop only */}
-        <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 flex-shrink-0 mr-2">
+        <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 flex-shrink-0">
           <span className="font-medium tracking-wide">EnviroBase</span>
         </div>
 
         {/* Notification bell with dropdown */}
-        <div className="relative flex-shrink-0" ref={panelRef}>
+        <div className="relative" ref={panelRef}>
         <button
           onClick={() => setShowPanel(!showPanel)}
           className="relative inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
@@ -197,14 +197,6 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
           )}
         </button>
 
-        {/* User avatar — desktop only */}
-        {userName && (
-          <div className="hidden md:flex items-center flex-shrink-0 ml-2">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: "linear-gradient(135deg, #7BC143, #0068B5)" }} title={userName}>
-              {userName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
-            </div>
-          </div>
-        )}
 
         {/* Dropdown panel */}
         {showPanel && (
@@ -353,6 +345,19 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
           </div>
         )}
         </div>
+
+        {/* User avatar — desktop only */}
+        {userName && (
+          <div className="hidden md:flex items-center flex-shrink-0 ml-2">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+              style={{ background: "linear-gradient(135deg, #7BC143, #0068B5)" }}
+              title={userName}
+            >
+              {userName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
