@@ -10,6 +10,7 @@ import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import PullToRefresh from "@/components/PullToRefresh";
 import ErrorBoundaryWrapper from "@/components/ErrorBoundaryWrapper";
 import GlobalNotesPanel from "@/components/GlobalNotesPanel";
+import OnboardingTour from "@/components/OnboardingTour";
 import type { OrgBranding } from "@/lib/org-branding";
 
 interface AuthenticatedShellProps {
@@ -69,6 +70,7 @@ function ShellContent({
 
         <AIAssistant />
         <GlobalNotesPanel />
+        <OnboardingTour />
         <PWAInstallPrompt />
         <PullToRefresh />
       </div>
