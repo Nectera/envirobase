@@ -70,7 +70,7 @@ function ShellContent({
 
         <AIAssistant />
         <GlobalNotesPanel />
-        <OnboardingTour />
+        <OnboardingTour isDemo={isDemo} />
         <PWAInstallPrompt />
         <PullToRefresh />
       </div>

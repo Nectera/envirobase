@@ -204,12 +204,13 @@ const TOUR_STEPS = [
 
 const STORAGE_KEY = "envirobase-onboarding-complete";
 
-export default function OnboardingTour() {
+export default function OnboardingTour({ isDemo }: { isDemo?: boolean }) {
   const [show, setShow] = useState(false);
   const [step, setStep] = useState(0);
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
+    if (isDemo) localStorage.removeItem(STORAGE_KEY);
     const done = localStorage.getItem(STORAGE_KEY);
     if (!done) {
       const timer = setTimeout(() => setShow(true), 800);
