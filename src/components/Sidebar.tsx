@@ -219,7 +219,7 @@ export default function Sidebar({
     <>
       {/* Desktop sidebar — floating translucent panel */}
       <aside
-        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 overflow-hidden transition-all duration-300 ease-in-out relative ${
+        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 overflow-hidden transition-all duration-300 ease-in-out ${
           collapsed ? "w-[72px]" : "w-[232px]"
         }`}
         style={{
