@@ -7,6 +7,7 @@ import { Bell, Menu, AlertTriangle, ShieldAlert, FileText, Clock, X, ChevronRigh
 import { useMobileNav } from "./MobileNavProvider";
 import { useTranslation } from "./LanguageProvider";
 import GlobalSearch from "./GlobalSearch";
+import type { OrgBranding } from "@/lib/org-branding";
 
 const PAGE_INFO: Record<string, { title: string; color: string }> = {
   "/dashboard": { title: "Dashboard", color: "#7BC143" },
@@ -52,7 +53,7 @@ interface Notification {
   createdAt: string;
 }
 
-export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: { alertCount?: number; alerts?: Alert[]; userName?: string }) {
+export default function AlertsHeader({ alertCount = 0, alerts = [], userName, branding }: { alertCount?: number; alerts?: Alert[]; userName?: string; branding?: OrgBranding }) {
   const { open } = useMobileNav();
   const { t } = useTranslation();
   const router = useRouter();
@@ -144,7 +145,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
   return (
     <div className="sticky top-0 z-30">
       {/* Green accent strip */}
-      <div className="h-[3px] bg-gradient-to-r from-[#7BC143] via-[#7BC143] to-[#0068B5]" />
+      <div className="h-[3px]" style={{ background: `linear-gradient(to right, ${branding?.brandColor || "#7BC143"}, ${branding?.brandColor || "#7BC143"}, ${branding?.accentColor || "#0068B5"})` }} />
       <div
         className="flex items-center flex-nowrap gap-3 px-3 md:px-6 py-2.5"
         style={{
@@ -179,7 +180,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
 
         {/* Company name — desktop only */}
         <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 flex-shrink-0">
-          <span className="font-medium tracking-wide">EnviroBase</span>
+          <span className="font-medium tracking-wide">{branding?.companyShort || "EnviroBase"}</span>
         </div>
 
         {/* Notification bell with dropdown */}
@@ -351,7 +352,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
           <div className="hidden md:flex items-center flex-shrink-0 ml-2">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-              style={{ background: "linear-gradient(135deg, #7BC143, #0068B5)" }}
+              style={{ background: `linear-gradient(135deg, ${branding?.brandColor || "#7BC143"}, ${branding?.accentColor || "#0068B5"})` }}
               title={userName}
             >
               {userName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
