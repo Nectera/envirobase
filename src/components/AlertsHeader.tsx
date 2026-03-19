@@ -171,9 +171,11 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
         )}
 
         {/* Global search */}
-        <div className="flex-1 mx-2 md:mx-4">
+        <div className="flex-1 mx-2 md:mx-4 md:max-w-md">
           <GlobalSearch />
         </div>
+
+        <div className="flex-1" />
 
         {/* Company name — desktop only */}
         <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 flex-shrink-0">
