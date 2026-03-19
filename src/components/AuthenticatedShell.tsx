@@ -42,7 +42,7 @@ function ShellContent({
         {/* Main content — offset for floating sidebar on desktop */}
         <div
           className={`flex-1 flex flex-col overflow-hidden min-w-0 transition-all duration-300 ease-in-out ${
-            collapsed ? "md:ml-[104px]" : "md:ml-[264px]"
+            collapsed ? "md:ml-[88px]" : "md:ml-[248px]"
           }`}
         >
           {/* Demo Read-Only Banner */}
