@@ -54,7 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           severity: status === "expired" ? "critical" : "warning",
           title: `${status === "expired" ? "EXPIRED" : "EXPIRING"}: ${worker?.name} - ${body.name}`,
           message: `Certification ${body.number || ""} ${status === "expired" ? "has expired" : "expires soon"}. ${status === "expired" ? "Worker cannot perform work until renewed." : "Schedule renewal ASAP."}`,
-          date: expiresDate,
+          date: expiresStr,
           workerId: params.id,
         }),
       });
