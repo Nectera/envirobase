@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Font: DM Sans — geometric, modern, distinctive ── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
 /* Hide scrollbar but keep scrolling */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -11,9 +14,23 @@
 @layer base {
   body {
     @apply text-slate-900 antialiased;
-    background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 40%, #eff6ff 70%, #f0fdf4 100%);
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.01em;
+    background-color: #f4f6f8;
+    background-image:
+      /* Brand-tinted radials */
+      radial-gradient(ellipse at 0% 0%, rgba(123, 193, 67, 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 100% 100%, rgba(0, 104, 181, 0.03) 0%, transparent 60%),
+      /* 3D diamond grid — matches sidebar texture */
+      url("data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23000000' stop-opacity='0.03'/%3E%3Cstop offset='50%25' stop-color='%23000000' stop-opacity='0.005'/%3E%3Cstop offset='100%25' stop-color='%23000000' stop-opacity='0.025'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M24 4 L44 24 L24 44 L4 24Z' fill='url(%23a)' stroke='%2394a3b8' stroke-opacity='0.04' stroke-width='0.4'/%3E%3Cpath d='M24 10 L38 24 L24 38 L10 24Z' fill='none' stroke='%2394a3b8' stroke-opacity='0.025' stroke-width='0.3'/%3E%3C/svg%3E");
     background-attachment: fixed;
+    background-size: auto, auto, 48px 48px;
     min-height: 100vh;
+  }
+
+  /* Tighten heading letter-spacing for sharpness */
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.025em;
   }
 }
 
@@ -42,45 +59,64 @@
 
 /* ── Scrollbar styling ── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.16);
 }
 
-/* ── Global element softening ── */
-
-/* Round all inputs and selects */
+/* ── Form element refinement ── */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 select,
 textarea {
-  border-radius: 14px !important;
+  border-radius: 12px !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
 select:focus,
 textarea:focus {
   border-color: #7BC143 !important;
-  box-shadow: 0 0 0 3px rgba(123, 193, 67, 0.12) !important;
+  box-shadow: 0 0 0 3px rgba(123, 193, 67, 0.10) !important;
   outline: none !important;
 }
 
-/* Table row hover */
+/* Table row hover — consistent green tint */
 tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color 0.12s ease;
 }
 tbody tr:hover {
   background-color: rgba(123, 193, 67, 0.03) !important;
 }
 
-/* Modal/dialog softening */
+/* Modal/dialog */
 [role="dialog"] > div {
-  border-radius: 24px !important;
+  border-radius: 20px !important;
+}
+
+/* ── Smooth card hover lift ── */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Button press effect ── */
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* ── Stat card number styling ── */
+.stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }

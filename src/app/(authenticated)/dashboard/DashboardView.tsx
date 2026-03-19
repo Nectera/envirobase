@@ -42,14 +42,14 @@ function StatCard({ icon: Icon, label, value, sub, color, bg, href }: {
   icon: any; label: string; value: string | number; sub?: string; color: string; bg: string; href?: string;
 }) {
   const content = (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 hover:shadow-sm transition">
+    <div className="bg-white rounded-2xl border border-slate-100 p-4 card-hover group">
       <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-2xl ${bg} flex-shrink-0`}>
-          <Icon size={16} className={color} />
+        <div className={`p-2.5 rounded-xl ${bg} flex-shrink-0 transition-transform group-hover:scale-105`}>
+          <Icon size={17} className={color} />
         </div>
         <div className="min-w-0">
-          <div className={`text-xl font-bold ${color}`}>{value}</div>
-          <div className="text-[11px] text-slate-500 uppercase tracking-wider leading-tight">{label}</div>
+          <div className={`text-2xl font-bold stat-value ${color}`}>{value}</div>
+          <div className="text-[11px] text-slate-500 font-medium uppercase tracking-wider leading-tight">{label}</div>
           {sub && <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>}
         </div>
       </div>
@@ -62,7 +62,7 @@ function SectionHeader({ title, href, linkText = "View All" }: { title: string; 
   return (
     <div className="flex items-center justify-between mb-3">
       <h3 className="text-sm font-bold text-slate-800">{title}</h3>
-      {href && <Link href={href} className="text-xs text-indigo-600 hover:underline flex items-center gap-1">{linkText} <ArrowRight size={10} /></Link>}
+      {href && <Link href={href} className="text-xs text-[#7BC143] hover:text-[#6aad38] font-medium flex items-center gap-1 transition-colors">{linkText} <ArrowRight size={10} /></Link>}
     </div>
   );
 }
@@ -112,9 +112,9 @@ export default function DashboardView({
 
       {/* === ROW 1: Key Stats === */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <StatCard icon={FolderOpen} label={t("dashboard.activeProjects")} value={activeProjects.length} color="text-blue-600" bg="bg-blue-50" href="/projects" />
-        <StatCard icon={ClipboardList} label={t("dashboard.openTasks")} value={openTasks.length} sub={overdueTasks.length > 0 ? `${overdueTasks.length} ${t("dashboard.overdue")}` : undefined} color="text-indigo-600" bg="bg-indigo-50" href="/tasks" />
-        <StatCard icon={Clock} label={t("dashboard.hoursThisWeek")} value={weekHours.toFixed(0)} sub={`${uniqueWorkersThisWeek} ${t("dashboard.workers")}`} color="text-sky-600" bg="bg-sky-50" href="/time-clock" />
+        <StatCard icon={FolderOpen} label={t("dashboard.activeProjects")} value={activeProjects.length} color="text-[#7BC143]" bg="bg-green-50" href="/projects" />
+        <StatCard icon={ClipboardList} label={t("dashboard.openTasks")} value={openTasks.length} sub={overdueTasks.length > 0 ? `${overdueTasks.length} ${t("dashboard.overdue")}` : undefined} color="text-[#0068B5]" bg="bg-blue-50" href="/tasks" />
+        <StatCard icon={Clock} label={t("dashboard.hoursThisWeek")} value={weekHours.toFixed(0)} sub={`${uniqueWorkersThisWeek} ${t("dashboard.workers")}`} color="text-slate-600" bg="bg-slate-100" href="/time-clock" />
         <StatCard icon={ShieldAlert} label={t("dashboard.certIssues")} value={certIssues.length} sub={criticalAlerts.length > 0 ? `${criticalAlerts.length} ${t("dashboard.criticalAlerts")}` : undefined} color="text-red-600" bg="bg-red-50" href="/workers" />
         <BonusPoolWidget />
       </div>

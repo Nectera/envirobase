@@ -8,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["'DM Sans'", "system-ui", "-apple-system", "sans-serif"],
+      },
       colors: {
         brand: {
           50: "#f0fdf0",

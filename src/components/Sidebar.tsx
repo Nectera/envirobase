@@ -131,23 +131,15 @@ export default function Sidebar({
 
   const sidebarContent = (
     <>
-      <div className={`${collapsed ? "px-2 py-5" : "px-5 py-5"} flex items-center justify-between`}>
-        <div className={`flex items-center ${collapsed ? "justify-center w-full" : "gap-2.5"}`}>
-          <Logo size={32} className="" />
-          {!collapsed && (
-            <div>
-              <h1 className="text-base font-bold text-white tracking-tight">{process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}</h1>
-              <p className="text-[11px] text-slate-500 mt-0.5">{t(subtitleKey)}</p>
-            </div>
-          )}
-        </div>
+      <div className={`${collapsed ? "px-2 py-5" : "px-5 py-5"} flex items-center justify-center relative`}>
+        <Logo size={collapsed ? 36 : 72} />
         {/* Close button — mobile only */}
-        <button onClick={close} className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-xl">
+        <button onClick={close} className="md:hidden absolute right-4 p-1.5 text-slate-400 hover:text-white rounded-xl">
           <X size={20} />
         </button>
       </div>
 
-      <nav className="flex-1 py-1 overflow-y-auto">
+      <nav className="flex-1 py-1 overflow-y-auto relative z-10">
         {isTech && (
           <>
             {technicianNavItems.map((item) => renderNavItem(item))}
@@ -227,19 +219,22 @@ export default function Sidebar({
     <>
       {/* Desktop sidebar — floating translucent panel */}
       <aside
-        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 overflow-hidden transition-all duration-300 ease-in-out ${
+        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 overflow-hidden transition-all duration-300 ease-in-out relative ${
           collapsed ? "w-[72px]" : "w-[232px]"
         }`}
         style={{
           borderRadius: "24px",
-          background: "rgba(15, 23, 42, 0.88)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
+          background: "rgba(15, 23, 42, 0.92)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
           border: "1px solid rgba(255, 255, 255, 0.06)",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.12)",
         }}
       >
-        {sidebarContent}
+        <div className="absolute inset-0 rounded-[24px] pointer-events-none opacity-[0.06]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23ffffff' stop-opacity='1'/%3E%3Cstop offset='50%25' stop-color='%23ffffff' stop-opacity='0.3'/%3E%3Cstop offset='100%25' stop-color='%23000000' stop-opacity='0.8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 0 L40 20 L20 40 L0 20Z' fill='url(%23a)' stroke='%23ffffff' stroke-opacity='0.8' stroke-width='0.5'/%3E%3Cpath d='M20 4 L36 20 L20 36 L4 20Z' fill='none' stroke='%23ffffff' stroke-opacity='0.5' stroke-width='0.3'/%3E%3C/svg%3E")`, backgroundSize: "40px 40px" }} />
+        <div className="relative z-10 flex flex-col h-full">
+          {sidebarContent}
+        </div>
       </aside>
 
       {/* Mobile overlay sidebar — always expanded */}
@@ -249,14 +244,18 @@ export default function Sidebar({
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={close} />
           {/* Sidebar panel */}
           <aside
-            className="relative w-72 text-slate-300 flex flex-col h-full z-10"
+            className="relative w-72 text-slate-300 flex flex-col h-full z-10 overflow-hidden"
             style={{
-              background: "rgba(15, 23, 42, 0.95)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
+              background: "rgba(15, 23, 42, 0.92)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(255, 255, 255, 0.06)",
             }}
           >
-            {sidebarContent}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.06]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23ffffff' stop-opacity='1'/%3E%3Cstop offset='50%25' stop-color='%23ffffff' stop-opacity='0.3'/%3E%3Cstop offset='100%25' stop-color='%23000000' stop-opacity='0.8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 0 L40 20 L20 40 L0 20Z' fill='url(%23a)' stroke='%23ffffff' stroke-opacity='0.8' stroke-width='0.5'/%3E%3Cpath d='M20 4 L36 20 L20 36 L4 20Z' fill='none' stroke='%23ffffff' stroke-opacity='0.5' stroke-width='0.3'/%3E%3C/svg%3E")`, backgroundSize: "40px 40px" }} />
+            <div className="relative z-10 flex flex-col h-full">
+              {sidebarContent}
+            </div>
           </aside>
         </div>
       )}

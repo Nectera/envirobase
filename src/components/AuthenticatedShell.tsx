@@ -34,18 +34,7 @@ function ShellContent({
 
   return (
     <>
-      {/* Flowing backdrop gradient */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse at 20% 50%, rgba(123, 193, 67, 0.04) 0%, transparent 50%),
-            radial-gradient(ellipse at 80% 20%, rgba(0, 104, 181, 0.03) 0%, transparent 50%),
-            radial-gradient(ellipse at 60% 80%, rgba(123, 193, 67, 0.03) 0%, transparent 50%)
-          `,
-          zIndex: 0,
-        }}
-      />
+      {/* Clean background — gradient is applied via globals.css body */}
 
       <div className="flex h-screen relative">
         <Sidebar alertCount={alertCount} userRole={userRole} userName={userName} isDemo={isDemo} isPlatformAdmin={isPlatformAdmin} />
@@ -69,7 +58,7 @@ function ShellContent({
               </a>
             </div>
           )}
-          <AlertsHeader alertCount={alertCount} alerts={recentAlerts} />
+          <AlertsHeader alertCount={alertCount} alerts={recentAlerts} userName={userName} />
           <main className="flex-1 overflow-auto p-3 md:p-6 relative z-[1]">
             <ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
           </main>

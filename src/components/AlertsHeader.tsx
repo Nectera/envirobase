@@ -2,11 +2,35 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Bell, Menu, AlertTriangle, ShieldAlert, FileText, Clock, X, ChevronRight, AtSign, Check } from "lucide-react";
 import { useMobileNav } from "./MobileNavProvider";
 import { useTranslation } from "./LanguageProvider";
 import GlobalSearch from "./GlobalSearch";
+
+const PAGE_INFO: Record<string, { title: string; color: string }> = {
+  "/dashboard": { title: "Dashboard", color: "#7BC143" },
+  "/crm": { title: "CRM", color: "#7BC143" },
+  "/projects": { title: "Projects", color: "#0068B5" },
+  "/schedule": { title: "Schedule", color: "#0068B5" },
+  "/time-clock": { title: "Time Clock", color: "#6366f1" },
+  "/workers": { title: "Team", color: "#6366f1" },
+  "/tasks": { title: "Tasks", color: "#f59e0b" },
+  "/calendar": { title: "Calendar", color: "#f59e0b" },
+  "/leads": { title: "Leads", color: "#7BC143" },
+  "/pipeline": { title: "Pipeline", color: "#7BC143" },
+  "/estimates": { title: "Estimates", color: "#7BC143" },
+  "/companies": { title: "Companies", color: "#7BC143" },
+  "/contacts": { title: "Contacts", color: "#7BC143" },
+  "/metrics": { title: "Metrics", color: "#7BC143" },
+  "/chat": { title: "Chat", color: "#06b6d4" },
+  "/bonus-pool": { title: "Bonus Pool", color: "#6366f1" },
+  "/alerts": { title: "Alerts", color: "#ef4444" },
+  "/settings": { title: "Settings", color: "#64748b" },
+  "/data-management": { title: "Data Management", color: "#64748b" },
+  "/invoices": { title: "Invoices", color: "#7BC143" },
+  "/my-documents": { title: "My Documents", color: "#6366f1" },
+};
 
 interface Alert {
   id: string;
@@ -28,10 +52,12 @@ interface Notification {
   createdAt: string;
 }
 
-export default function AlertsHeader({ alertCount = 0, alerts = [] }: { alertCount?: number; alerts?: Alert[] }) {
+export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: { alertCount?: number; alerts?: Alert[]; userName?: string }) {
   const { open } = useMobileNav();
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
+  const pageInfo = PAGE_INFO[pathname] || PAGE_INFO["/" + (pathname.split("/")[1] || "")] || null;
   const [showPanel, setShowPanel] = useState(false);
   const [activeTab, setActiveTab] = useState<"alerts" | "mentions">("alerts");
   const panelRef = useRef<HTMLDivElement>(null);
@@ -116,30 +142,46 @@ export default function AlertsHeader({ alertCount = 0, alerts = [] }: { alertCou
   };
 
   return (
-    <div
-      className="sticky top-0 z-30 flex items-center justify-between px-3 md:px-6 py-3"
-      style={{
-        background: "rgba(255, 255, 255, 0.7)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(0, 0, 0, 0.05)",
-      }}
-    >
-      {/* Hamburger — mobile only */}
-      <button
-        onClick={open}
-        className="md:hidden p-2 -ml-1 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+    <div className="sticky top-0 z-30">
+      {/* Green accent strip */}
+      <div className="h-[3px] bg-gradient-to-r from-[#7BC143] via-[#7BC143] to-[#0068B5]" />
+      <div
+        className="flex items-center gap-3 px-3 md:px-6 py-2.5"
+        style={{
+          background: "rgba(255, 255, 255, 0.92)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderBottom: "1px solid rgba(0, 0, 0, 0.06)",
+        }}
       >
-        <Menu size={22} />
-      </button>
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={open}
+          className="md:hidden p-2 -ml-1 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+        >
+          <Menu size={22} />
+        </button>
 
-      {/* Global search */}
-      <div className="flex-1 mx-2 md:mx-4">
-        <GlobalSearch />
-      </div>
+        {/* Page title section — desktop only */}
+        {pageInfo && (
+          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pageInfo.color }} />
+            <span className="text-sm font-semibold text-slate-700 tracking-tight">{pageInfo.title}</span>
+          </div>
+        )}
 
-      {/* Notification bell with dropdown */}
-      <div className="relative" ref={panelRef}>
+        {/* Global search */}
+        <div className="flex-1 mx-2 md:mx-4">
+          <GlobalSearch />
+        </div>
+
+        {/* Company name — desktop only */}
+        <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 flex-shrink-0">
+          <span className="font-medium tracking-wide">EnviroBase</span>
+        </div>
+
+        {/* Notification bell with dropdown */}
+        <div className="relative" ref={panelRef}>
         <button
           onClick={() => setShowPanel(!showPanel)}
           className="relative inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
@@ -152,6 +194,15 @@ export default function AlertsHeader({ alertCount = 0, alerts = [] }: { alertCou
             </span>
           )}
         </button>
+
+        {/* User avatar — desktop only */}
+        {userName && (
+          <div className="hidden md:flex items-center flex-shrink-0 ml-1">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: "linear-gradient(135deg, #7BC143, #0068B5)" }} title={userName}>
+              {userName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
+            </div>
+          </div>
+        )}
 
         {/* Dropdown panel */}
         {showPanel && (
@@ -299,6 +350,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [] }: { alertCou
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
