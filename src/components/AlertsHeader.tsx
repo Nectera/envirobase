@@ -178,7 +178,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
         <div className="flex-1" />
 
         {/* Company name — desktop only */}
-        <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 flex-shrink-0">
+        <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 flex-shrink-0 mr-2">
           <span className="font-medium tracking-wide">EnviroBase</span>
         </div>
 
@@ -199,7 +199,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName }: 
 
         {/* User avatar — desktop only */}
         {userName && (
-          <div className="hidden md:flex items-center flex-shrink-0 ml-1">
+          <div className="hidden md:flex items-center flex-shrink-0 ml-2">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: "linear-gradient(135deg, #7BC143, #0068B5)" }} title={userName}>
               {userName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
             </div>
