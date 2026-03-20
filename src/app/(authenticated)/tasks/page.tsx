@@ -9,8 +9,8 @@ export default async function TasksPage() {
   const userRole = (session?.user as any)?.role as string | undefined;
   const userId = (session?.user as any)?.id as string | undefined;
 
-  // Auto-escalate overdue tasks on page load
-  escalateOverdueTasks();
+  // Auto-escalate overdue tasks on page load (fire-and-forget, non-blocking)
+  escalateOverdueTasks().catch(() => {});
 
   // Get all workers for the assignee dropdown
   const workers = await prisma.worker.findMany({ orderBy: { name: "asc" } });

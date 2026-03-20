@@ -310,17 +310,21 @@ export async function escalateOverdueTasks() {
   today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString();
 
-  await prisma.task.updateMany({
-    where: {
-      status: { not: "completed" },
-      dueDate: { lt: todayStr },
-      priority: { not: "high" },
-    },
-    data: {
-      priority: "high",
-      updatedAt: new Date(),
-    },
-  });
+  try {
+    await prisma.task.updateMany({
+      where: {
+        status: { not: "completed" },
+        dueDate: { lt: todayStr },
+        priority: { not: "high" },
+      },
+      data: {
+        priority: "high",
+      },
+    });
+  } catch (error) {
+    // Non-critical — don't crash the page if escalation fails
+    console.error("escalateOverdueTasks failed:", error);
+  }
 }
 
 /**
