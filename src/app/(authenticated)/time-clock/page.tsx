@@ -33,8 +33,14 @@ export default async function TimeClockPage() {
   const isSupOrAdmin = userRole === "ADMIN" || userRole === "SUPERVISOR";
   const clockRole = isSupOrAdmin ? "supervisor" : "technician";
 
-  // Get today's date
-  const today = new Date().toISOString().split("T")[0];
+  // Get today's date and start of week (Monday)
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + mondayOffset);
+  const weekStart = monday.toISOString().split("T")[0];
 
   // Get all open (active) clock-ins
   const activeEntries = await prisma.timeEntry.findMany({
@@ -42,10 +48,17 @@ export default async function TimeClockPage() {
     include: { project: true },
   });
 
-  // Get today's completed entries
+  // Get today's entries
   const todayEntries = await prisma.timeEntry.findMany({
     where: { date: today },
     include: { project: true },
+  });
+
+  // Get this week's entries (Monday through today)
+  const weekEntries = await prisma.timeEntry.findMany({
+    where: { date: { gte: weekStart, lte: today } },
+    include: { project: true },
+    orderBy: { date: "desc" },
   });
 
   // For technicians, filter entries to only their own
@@ -56,6 +69,9 @@ export default async function TimeClockPage() {
   const filteredTodayEntries = isTech && currentWorker
     ? todayEntries.filter((e: any) => e.workerId === currentWorker.id)
     : todayEntries;
+  const filteredWeekEntries = isTech && currentWorker
+    ? weekEntries.filter((e: any) => e.workerId === currentWorker.id)
+    : weekEntries;
 
   return (
     <div>
@@ -110,6 +126,7 @@ export default async function TimeClockPage() {
         projects={projects}
         workers={isTech && currentWorker ? [currentWorker] : workers}
         todayEntries={filteredTodayEntries}
+        weekEntries={filteredWeekEntries}
         activeEntries={filteredActiveEntries}
         currentWorker={currentWorker}
         currentUserRole={clockRole}

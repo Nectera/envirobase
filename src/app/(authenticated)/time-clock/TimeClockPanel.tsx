@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Clock, LogIn, LogOut, Coffee, ChevronDown, User, AlertTriangle, FileDown, Users,
-  MapPin, Navigation, Pencil, X, Trash2,
+  MapPin, Navigation, Pencil, X, Trash2, Calendar,
 } from "lucide-react";
 
 type Project = { id: string; name: string; type: string };
@@ -57,6 +57,7 @@ export default function TimeClockPanel({
   projects,
   workers,
   todayEntries,
+  weekEntries,
   activeEntries,
   currentWorker,
   currentUserRole,
@@ -65,6 +66,7 @@ export default function TimeClockPanel({
   projects: Project[];
   workers: Worker[];
   todayEntries: TimeEntry[];
+  weekEntries: TimeEntry[];
   activeEntries: TimeEntry[];
   currentWorker: Worker | null;
   currentUserRole: "supervisor" | "technician";
@@ -85,6 +87,9 @@ export default function TimeClockPanel({
   const [breakMinutes, setBreakMinutes] = useState(0);
   const [entryNotes, setEntryNotes] = useState("");
   const [gpsStatus, setGpsStatus] = useState<"idle" | "fetching" | "granted" | "denied">("idle");
+
+  // Time log view toggle
+  const [timeLogView, setTimeLogView] = useState<"today" | "week">("today");
 
   // Edit modal state (admin only)
   const [editModalEntry, setEditModalEntry] = useState<TimeEntry | null>(null);
@@ -272,6 +277,101 @@ export default function TimeClockPanel({
     const hrs = Math.floor(diff / (1000 * 60 * 60));
     const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     return `${hrs}h ${mins}m`;
+  }
+
+  /** Render the entries table (reused by both today and week views) */
+  function renderEntryTable(entries: TimeEntry[]) {
+    return (
+      <table className="w-full text-sm">
+        <thead className="bg-slate-50/50 border-b border-slate-100">
+          <tr>
+            <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Worker</th>
+            <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Role</th>
+            <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Clock In</th>
+            <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Clock Out</th>
+            <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Break</th>
+            <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Total</th>
+            <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">GPS</th>
+            <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Notes</th>
+            {isAdmin && <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs w-10"></th>}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50">
+          {entries.map((entry) => (
+            <tr key={entry.id} className="hover:bg-slate-50">
+              <td className="px-4 py-2 font-medium text-slate-800">{entry.workerName}</td>
+              <td className="px-4 py-2">
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                  entry.role === "office"
+                    ? "bg-blue-100 text-blue-700"
+                    : entry.role === "supervisor"
+                    ? "bg-indigo-100 text-indigo-700"
+                    : "bg-slate-100 text-slate-600"
+                }`}>
+                  {entry.role === "office" ? "OFFICE" : entry.role === "supervisor" ? "SUP" : "TECH"}
+                </span>
+              </td>
+              <td className="px-4 py-2 text-slate-600">{formatTime(entry.clockIn)}</td>
+              <td className="px-4 py-2 text-slate-600">
+                {entry.clockOut ? formatTime(entry.clockOut) : (
+                  <span className="text-emerald-600 text-xs font-medium">Active</span>
+                )}
+              </td>
+              <td className="px-4 py-2 text-slate-500">
+                {entry.breakMinutes > 0 ? `${entry.breakMinutes}m` : "—"}
+              </td>
+              <td className="px-4 py-2 font-medium text-slate-800">
+                {entry.totalHours != null ? `${entry.totalHours.toFixed(1)}h` : "—"}
+              </td>
+              <td className="px-4 py-2">
+                <div className="flex items-center gap-1">
+                  {entry.clockInLat != null ? (
+                    <a
+                      href={`https://maps.google.com/?q=${entry.clockInLat},${entry.clockInLng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition"
+                      title={`Clock-in: ${entry.clockInLat?.toFixed(5)}, ${entry.clockInLng?.toFixed(5)}`}
+                    >
+                      <Navigation size={9} /> In
+                    </a>
+                  ) : (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded">—</span>
+                  )}
+                  {entry.clockOutLat != null ? (
+                    <a
+                      href={`https://maps.google.com/?q=${entry.clockOutLat},${entry.clockOutLng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded flex items-center gap-0.5 hover:bg-blue-100 transition"
+                      title={`Clock-out: ${entry.clockOutLat?.toFixed(5)}, ${entry.clockOutLng?.toFixed(5)}`}
+                    >
+                      <Navigation size={9} /> Out
+                    </a>
+                  ) : entry.clockOut ? (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded">—</span>
+                  ) : null}
+                </div>
+              </td>
+              <td className="px-4 py-2 text-slate-500 max-w-[200px] truncate">
+                {entry.notes || "—"}
+              </td>
+              {isAdmin && (
+                <td className="px-4 py-2">
+                  <button
+                    onClick={() => openEditModal(entry)}
+                    className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
+                    title="Edit time entry"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
   }
 
   // Group by project for daily summary (null projectId = "office")
@@ -585,140 +685,182 @@ export default function TimeClockPanel({
         </div>
       )}
 
-      {/* Today's Summary by Project */}
+      {/* Time Log — Today / This Week toggle */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-          <User size={16} className="text-slate-400" />
-          Today&apos;s Time Log
-        </h2>
-
-        {todayEntries.length === 0 ? (
-          <div className="text-center py-10 bg-white rounded-lg border border-slate-200">
-            <Clock size={32} className="mx-auto text-slate-300 mb-2" />
-            <p className="text-sm text-slate-500">No time entries for today yet.</p>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <User size={16} className="text-slate-400" />
+            Time Log
+          </h2>
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setTimeLogView("today")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                timeLogView === "today" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => setTimeLogView("week")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                timeLogView === "week" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              This Week
+            </button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {Array.from(projectGroups.entries()).map(([projId, entries]) => {
-              const proj = entries[0]?.project;
-              const supervisorHrs = entries
-                .filter((e) => e.role === "supervisor" && e.totalHours)
-                .reduce((s, e) => s + (e.totalHours || 0), 0);
-              const techHrs = entries
-                .filter((e) => e.role === "technician" && e.totalHours)
-                .reduce((s, e) => s + (e.totalHours || 0), 0);
-              const openCount = entries.filter((e) => !e.clockOut).length;
+        </div>
 
-              return (
-                <div key={projId} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-sm text-slate-800">{projId === "__office__" ? "Office" : (proj?.name || "Unknown Project")}</span>
-                      {openCount > 0 && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">
-                          {openCount} active
-                        </span>
-                      )}
+        {timeLogView === "today" ? (
+          /* ── Today View ── */
+          todayEntries.length === 0 ? (
+            <div className="text-center py-10 bg-white rounded-lg border border-slate-200">
+              <Clock size={32} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm text-slate-500">No time entries for today yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Array.from(projectGroups.entries()).map(([projId, entries]) => {
+                const proj = entries[0]?.project;
+                const supervisorHrs = entries
+                  .filter((e) => e.role === "supervisor" && e.totalHours)
+                  .reduce((s, e) => s + (e.totalHours || 0), 0);
+                const techHrs = entries
+                  .filter((e) => e.role === "technician" && e.totalHours)
+                  .reduce((s, e) => s + (e.totalHours || 0), 0);
+                const openCount = entries.filter((e) => !e.clockOut).length;
+
+                return (
+                  <div key={projId} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-sm text-slate-800">{projId === "__office__" ? "Office" : (proj?.name || "Unknown Project")}</span>
+                        {openCount > 0 && (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">
+                            {openCount} active
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500 flex gap-4">
+                        <span>Supervisor: <strong className="text-indigo-600">{supervisorHrs.toFixed(1)}h</strong></span>
+                        <span>Tech: <strong className="text-slate-800">{techHrs.toFixed(1)}h</strong></span>
+                        <span>Total: <strong className="text-slate-900">{(supervisorHrs + techHrs).toFixed(1)}h</strong></span>
+                      </div>
                     </div>
-                    <div className="text-xs text-slate-500 flex gap-4">
-                      <span>Supervisor: <strong className="text-indigo-600">{supervisorHrs.toFixed(1)}h</strong></span>
-                      <span>Tech: <strong className="text-slate-800">{techHrs.toFixed(1)}h</strong></span>
-                      <span>Total: <strong className="text-slate-900">{(supervisorHrs + techHrs).toFixed(1)}h</strong></span>
-                    </div>
+                    {renderEntryTable(entries)}
                   </div>
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50/50 border-b border-slate-100">
-                      <tr>
-                        <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Worker</th>
-                        <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Role</th>
-                        <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Clock In</th>
-                        <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Clock Out</th>
-                        <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Break</th>
-                        <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Total</th>
-                        <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">GPS</th>
-                        <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs">Notes</th>
-                        {isAdmin && <th className="text-left px-4 py-2 font-medium text-slate-500 text-xs w-10"></th>}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {entries.map((entry) => (
-                        <tr key={entry.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-2 font-medium text-slate-800">{entry.workerName}</td>
-                          <td className="px-4 py-2">
-                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                              entry.role === "office"
-                                ? "bg-blue-100 text-blue-700"
-                                : entry.role === "supervisor"
-                                ? "bg-indigo-100 text-indigo-700"
-                                : "bg-slate-100 text-slate-600"
-                            }`}>
-                              {entry.role === "office" ? "OFFICE" : entry.role === "supervisor" ? "SUP" : "TECH"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-slate-600">{formatTime(entry.clockIn)}</td>
-                          <td className="px-4 py-2 text-slate-600">
-                            {entry.clockOut ? formatTime(entry.clockOut) : (
-                              <span className="text-emerald-600 text-xs font-medium">Active</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-slate-500">
-                            {entry.breakMinutes > 0 ? `${entry.breakMinutes}m` : "—"}
-                          </td>
-                          <td className="px-4 py-2 font-medium text-slate-800">
-                            {entry.totalHours != null ? `${entry.totalHours.toFixed(1)}h` : "—"}
-                          </td>
-                          <td className="px-4 py-2">
-                            <div className="flex items-center gap-1">
-                              {entry.clockInLat != null ? (
-                                <a
-                                  href={`https://maps.google.com/?q=${entry.clockInLat},${entry.clockInLng}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition"
-                                  title={`Clock-in: ${entry.clockInLat?.toFixed(5)}, ${entry.clockInLng?.toFixed(5)}`}
-                                >
-                                  <Navigation size={9} /> In
-                                </a>
-                              ) : (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded">—</span>
-                              )}
-                              {entry.clockOutLat != null ? (
-                                <a
-                                  href={`https://maps.google.com/?q=${entry.clockOutLat},${entry.clockOutLng}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded flex items-center gap-0.5 hover:bg-blue-100 transition"
-                                  title={`Clock-out: ${entry.clockOutLat?.toFixed(5)}, ${entry.clockOutLng?.toFixed(5)}`}
-                                >
-                                  <Navigation size={9} /> Out
-                                </a>
-                              ) : entry.clockOut ? (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded">—</span>
-                              ) : null}
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 text-slate-500 max-w-[200px] truncate">
-                            {entry.notes || "—"}
-                          </td>
-                          {isAdmin && (
-                            <td className="px-4 py-2">
-                              <button
-                                onClick={() => openEditModal(entry)}
-                                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
-                                title="Edit time entry"
-                              >
-                                <Pencil size={13} />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          /* ── Week View ── */
+          (() => {
+            // Group week entries by date, then by project within each date
+            const dateGroups = new Map<string, TimeEntry[]>();
+            for (const entry of weekEntries) {
+              const d = entry.date || "unknown";
+              if (!dateGroups.has(d)) dateGroups.set(d, []);
+              dateGroups.get(d)!.push(entry);
+            }
+            // Sort dates descending (most recent first)
+            const sortedDates = Array.from(dateGroups.keys()).sort((a, b) => b.localeCompare(a));
+
+            if (weekEntries.length === 0) {
+              return (
+                <div className="text-center py-10 bg-white rounded-lg border border-slate-200">
+                  <Calendar size={32} className="mx-auto text-slate-300 mb-2" />
+                  <p className="text-sm text-slate-500">No time entries this week yet.</p>
                 </div>
               );
-            })}
-          </div>
+            }
+
+            // Week totals
+            const weekTotalHrs = weekEntries.reduce((s, e) => s + (e.totalHours || 0), 0);
+            const weekSupHrs = weekEntries.filter((e) => e.role === "supervisor").reduce((s, e) => s + (e.totalHours || 0), 0);
+            const weekTechHrs = weekEntries.filter((e) => e.role === "technician").reduce((s, e) => s + (e.totalHours || 0), 0);
+
+            return (
+              <div className="space-y-4">
+                {/* Week summary bar */}
+                <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={16} className="text-indigo-500" />
+                    <span className="text-sm font-semibold text-indigo-800">Week Total</span>
+                  </div>
+                  <div className="text-xs text-indigo-700 flex gap-4">
+                    <span>Supervisor: <strong>{weekSupHrs.toFixed(1)}h</strong></span>
+                    <span>Tech: <strong>{weekTechHrs.toFixed(1)}h</strong></span>
+                    <span>Total: <strong className="text-indigo-900">{weekTotalHrs.toFixed(1)}h</strong></span>
+                    <span className="text-indigo-400">|</span>
+                    <span>{weekEntries.length} entries</span>
+                  </div>
+                </div>
+
+                {sortedDates.map((dateStr) => {
+                  const dayEntries = dateGroups.get(dateStr) || [];
+                  const isToday = dateStr === new Date().toISOString().split("T")[0];
+                  const dayLabel = new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                  });
+                  const dayTotalHrs = dayEntries.reduce((s, e) => s + (e.totalHours || 0), 0);
+
+                  // Group this day's entries by project
+                  const dayProjectGroups = new Map<string, TimeEntry[]>();
+                  for (const entry of dayEntries) {
+                    const key = entry.projectId || "__office__";
+                    if (!dayProjectGroups.has(key)) dayProjectGroups.set(key, []);
+                    dayProjectGroups.get(key)!.push(entry);
+                  }
+
+                  return (
+                    <div key={dateStr}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-xs font-semibold text-slate-600">
+                          {dayLabel}
+                          {isToday && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">Today</span>}
+                        </h3>
+                        <div className="flex-1 border-t border-slate-200" />
+                        <span className="text-xs text-slate-500 font-medium">{dayTotalHrs.toFixed(1)}h</span>
+                      </div>
+                      <div className="space-y-3">
+                        {Array.from(dayProjectGroups.entries()).map(([projId, entries]) => {
+                          const proj = entries[0]?.project;
+                          const supHrs = entries.filter((e) => e.role === "supervisor" && e.totalHours).reduce((s, e) => s + (e.totalHours || 0), 0);
+                          const tHrs = entries.filter((e) => e.role === "technician" && e.totalHours).reduce((s, e) => s + (e.totalHours || 0), 0);
+                          const openCount = entries.filter((e) => !e.clockOut).length;
+
+                          return (
+                            <div key={projId} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                              <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                <div>
+                                  <span className="font-semibold text-sm text-slate-800">{projId === "__office__" ? "Office" : (proj?.name || "Unknown Project")}</span>
+                                  {openCount > 0 && (
+                                    <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">
+                                      {openCount} active
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-slate-500 flex gap-4">
+                                  <span>Supervisor: <strong className="text-indigo-600">{supHrs.toFixed(1)}h</strong></span>
+                                  <span>Tech: <strong className="text-slate-800">{tHrs.toFixed(1)}h</strong></span>
+                                  <span>Total: <strong className="text-slate-900">{(supHrs + tHrs).toFixed(1)}h</strong></span>
+                                </div>
+                              </div>
+                              {renderEntryTable(entries)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()
         )}
       </div>
       {/* Edit Time Entry Modal (Admin only) */}
