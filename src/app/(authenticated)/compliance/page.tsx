@@ -4,15 +4,33 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/components/LanguageProvider";
 import { COMPLIANCE_CHECKLISTS } from "@/lib/regulations";
 import type { ChecklistSection } from "@/lib/regulations";
-import { FileDown, Loader2, MapPin, RefreshCw } from "lucide-react";
+import { ExternalLink, Loader2, MapPin, RefreshCw } from "lucide-react";
 
 type ServiceType = "ASBESTOS" | "LEAD" | "METH" | "MOLD";
+type SourceLink = { label: string; url: string; type: "state" | "federal" };
 
-const SERVICE_PDF: Record<ServiceType, { href: string; label: string }> = {
-  ASBESTOS: { href: "/regulations/asbestos-regulations.pdf", label: "Asbestos Regulations" },
-  LEAD: { href: "/regulations/lead-regulations.pdf", label: "Lead Regulations" },
-  METH: { href: "/regulations/meth-regulations.pdf", label: "Meth Lab Regulations" },
-  MOLD: { href: "/regulations/mold-regulations.pdf", label: "Mold Regulations" },
+// Colorado hardcoded source links for instant loading
+const CO_SOURCES: Record<ServiceType, SourceLink[]> = {
+  ASBESTOS: [
+    { label: "CDPHE Regulation 8, Part B", url: "https://cdphe.colorado.gov/asbestos", type: "state" },
+    { label: "OSHA 29 CFR 1926.1101", url: "https://www.osha.gov/laws/regs/regulations/standardnumber/1926/1926.1101", type: "federal" },
+    { label: "EPA NESHAP (40 CFR 61 Subpart M)", url: "https://www.epa.gov/asbestos/asbestos-neshap-regulations-and-guidance", type: "federal" },
+  ],
+  LEAD: [
+    { label: "CDPHE Regulation 19", url: "https://cdphe.colorado.gov/lead", type: "state" },
+    { label: "OSHA 29 CFR 1926.62", url: "https://www.osha.gov/laws/regs/regulations/standardnumber/1926/1926.62", type: "federal" },
+    { label: "EPA RRP Rule (40 CFR 745)", url: "https://www.epa.gov/lead/lead-renovation-repair-and-painting-program", type: "federal" },
+  ],
+  METH: [
+    { label: "Colorado 6 CCR 1014-3", url: "https://cdphe.colorado.gov/meth-labs", type: "state" },
+    { label: "CRS 25-18.5", url: "https://leg.colorado.gov/colorado-revised-statutes", type: "state" },
+    { label: "OSHA HAZWOPER (29 CFR 1910.120)", url: "https://www.osha.gov/laws/regs/regulations/standardnumber/1910/1910.120", type: "federal" },
+  ],
+  MOLD: [
+    { label: "EPA Mold Remediation Guidelines", url: "https://www.epa.gov/mold/mold-remediation-schools-and-commercial-buildings-guide", type: "federal" },
+    { label: "OSHA Mold Safety (OSHA 3160)", url: "https://www.osha.gov/mold", type: "federal" },
+    { label: "IICRC S520 Standard", url: "https://iicrc.org/standards/iicrc-s520/", type: "federal" },
+  ],
 };
 
 const TABS: { key: ServiceType; label: string; color: string }[] = [
@@ -217,6 +235,7 @@ export default function CompliancePage() {
   // Dynamic regulation data per type
   const [dynamicRegs, setDynamicRegs] = useState<Record<string, RegSection[]>>({});
   const [dynamicChecklists, setDynamicChecklists] = useState<Record<string, ChecklistData[]>>({});
+  const [dynamicSources, setDynamicSources] = useState<Record<string, SourceLink[]>>({});
   const [loadingRegs, setLoadingRegs] = useState<Record<string, boolean>>({});
   const [regErrors, setRegErrors] = useState<Record<string, string>>({});
 
@@ -245,6 +264,7 @@ export default function CompliancePage() {
       setDynamicRegs((prev) => ({ ...prev, [cacheKey]: CO_REGULATION_DATA[type] }));
       const coChecklist = COMPLIANCE_CHECKLISTS[type] || [];
       setDynamicChecklists((prev) => ({ ...prev, [cacheKey]: coChecklist }));
+      setDynamicSources((prev) => ({ ...prev, [cacheKey]: CO_SOURCES[type] || [] }));
       return;
     }
 
@@ -258,6 +278,7 @@ export default function CompliancePage() {
       setStateName(data.stateName || state);
       setDynamicRegs((prev) => ({ ...prev, [cacheKey]: data.data || [] }));
       setDynamicChecklists((prev) => ({ ...prev, [cacheKey]: data.checklists || [] }));
+      setDynamicSources((prev) => ({ ...prev, [cacheKey]: data.sources || [] }));
     } catch {
       setRegErrors((prev) => ({ ...prev, [cacheKey]: "Failed to load regulations. Using federal defaults." }));
       // Fall back to Colorado data as a reasonable default
@@ -280,13 +301,14 @@ export default function CompliancePage() {
   const checklist: ChecklistData[] = dynamicChecklists[cacheKey] || [];
   const isLoadingRegs = loadingRegs[cacheKey] || false;
   const regError = regErrors[cacheKey] || "";
-  const pdf = SERVICE_PDF[activeType];
+  const sources: SourceLink[] = dynamicSources[cacheKey] || [];
 
   const handleRefresh = () => {
     if (!orgState) return;
     const key = `${orgState}-${activeType}`;
     setDynamicRegs((prev) => { const next = { ...prev }; delete next[key]; return next; });
     setDynamicChecklists((prev) => { const next = { ...prev }; delete next[key]; return next; });
+    setDynamicSources((prev) => { const next = { ...prev }; delete next[key]; return next; });
     // Re-trigger fetch
     setTimeout(() => fetchRegs(orgState, activeType), 0);
   };
@@ -354,16 +376,6 @@ export default function CompliancePage() {
                 <RefreshCw size={12} className={isLoadingRegs ? "animate-spin" : ""} />
               </button>
             )}
-            <a
-              href={pdf.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full hover:bg-slate-50 hover:border-slate-300 transition shrink-0"
-            >
-              <FileDown size={13} />
-              <span className="hidden sm:inline">{pdf.label}</span>
-              <span className="sm:hidden">PDF</span>
-            </a>
           </div>
         </div>
       </div>
@@ -457,6 +469,42 @@ export default function CompliancePage() {
               <p className="text-sm text-slate-500">{t("compliance.noChecklists")}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Source Links */}
+      {!isLoadingRegs && sources.length > 0 && (
+        <div className="mt-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <div className="px-5 py-3 border-b border-slate-100">
+            <h3 className="text-sm font-semibold text-slate-900">Regulation Sources</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Official regulation documents and agency pages</p>
+          </div>
+          <div className="p-4 space-y-2">
+            {sources.map((src, i) => (
+              <a
+                key={i}
+                href={src.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition group"
+              >
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  src.type === "state" ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"
+                }`}>
+                  <ExternalLink size={13} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-slate-700 group-hover:text-slate-900 truncate">{src.label}</div>
+                  <div className="text-[11px] text-slate-400 truncate">{src.url}</div>
+                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                  src.type === "state" ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
+                }`}>
+                  {src.type === "state" ? "State" : "Federal"}
+                </span>
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </div>
