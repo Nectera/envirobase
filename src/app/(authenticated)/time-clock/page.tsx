@@ -45,19 +45,19 @@ export default async function TimeClockPage() {
   // Get all open (active) clock-ins
   const activeEntries = await prisma.timeEntry.findMany({
     where: { clockOut: null },
-    include: { project: true },
+    include: { project: true, worker: true },
   });
 
   // Get today's entries
   const todayEntries = await prisma.timeEntry.findMany({
     where: { date: today },
-    include: { project: true },
+    include: { project: true, worker: true },
   });
 
   // Get this week's entries (Monday through today)
   const weekEntries = await prisma.timeEntry.findMany({
     where: { date: { gte: weekStart, lte: today } },
-    include: { project: true },
+    include: { project: true, worker: true },
     orderBy: { date: "desc" },
   });
 

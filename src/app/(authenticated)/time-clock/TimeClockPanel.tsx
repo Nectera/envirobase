@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 type Project = { id: string; name: string; type: string };
-type Worker = { id: string; name: string; role: string; userId?: string };
+type Worker = { id: string; name: string; role: string; userId?: string; isTemp?: boolean; tempAgency?: string | null; tempCertifications?: string | null };
 type TimeEntry = {
   id: string;
   projectId: string;
@@ -22,6 +22,7 @@ type TimeEntry = {
   totalHours: number | null;
   notes: string;
   project?: Project & { address?: string };
+  worker?: Worker | null;
   clockInLat?: number | null;
   clockInLng?: number | null;
   clockInAddress?: string | null;
@@ -90,6 +91,13 @@ export default function TimeClockPanel({
 
   // Time log view toggle
   const [timeLogView, setTimeLogView] = useState<"today" | "week">("today");
+
+  // Temp worker quick-add state
+  const [showTempModal, setShowTempModal] = useState(false);
+  const [tempName, setTempName] = useState("");
+  const [tempAgency, setTempAgency] = useState("");
+  const [tempCerts, setTempCerts] = useState<string[]>([]);
+  const [tempSaving, setTempSaving] = useState(false);
 
   // Edit modal state (admin only)
   const [editModalEntry, setEditModalEntry] = useState<TimeEntry | null>(null);
@@ -164,6 +172,45 @@ export default function TimeClockPanel({
       setLoading(false);
     }
   }
+
+  async function handleCreateTemp() {
+    if (!tempName.trim()) return;
+    setTempSaving(true);
+    try {
+      const res = await fetch("/api/temp-workers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: tempName.trim(),
+          agency: tempAgency.trim() || null,
+          certifications: tempCerts.length > 0 ? tempCerts : null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Failed to create temp worker");
+        return;
+      }
+      const newWorker = await res.json();
+      // Auto-select the new temp worker for clock-in
+      setClockingForOther(true);
+      setSelectedWorker(newWorker.id);
+      setSelectedRole("technician");
+      // Reset modal
+      setShowTempModal(false);
+      setTempName("");
+      setTempAgency("");
+      setTempCerts([]);
+      // Refresh to get updated worker list
+      router.refresh();
+    } catch {
+      setError("Failed to create temp worker");
+    } finally {
+      setTempSaving(false);
+    }
+  }
+
+  const tempWorkers = workers.filter((w) => w.isTemp);
 
   const effectiveWorker = clockingForOther
     ? workers.find((w) => w.id === selectedWorker)
@@ -299,7 +346,14 @@ export default function TimeClockPanel({
         <tbody className="divide-y divide-slate-50">
           {entries.map((entry) => (
             <tr key={entry.id} className="hover:bg-slate-50">
-              <td className="px-4 py-2 font-medium text-slate-800">{entry.workerName}</td>
+              <td className="px-4 py-2 font-medium text-slate-800">
+                <span className="flex items-center gap-1.5">
+                  {entry.workerName}
+                  {entry.worker?.isTemp && (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded" title={entry.worker.tempAgency ? `Agency: ${entry.worker.tempAgency}` : "Temp Worker"}>TEMP</span>
+                  )}
+                </span>
+              </td>
               <td className="px-4 py-2">
                 <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
                   entry.role === "office"
@@ -506,6 +560,12 @@ export default function TimeClockPanel({
               <Users size={16} className="text-slate-400" />
               Clock In Team Member
             </h2>
+            <button
+              onClick={() => setShowTempModal(true)}
+              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium rounded-full border border-amber-200 transition flex items-center gap-1.5"
+            >
+              <User size={13} /> + Temp Worker
+            </button>
           </div>
 
           {error && (
@@ -544,7 +604,7 @@ export default function TimeClockPanel({
                   setSelectedWorker(e.target.value);
                   const w = workers.find((w) => w.id === e.target.value);
                   if (w) {
-                    const r = w.role.toLowerCase();
+                    const r = (w.role || "").toLowerCase();
                     setSelectedRole(
                       r.includes("supervisor") || r.includes("owner") || r.includes("admin")
                         ? "supervisor"
@@ -555,11 +615,22 @@ export default function TimeClockPanel({
                 className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#7BC143] focus:border-[#7BC143]"
               >
                 <option value="">Select worker…</option>
-                {workers.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name} {activeEntries.some((e) => e.workerId === w.id) ? "(Active)" : ""}
-                  </option>
-                ))}
+                {tempWorkers.length > 0 && (
+                  <optgroup label="Temp Workers">
+                    {tempWorkers.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name} {w.tempAgency ? `(${w.tempAgency})` : ""} {activeEntries.some((e) => e.workerId === w.id) ? "— Active" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="Team">
+                  {workers.filter((w) => !w.isTemp).map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} {activeEntries.some((e) => e.workerId === w.id) ? "(Active)" : ""}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 
@@ -604,6 +675,9 @@ export default function TimeClockPanel({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm text-slate-900">{entry.workerName}</span>
+                    {entry.worker?.isTemp && (
+                      <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded" title={entry.worker.tempAgency ? `Agency: ${entry.worker.tempAgency}` : "Temp Worker"}>TEMP</span>
+                    )}
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
                       entry.role === "office"
                         ? "bg-blue-100 text-blue-700"
@@ -988,6 +1062,90 @@ export default function TimeClockPanel({
                   {editSaving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add Temp Worker Modal */}
+      {showTempModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowTempModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                <User size={18} className="text-amber-500" />
+                Add Temp Worker
+              </h3>
+              <button onClick={() => setShowTempModal(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={tempName}
+                  onChange={(e) => setTempName(e.target.value)}
+                  placeholder="Full name"
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Temp Agency</label>
+                <input
+                  type="text"
+                  value={tempAgency}
+                  onChange={(e) => setTempAgency(e.target.value)}
+                  placeholder="e.g., Staffing Solutions Inc."
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">Certifications</label>
+                <div className="flex flex-wrap gap-2">
+                  {["Asbestos", "Lead", "Meth", "Mold", "Select Demo"].map((cert) => {
+                    const isSelected = tempCerts.includes(cert.toUpperCase().replace(" ", "_"));
+                    const value = cert.toUpperCase().replace(" ", "_");
+                    return (
+                      <button
+                        key={cert}
+                        type="button"
+                        onClick={() => setTempCerts((prev) =>
+                          isSelected ? prev.filter((c) => c !== value) : [...prev, value]
+                        )}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition ${
+                          isSelected
+                            ? "bg-amber-100 border-amber-300 text-amber-800"
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        {cert}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setShowTempModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateTemp}
+                disabled={!tempName.trim() || tempSaving}
+                className="px-5 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-sm font-medium rounded-full transition"
+              >
+                {tempSaving ? "Adding..." : "Add & Select"}
+              </button>
             </div>
           </div>
         </div>

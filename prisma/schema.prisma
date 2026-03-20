@@ -131,6 +131,9 @@ model Worker {
   emergencyContactName  String?
   emergencyContactPhone String?
   status                String  @default("active")
+  isTemp                Boolean @default(false)
+  tempAgency            String?
+  tempCertifications    String? // Comma-separated cert names for quick reference
   skillRating           Int?
   userId                String?
   user                  User?   @relation(fields: [userId], references: [id])
