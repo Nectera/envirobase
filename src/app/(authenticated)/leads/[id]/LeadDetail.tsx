@@ -17,6 +17,7 @@ import SMSCompose from "@/components/SMSCompose";
 import ReferralSourcePicker from "@/components/ReferralSourcePicker";
 import PandaDocSend from "@/components/PandaDocSend";
 import TaskDetailModal from "@/components/TaskDetailModal";
+import CallConfirmModal from "@/components/CallConfirmModal";
 
 const STAGES = ["new", "contacted", "site_visit", "proposal_sent", "negotiation", "won", "lost"];
 const STAGE_LABELS: Record<string, string> = {
@@ -62,6 +63,7 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
   const [docNotes, setDocNotes] = useState("");
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docSaving, setDocSaving] = useState(false);
+  const [showCallConfirm, setShowCallConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -311,10 +313,10 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
           {/* Action buttons */}
           <div className="flex gap-1.5 flex-wrap">
             {lead.phone && (
-              <a href={`tel:${lead.phone}`}
+              <button onClick={() => setShowCallConfirm(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                 <PhoneCall size={12} /> Call
-              </a>
+              </button>
             )}
             {lead.phone && (
               <button onClick={() => setShowSMSCompose(true)}
@@ -476,7 +478,7 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
             {lead.phone && (
               <div className="flex items-center gap-2">
                 <Phone size={12} className="text-slate-400 flex-shrink-0" />
-                <a href={`tel:${lead.phone}`} className="text-sm text-slate-700 hover:text-blue-600 transition">{lead.phone}</a>
+                <button onClick={() => setShowCallConfirm(true)} className="text-sm text-slate-700 hover:text-blue-600 transition text-left">{lead.phone}</button>
               </div>
             )}
             {lead.email && (
@@ -1306,6 +1308,14 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
             </div>
           </div>
         </div>
+      )}
+      {showCallConfirm && lead.phone && (
+        <CallConfirmModal
+          phoneNumber={lead.phone}
+          contactName={leadName}
+          onConfirm={() => { setShowCallConfirm(false); window.location.href = `tel:${lead.phone}`; }}
+          onCancel={() => setShowCallConfirm(false)}
+        />
       )}
     </div>
   );

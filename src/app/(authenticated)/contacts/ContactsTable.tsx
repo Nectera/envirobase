@@ -18,6 +18,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
+import CallConfirmModal from "@/components/CallConfirmModal";
 
 interface Company {
   id: string;
@@ -58,6 +59,9 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
     phone: string;
   }>({ firstName: "", lastName: "", title: "", email: "", phone: "" });
   const [saving, setSaving] = useState(false);
+
+  // Call confirm state
+  const [callConfirm, setCallConfirm] = useState<{ phone: string; name: string } | null>(null);
 
   // Delete state
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -469,7 +473,7 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
                         {contact.phone ? (
                           <div className="flex items-center gap-1">
                             <Phone size={13} className="text-slate-400 shrink-0" />
-                            <a href={`tel:${contact.phone}`} className="hover:text-blue-600 transition">{contact.phone}</a>
+                            <button onClick={() => setCallConfirm({ phone: contact.phone!, name: [contact.firstName, contact.lastName].filter(Boolean).join(" ") || "Unknown" })} className="hover:text-blue-600 transition">{contact.phone}</button>
                           </div>
                         ) : (
                           "-"
@@ -501,6 +505,14 @@ export default function ContactsTable({ contacts: initialContacts }: { contacts:
           </tbody>
         </table>
       </div>
+      {callConfirm && (
+        <CallConfirmModal
+          phoneNumber={callConfirm.phone}
+          contactName={callConfirm.name}
+          onConfirm={() => { const phone = callConfirm.phone; setCallConfirm(null); window.location.href = `tel:${phone}`; }}
+          onCancel={() => setCallConfirm(null)}
+        />
+      )}
     </div>
   );
 }

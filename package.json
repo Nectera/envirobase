@@ -31,6 +31,7 @@
     "next-auth": "^4.24.11",
     "nodemailer": "^7.0.13",
     "pdf-lib": "^1.17.1",
+    "pdf-parse": "^2.4.5",
     "prisma": "^5.22.0",
     "react": "^18",
     "react-dom": "^18",

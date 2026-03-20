@@ -14,6 +14,7 @@ import ClickToCall from "@/components/ClickToCall";
 import SMSCompose from "@/components/SMSCompose";
 import PandaDocSend from "@/components/PandaDocSend";
 import { useTranslation } from "@/components/LanguageProvider";
+import CallConfirmModal from "@/components/CallConfirmModal";
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("en-US", {
@@ -56,6 +57,7 @@ export default function ContactDetail({
   const [showEmailCompose, setShowEmailCompose] = useState(false);
   const [showSMSCompose, setShowSMSCompose] = useState(false);
   const [showPandaDoc, setShowPandaDoc] = useState(false);
+  const [showCallConfirm, setShowCallConfirm] = useState<{ phone: string; name: string } | null>(null);
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -326,14 +328,14 @@ export default function ContactDetail({
                   {contactData.phone && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone size={14} className="text-slate-400" />
-                      <a href={`tel:${contactData.phone}`} className="text-slate-700 hover:text-blue-600 transition">{contactData.phone}</a>
+                      <button onClick={() => setShowCallConfirm({ phone: contactData.phone!, name: [contactData.firstName, contactData.lastName].filter(Boolean).join(" ") || contactData.name })} className="text-slate-700 hover:text-blue-600 transition">{contactData.phone}</button>
                       <ClickToCall phoneNumber={contactData.phone} parentType="contact" parentId={contactData.id} contactName={[contactData.firstName, contactData.lastName].filter(Boolean).join(" ") || contactData.name} />
                     </div>
                   )}
                   {contactData.mobile && (
                     <div className="flex items-center gap-2 text-sm">
                       <Smartphone size={14} className="text-slate-400" />
-                      <a href={`tel:${contactData.mobile}`} className="text-slate-700 hover:text-blue-600 transition">{contactData.mobile}</a>
+                      <button onClick={() => setShowCallConfirm({ phone: contactData.mobile!, name: [contactData.firstName, contactData.lastName].filter(Boolean).join(" ") || contactData.name })} className="text-slate-700 hover:text-blue-600 transition">{contactData.mobile}</button>
                       <span className="text-[10px] text-slate-400">Mobile</span>
                     </div>
                   )}
@@ -602,6 +604,14 @@ export default function ContactDetail({
         parentId={contactData.id}
         documentName={`Document - ${[contactData.firstName, contactData.lastName].filter(Boolean).join(" ") || contactData.name}`}
       />
+      {showCallConfirm && (
+        <CallConfirmModal
+          phoneNumber={showCallConfirm.phone}
+          contactName={showCallConfirm.name}
+          onConfirm={() => { const phone = showCallConfirm.phone; setShowCallConfirm(null); window.location.href = `tel:${phone}`; }}
+          onCancel={() => setShowCallConfirm(null)}
+        />
+      )}
     </div>
   );
 }

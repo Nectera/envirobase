@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "@/components/LanguageProvider";
 import { Search, LayoutGrid, List, DollarSign, Calendar, Building2, ChevronRight, GripVertical, CheckSquare, Trash2, XCircle, Edit3, Eye, EyeOff, Archive } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import CallConfirmModal from "@/components/CallConfirmModal";
 import { hasProjectType } from "@/lib/utils";
 
 type Lead = {
@@ -104,6 +105,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
   const [lostReason, setLostReason] = useState("");
   const [bulkEditField, setBulkEditField] = useState<string | null>(null);
   const [bulkEditValue, setBulkEditValue] = useState("");
+  const [callConfirm, setCallConfirm] = useState<{ phone: string; name: string } | null>(null);
 
   // Pagination
   const PAGE_SIZE = 25;
@@ -735,7 +737,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
                         <Link href={`/leads/${lead.id}`} className="font-medium text-slate-800 hover:text-[#7BC143]">
                           {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || t("leads.unknown")}
                         </Link>
-                        {lead.phone && <a href={`tel:${lead.phone}`} className="block text-[11px] text-slate-400 hover:text-blue-600 transition">{lead.phone}</a>}
+                        {lead.phone && <button onClick={(e) => { e.preventDefault(); setCallConfirm({ phone: lead.phone!, name: [lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unknown" }); }} className="block text-[11px] text-slate-400 hover:text-blue-600 transition">{lead.phone}</button>}
                       </td>
                       <td className="px-4 py-3 text-slate-600 text-sm">
                         {lead.company?.name || "—"}
@@ -978,6 +980,14 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
             </div>
           </div>
         </div>
+      )}
+      {callConfirm && (
+        <CallConfirmModal
+          phoneNumber={callConfirm.phone}
+          contactName={callConfirm.name}
+          onConfirm={() => { const phone = callConfirm.phone; setCallConfirm(null); window.location.href = `tel:${phone}`; }}
+          onCancel={() => setCallConfirm(null)}
+        />
       )}
     </div>
   );

@@ -7,9 +7,43 @@ import { supabase } from "@/lib/supabase";
 const KB_BUCKET = "knowledge-base";
 
 /**
+ * Extract text content from uploaded files so the AI assistant can read them.
+ * Supports PDF, plain text, and markdown files.
+ */
+async function extractTextFromFile(buffer: Buffer, mimeType: string): Promise<string> {
+  try {
+    // Plain text / markdown — just decode the buffer
+    if (mimeType === "text/plain" || mimeType === "text/markdown") {
+      return buffer.toString("utf-8").trim();
+    }
+
+    // PDF — use pdf-parse to extract text
+    if (mimeType === "application/pdf") {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const pdfParse = require("pdf-parse");
+      const result = await pdfParse(buffer);
+      // Limit to ~50K chars to stay within Prisma field limits
+      const text = result.text?.trim() || "";
+      return text.slice(0, 50000);
+    }
+
+    // Images — can't extract text without OCR
+    if (mimeType.startsWith("image/")) {
+      return "";
+    }
+
+    return "";
+  } catch (err) {
+    console.error("Text extraction failed:", err);
+    return "";
+  }
+}
+
+/**
  * POST /api/knowledge-base/[id]/upload
  * Upload a file (PDF, image, docx) to a knowledge base article.
- * Creates the storage bucket if it doesn't exist.
+ * Automatically extracts text content from PDFs and text files
+ * so the AI assistant can read the content.
  */
 export async function POST(
   req: NextRequest,
@@ -74,8 +108,10 @@ export async function POST(
     const ext = file.name.split(".").pop() || "bin";
     const storagePath = `articles/${params.id}/${Date.now()}.${ext}`;
 
-    // Upload to Supabase Storage
+    // Read file buffer once — used for both upload and text extraction
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Upload to Supabase Storage
     let { data, error } = await supabase.storage
       .from(KB_BUCKET)
       .upload(storagePath, buffer, {
@@ -108,7 +144,15 @@ export async function POST(
 
     const publicUrl = urlData.publicUrl;
 
-    // Update the KB article record
+    // Extract text from the file for the AI assistant
+    const extractedText = await extractTextFromFile(buffer, file.type);
+
+    // Update the KB article record — save extracted text as content if the article
+    // doesn't already have meaningful content
+    const existingContent = article.content?.trim() || "";
+    const hasPlaceholderContent = !existingContent || existingContent === "(See attached file)";
+    const shouldUpdateContent = hasPlaceholderContent && extractedText.length > 0;
+
     const updated = await prisma.knowledgeBase.update({
       where: { id: params.id },
       data: {
@@ -116,6 +160,7 @@ export async function POST(
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type,
+        ...(shouldUpdateContent && { content: extractedText }),
       },
     });
 
@@ -125,6 +170,8 @@ export async function POST(
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type,
+      textExtracted: extractedText.length > 0,
+      textLength: extractedText.length,
     });
   } catch (error: any) {
     console.error("KB upload error:", error);
