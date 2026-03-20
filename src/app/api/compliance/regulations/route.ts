@@ -51,12 +51,17 @@ export async function GET(req: NextRequest) {
     });
 
     if (cached && Date.now() - new Date(cached.generatedAt).getTime() < CACHE_MAX_AGE_MS) {
+      // Handle both old format (data = sections array) and new format (data = { sections, sources })
+      const cachedData = cached.data as any;
+      const sections = Array.isArray(cachedData) ? cachedData : cachedData?.sections || [];
+      const sources = Array.isArray(cachedData) ? [] : cachedData?.sources || [];
       return NextResponse.json({
         state,
         stateName: STATE_NAMES[state],
         serviceType,
-        data: cached.data,
+        data: sections,
         checklists: cached.checklists,
+        sources,
         generatedAt: cached.generatedAt,
         cached: true,
       });
@@ -82,7 +87,7 @@ export async function GET(req: NextRequest) {
 
     const prompt = `You are an expert in US environmental remediation regulations. Generate comprehensive regulatory reference data for **${serviceLabel}** in **${stateName}** (${state}).
 
-Return a JSON object with two top-level keys: "data" and "checklists".
+Return a JSON object with three top-level keys: "data", "checklists", and "sources".
 
 **"data"** should be an array of section objects. Each section has:
 - "title": section heading (e.g., "Contractor & Crew Requirements")
@@ -106,6 +111,13 @@ If ${stateName} does not have state-specific regulations for ${serviceLabel} bey
   - "reg": regulation citation
   - "critical": boolean (true if legally required, false if best practice)
 
+**"sources"** should be an array of objects linking to the actual regulation documents. Each source has:
+- "label": display name (e.g., "${stateName} Asbestos Regulations", "OSHA 1926.1101", "EPA NESHAP")
+- "url": direct URL to the official regulation document, state agency page, or federal register entry
+- "type": "state" or "federal"
+
+Include the most important 3-6 source links — prioritize direct links to the actual regulation text on the state agency website (e.g., state secretary of state admin code, state environmental agency pages) and key federal regulation pages (OSHA, EPA). Only include URLs you are confident are real and currently active.
+
 Return ONLY valid JSON, no markdown fences or explanation.`;
 
     const response = await client.messages.create({
@@ -119,7 +131,7 @@ Return ONLY valid JSON, no markdown fences or explanation.`;
       return NextResponse.json({ error: "AI returned no content" }, { status: 500 });
     }
 
-    let parsed: { data: any; checklists: any };
+    let parsed: { data: any; checklists: any; sources?: any };
     try {
       parsed = JSON.parse(textBlock.text);
     } catch {
@@ -131,19 +143,20 @@ Return ONLY valid JSON, no markdown fences or explanation.`;
       parsed = JSON.parse(jsonMatch[0]);
     }
 
-    // Cache the result
+    // Cache the result (sources stored inside the data JSON)
+    const cacheData = { sections: parsed.data, sources: parsed.sources || [] };
     try {
       await (prisma as any).stateRegulation.upsert({
         where: { state_serviceType: { state, serviceType } },
         update: {
-          data: parsed.data,
+          data: cacheData,
           checklists: parsed.checklists,
           generatedAt: new Date(),
         },
         create: {
           state,
           serviceType,
-          data: parsed.data,
+          data: cacheData,
           checklists: parsed.checklists,
         },
       });
@@ -157,6 +170,7 @@ Return ONLY valid JSON, no markdown fences or explanation.`;
       serviceType,
       data: parsed.data,
       checklists: parsed.checklists,
+      sources: parsed.sources || [],
       generatedAt: new Date().toISOString(),
       cached: false,
     });
