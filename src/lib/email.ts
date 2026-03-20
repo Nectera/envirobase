@@ -1,10 +1,25 @@
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { logger } from "./logger";
 import prisma from "./prisma";
 
 // Cache transporters per org to avoid recreating on every email
 const transporterCache = new Map<string, { transporter: any; expiresAt: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Resend client (lazy-initialized)
+let resendClient: Resend | null = null;
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) return null;
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
+
+// Default "from" when using Resend
+const RESEND_FROM_NAME = process.env.RESEND_FROM_NAME || "EnviroBase";
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "notifications@envirobase.app";
 
 interface SmtpConfig {
   host: string;
@@ -136,39 +151,39 @@ export async function sendEmail({
   organizationId,
 }: SendEmailOptions): Promise<SendEmailResult> {
   const config = await getSmtpConfig(organizationId);
-  if (!config) {
-    return {
-      success: false,
-      error: "Email not configured. Set up SMTP in Settings → Email.",
-    };
+
+  // If SMTP is configured (org-level or env), use Nodemailer
+  if (config) {
+    try {
+      const cacheKey = organizationId || "env-default";
+      const transporter = getTransporter(config, cacheKey);
+
+      const escapedBody = escapeHtml(body);
+      const htmlBody = escapedBody.replace(/\n/g, "<br>");
+
+      const info = await transporter.sendMail({
+        from: `"${config.fromName}" <${config.fromEmail}>`,
+        to,
+        cc: cc || undefined,
+        replyTo: replyTo || config.fromEmail,
+        subject,
+        text: body,
+        html: htmlBody,
+      });
+
+      return { success: true, messageId: info.messageId };
+    } catch (error: any) {
+      logger.error("Email send error (SMTP)", { error: error.message, organizationId });
+      return { success: false, error: error.message || "Failed to send email" };
+    }
   }
 
-  try {
-    const cacheKey = organizationId || "env-default";
-    const transporter = getTransporter(config, cacheKey);
-
-    const escapedBody = escapeHtml(body);
-    const htmlBody = escapedBody.replace(/\n/g, "<br>");
-
-    const info = await transporter.sendMail({
-      from: `"${config.fromName}" <${config.fromEmail}>`,
-      to,
-      cc: cc || undefined,
-      replyTo: replyTo || config.fromEmail,
-      subject,
-      text: body,
-      html: htmlBody,
-    });
-
-    return { success: true, messageId: info.messageId };
-  } catch (error: any) {
-    logger.error("Email send error", { error: error.message, organizationId });
-    return { success: false, error: error.message || "Failed to send email" };
-  }
+  // Fallback: use Resend API
+  return sendViaResend({ to, subject, text: body, html: escapeHtml(body).replace(/\n/g, "<br>"), replyTo, cc });
 }
 
 export function isEmailConfigured(): boolean {
-  return !!(process.env.SMTP_USER && process.env.SMTP_PASSWORD);
+  return !!(process.env.SMTP_USER && process.env.SMTP_PASSWORD) || !!process.env.RESEND_API_KEY;
 }
 
 /**
@@ -176,7 +191,9 @@ export function isEmailConfigured(): boolean {
  */
 export async function isOrgEmailConfigured(organizationId?: string | null): Promise<boolean> {
   const config = await getSmtpConfig(organizationId);
-  return config !== null;
+  if (config !== null) return true;
+  // Resend is always available if configured at platform level
+  return !!process.env.RESEND_API_KEY;
 }
 
 /**
@@ -196,29 +213,29 @@ export async function sendHtmlEmail({
   organizationId?: string | null;
 }): Promise<SendEmailResult> {
   const config = await getSmtpConfig(organizationId);
-  if (!config) {
-    return {
-      success: false,
-      error: "Email not configured. Set up SMTP in Settings → Email.",
-    };
+
+  // If SMTP is configured (org-level or env), use Nodemailer
+  if (config) {
+    try {
+      const cacheKey = organizationId || "env-default";
+      const transporter = getTransporter(config, cacheKey);
+
+      const info = await transporter.sendMail({
+        from: `"${config.fromName}" <${config.fromEmail}>`,
+        to,
+        subject,
+        text,
+        html,
+      });
+      return { success: true, messageId: info.messageId };
+    } catch (error: any) {
+      logger.error("HTML email send error (SMTP)", { error: error.message, organizationId });
+      return { success: false, error: error.message || "Failed to send email" };
+    }
   }
 
-  try {
-    const cacheKey = organizationId || "env-default";
-    const transporter = getTransporter(config, cacheKey);
-
-    const info = await transporter.sendMail({
-      from: `"${config.fromName}" <${config.fromEmail}>`,
-      to,
-      subject,
-      text,
-      html,
-    });
-    return { success: true, messageId: info.messageId };
-  } catch (error: any) {
-    logger.error("HTML email send error", { error: error.message, organizationId });
-    return { success: false, error: error.message || "Failed to send email" };
-  }
+  // Fallback: use Resend API
+  return sendViaResend({ to, subject, text, html });
 }
 
 /**
@@ -267,6 +284,8 @@ async function getOrgBranding(organizationId?: string | null) {
 
 export async function brandedEmailWrapper(content: string, organizationId?: string | null): Promise<string> {
   const b = await getOrgBranding(organizationId);
+  const appUrl = process.env.NEXTAUTH_URL || "https://app.envirobase.app";
+  const unsubscribeUrl = `${appUrl}/settings/notifications`;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -283,7 +302,8 @@ export async function brandedEmailWrapper(content: string, organizationId?: stri
         <tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;color:#94a3b8;font-size:12px;text-align:center;">
             ${b.companyName}${b.companyLocation ? ` &bull; ${b.companyLocation}` : ""}<br>
-            This is an automated message. Please do not reply directly.
+            This is an automated message. Please do not reply directly.<br>
+            <a href="${unsubscribeUrl}" style="color:#94a3b8;text-decoration:underline;">Manage notification preferences</a>
           </p>
         </td></tr>
       </table>
@@ -352,6 +372,55 @@ export async function sendWelcomeEmail(
   const text = `Welcome to ${b.companyShort}, ${name}!\n\nYour account has been created.\n\nEmail: ${to}\nTemporary Password: ${temporaryPassword}\nRole: ${roleDisplay}\n\nSign in at: ${loginUrl}\n\nPlease change your password after your first login.`;
 
   return sendHtmlEmail({ to, subject: `Welcome to ${b.companyShort} — Your Account is Ready`, html, text, organizationId });
+}
+
+/**
+ * Send email via Resend API (platform default for orgs without SMTP).
+ */
+async function sendViaResend({
+  to,
+  subject,
+  text,
+  html,
+  replyTo,
+  cc,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  replyTo?: string;
+  cc?: string;
+}): Promise<SendEmailResult> {
+  const resend = getResendClient();
+  if (!resend) {
+    return {
+      success: false,
+      error: "Email not configured. Set RESEND_API_KEY or configure SMTP in Settings.",
+    };
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `${RESEND_FROM_NAME} <${RESEND_FROM_EMAIL}>`,
+      to: to.split(",").map((e) => e.trim()),
+      cc: cc ? cc.split(",").map((e) => e.trim()) : undefined,
+      replyTo: replyTo || undefined,
+      subject,
+      text,
+      html,
+    });
+
+    if (error) {
+      logger.error("Resend API error", { error, to });
+      return { success: false, error: error.message || "Resend API error" };
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (error: any) {
+    logger.error("Resend send error", { error: error.message, to });
+    return { success: false, error: error.message || "Failed to send via Resend" };
+  }
 }
 
 /**
