@@ -27,12 +27,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const body = await req.json();
     const { title, category, tags, content } = body;
+    const serializedTags = tags !== undefined ? (Array.isArray(tags) ? JSON.stringify(tags) : tags) : undefined;
     const article = await prisma.knowledgeBase.update({
       where: { id: params.id },
       data: {
         ...(title !== undefined && { title }),
         ...(category !== undefined && { category }),
-        ...(tags !== undefined && { tags }),
+        ...(serializedTags !== undefined && { tags: serializedTags }),
         ...(content !== undefined && { content }),
       },
     });

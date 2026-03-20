@@ -126,6 +126,10 @@ interface KBArticle {
   category: string;
   tags: string[];
   content: string;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
@@ -166,6 +170,9 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
   const [showArticleModal, setShowArticleModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState<KBArticle | null>(null);
   const [articleForm, setArticleForm] = useState({ title: "", category: "general", tags: "", content: "" });
+  const [articleFile, setArticleFile] = useState<File | null>(null);
+  const [articleFileUploading, setArticleFileUploading] = useState(false);
+  const articleFileInputRef = useRef<HTMLInputElement>(null);
   const [articleSaving, setArticleSaving] = useState(false);
   const [articleError, setArticleError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -334,6 +341,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
   const openCreateModal = () => {
     setEditingArticle(null);
     setArticleForm({ title: "", category: "general", tags: "", content: "" });
+    setArticleFile(null);
     setArticleError("");
     setShowArticleModal(true);
   };
@@ -346,13 +354,20 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
       tags: (article.tags || []).join(", "),
       content: article.content,
     });
+    setArticleFile(null);
     setArticleError("");
     setShowArticleModal(true);
   };
 
   const handleSaveArticle = async () => {
-    if (!articleForm.title.trim() || !articleForm.content.trim()) {
-      setArticleError(t("knowledgeBase.requiredError"));
+    if (!articleForm.title.trim()) {
+      setArticleError("Title is required.");
+      return;
+    }
+    // Content is required only if no file is being uploaded and no file already exists
+    const hasExistingFile = editingArticle && editingArticle.fileUrl;
+    if (!articleForm.content.trim() && !articleFile && !hasExistingFile) {
+      setArticleError("Either content or a file upload is required.");
       return;
     }
     setArticleSaving(true);
@@ -363,26 +378,61 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
       .filter(Boolean);
 
     try {
+      let articleId: string;
+
       if (editingArticle) {
         const res = await fetch(`/api/knowledge-base/${editingArticle.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: articleForm.title, category: articleForm.category, tags, content: articleForm.content }),
+          body: JSON.stringify({ title: articleForm.title, category: articleForm.category, tags, content: articleForm.content || undefined }),
         });
-        if (!res.ok) throw new Error("Failed to update");
         const updated = await res.json();
+        if (!res.ok) { setArticleError(updated.error || "Failed to update article"); setArticleSaving(false); return; }
+        articleId = updated.id;
         setArticles((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
       } else {
+        const contentToSend = articleForm.content.trim() || (articleFile ? "(See attached file)" : "");
         const res = await fetch("/api/knowledge-base", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: articleForm.title, category: articleForm.category, tags, content: articleForm.content }),
+          body: JSON.stringify({ title: articleForm.title, category: articleForm.category, tags, content: contentToSend || undefined }),
         });
-        if (!res.ok) throw new Error("Failed to create");
         const created = await res.json();
+        if (!res.ok) { setArticleError(created.error || "Failed to create article"); setArticleSaving(false); return; }
+        articleId = created.id;
         setArticles((prev) => [created, ...prev]);
       }
+
+      // Upload file if selected
+      if (articleFile) {
+        setArticleFileUploading(true);
+        const fd = new FormData();
+        fd.append("file", articleFile);
+        const uploadRes = await fetch(`/api/knowledge-base/${articleId}/upload`, {
+          method: "POST",
+          body: fd,
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          setArticles((prev) =>
+            prev.map((a) =>
+              a.id === articleId
+                ? { ...a, fileUrl: uploadData.fileUrl, fileName: uploadData.fileName } as KBArticle
+                : a
+            )
+          );
+        } else {
+          const errData = await uploadRes.json();
+          setArticleError(`Article saved but file upload failed: ${errData.error}`);
+          setArticleSaving(false);
+          setArticleFileUploading(false);
+          return;
+        }
+        setArticleFileUploading(false);
+      }
+
       setShowArticleModal(false);
+      setArticleFile(null);
     } catch {
       setArticleError(editingArticle ? t("knowledgeBase.updateError") : t("knowledgeBase.createError"));
     } finally {
@@ -968,6 +1018,17 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                         </div>
                         <h4 className="font-semibold text-slate-900 mb-1">{article.title}</h4>
                         <p className="text-sm text-slate-600 line-clamp-2">{article.content}</p>
+                        {article.fileUrl && (
+                          <a
+                            href={article.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 text-[11px] font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition"
+                          >
+                            <FileText size={11} />
+                            {article.fileName || "View attachment"}
+                          </a>
+                        )}
                         <p className="text-[11px] text-slate-400 mt-2">
                           {article.createdBy && `${article.createdBy} • `}
                           {new Date(article.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -1057,14 +1118,72 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
 
               {/* Content */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">{t("knowledgeBase.content")} *</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{t("knowledgeBase.content")} {!articleFile && !editingArticle?.fileUrl ? "*" : ""}</label>
                 <textarea
                   value={articleForm.content}
                   onChange={(e) => setArticleForm((f) => ({ ...f, content: e.target.value }))}
-                  rows={10}
-                  placeholder="Enter the full article content here. This content will be available to all employees through the AI assistant..."
+                  rows={6}
+                  placeholder="Enter article content, or upload a file below..."
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 resize-y"
                 />
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Upload File</label>
+                <input
+                  ref={articleFileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.webp"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setArticleFile(f);
+                  }}
+                  className="hidden"
+                />
+                {articleFile ? (
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+                    <FileUp size={16} className="text-green-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-green-800 truncate">{articleFile.name}</p>
+                      <p className="text-[11px] text-green-600">{(articleFile.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setArticleFile(null);
+                        if (articleFileInputRef.current) articleFileInputRef.current.value = "";
+                      }}
+                      className="p-1 text-green-600 hover:text-red-500 transition"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : editingArticle?.fileUrl ? (
+                  <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <FileText size={16} className="text-slate-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-700 truncate">{editingArticle?.fileName || "Attached file"}</p>
+                      <p className="text-[11px] text-slate-400">Currently attached — upload new file to replace</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => articleFileInputRef.current?.click()}
+                      className="px-2 py-1 text-[11px] font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition"
+                    >
+                      Replace
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => articleFileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl text-sm text-slate-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50/50 transition"
+                  >
+                    <FileUp size={18} />
+                    Upload PDF, Word doc, image, or text file (max 25MB)
+                  </button>
+                )}
               </div>
 
               {articleError && (
@@ -1089,7 +1208,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                 style={{ backgroundColor: "#7BC143" }}
               >
                 {articleSaving && <Loader2 size={14} className="animate-spin" />}
-                {editingArticle ? t("knowledgeBase.save") : t("knowledgeBase.create")}
+                {articleFileUploading ? "Uploading file..." : editingArticle ? t("knowledgeBase.save") : t("knowledgeBase.create")}
               </button>
             </div>
           </div>

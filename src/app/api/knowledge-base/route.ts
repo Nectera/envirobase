@@ -42,12 +42,12 @@ export async function POST(req: NextRequest) {
     const v = validateBody(createKnowledgeBaseSchema, body);
     if (!v.success) return NextResponse.json({ error: v.error }, { status: 400 });
     const { title, category, content } = v.data;
-    const tags = body.tags;
+    const tags = Array.isArray(body.tags) ? JSON.stringify(body.tags) : body.tags || null;
     const article = await prisma.knowledgeBase.create({
       data: orgData(orgId, {
         title,
         category,
-        tags: tags || [],
+        tags,
         content,
         createdBy: session.user.name || "Unknown",
       }),
