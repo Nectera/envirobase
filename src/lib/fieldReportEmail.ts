@@ -313,10 +313,11 @@ export async function sendFieldReportEmail(
     console.log("[DFR-EMAIL] AI summary generated, length:", summary.length);
 
     // Collect photos — form uses "photos" key, also check "dailyPictures"
-    // Upload each base64 photo to Supabase Storage so email clients can display them
-    const rawPhotos: Array<{ dataUrl?: string; caption?: string; filename?: string }> = [];
-    if (reportData.manometerPhoto?.dataUrl) {
+    // Photos may already have Supabase URLs (new flow) or base64 dataUrls (legacy)
+    const rawPhotos: Array<{ url?: string; dataUrl?: string; caption?: string; filename?: string }> = [];
+    if (reportData.manometerPhoto?.dataUrl || reportData.manometerPhoto?.url) {
       rawPhotos.push({
+        url: reportData.manometerPhoto.url,
         dataUrl: reportData.manometerPhoto.dataUrl,
         caption: "Manometer Reading",
         filename: reportData.manometerPhoto.filename,
@@ -325,8 +326,9 @@ export async function sendFieldReportEmail(
     const pictureArray = reportData.dailyPictures || reportData.photos || [];
     if (Array.isArray(pictureArray)) {
       for (const pic of pictureArray) {
-        if (pic.dataUrl) {
+        if (pic.url || pic.dataUrl) {
           rawPhotos.push({
+            url: pic.url,
             dataUrl: pic.dataUrl,
             caption: pic.caption || pic.filename,
             filename: pic.filename,
@@ -337,9 +339,13 @@ export async function sendFieldReportEmail(
     console.log("[DFR-EMAIL] Photos collected:", rawPhotos.length, "— uploading to storage...");
 
     // Upload photos to Supabase Storage in parallel for proper email rendering
+    // Skip upload if photo already has a non-base64 URL
     const photos: Array<{ url?: string; caption?: string; filename?: string }> = await Promise.all(
       rawPhotos.map(async (p, i) => {
-        const url = p.dataUrl ? await uploadPhotoToStorage(p.dataUrl, reportId, i) : undefined;
+        let url = p.url;
+        if (!url && p.dataUrl) {
+          url = await uploadPhotoToStorage(p.dataUrl, reportId, i);
+        }
         return { url, caption: p.caption, filename: p.filename };
       }),
     );

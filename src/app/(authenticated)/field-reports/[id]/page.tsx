@@ -232,8 +232,8 @@ export default async function FieldReportDetailPage({ params }: { params: { id: 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {report.photos.map((photo: any, i: number) => (
               <div key={i} className="bg-slate-100 rounded-lg overflow-hidden">
-                {photo.dataUrl ? (
-                  <img src={photo.dataUrl} alt={photo.caption || `Photo ${i + 1}`} className="w-full h-48 object-cover" />
+                {(photo.url || photo.dataUrl) ? (
+                  <img src={photo.url || photo.dataUrl} alt={photo.caption || `Photo ${i + 1}`} className="w-full h-48 object-cover" />
                 ) : (
                   <div className="h-24 flex items-center justify-center text-slate-400">
                     <span className="text-sm">{photo.filename || "No image"}</span>

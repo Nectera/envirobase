@@ -39,8 +39,8 @@ interface MethDeconReport {
   signedByName: string;
   signedByTitle: string;
   signedDate: string;
-  wasteManifestPhotos: string[];
-  projectPhotos: string[];
+  wasteManifestPhotos: any[];
+  projectPhotos: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -226,17 +226,18 @@ export default function MethDeconReportSection({
         }
 
         const data = await res.json();
+        const photoObj = { url: data.url, name: data.fileName, uploadedAt: new Date().toISOString() };
         setReport((prev) => {
           if (!prev) return prev;
           if (type === "waste") {
             return {
               ...prev,
-              wasteManifestPhotos: [...(prev.wasteManifestPhotos || []), data.url],
+              wasteManifestPhotos: [...(prev.wasteManifestPhotos || []), photoObj],
             };
           } else {
             return {
               ...prev,
-              projectPhotos: [...(prev.projectPhotos || []), data.url],
+              projectPhotos: [...(prev.projectPhotos || []), photoObj],
             };
           }
         });
@@ -262,22 +263,34 @@ export default function MethDeconReportSection({
     if (!report?.id) return;
 
     try {
+      const res = await fetch(`/api/meth-decon-report/${report.id}/photo`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl, type: type === "waste" ? "waste_manifest" : "project_photo" }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete photo");
+      }
+
       setReport((prev) => {
         if (!prev) return prev;
         if (type === "waste") {
           return {
             ...prev,
-            wasteManifestPhotos: (prev.wasteManifestPhotos || []).filter((url) => url !== photoUrl),
+            wasteManifestPhotos: (prev.wasteManifestPhotos || []).filter(
+              (p: any) => (typeof p === "string" ? p : p.url) !== photoUrl
+            ),
           };
         } else {
           return {
             ...prev,
-            projectPhotos: (prev.projectPhotos || []).filter((url) => url !== photoUrl),
+            projectPhotos: (prev.projectPhotos || []).filter(
+              (p: any) => (typeof p === "string" ? p : p.url) !== photoUrl
+            ),
           };
         }
       });
-
-      await saveReport(report.status || "draft");
     } catch (error) {
       console.error("Error deleting photo:", error);
       alert("Failed to delete photo.");
@@ -690,24 +703,27 @@ export default function MethDeconReportSection({
             </div>
             {report.wasteManifestPhotos && report.wasteManifestPhotos.length > 0 && (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                {report.wasteManifestPhotos.map((photoUrl) => (
-                  <div
-                    key={photoUrl}
-                    className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 group"
-                  >
-                    <img
-                      src={photoUrl}
-                      alt="Waste manifest"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      onClick={() => handleDeletePhoto(photoUrl, "waste")}
-                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                {report.wasteManifestPhotos.map((photo: any, idx: number) => {
+                  const url = typeof photo === "string" ? photo : photo.url;
+                  return (
+                    <div
+                      key={url || idx}
+                      className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 group"
                     >
-                      <Trash2 size={16} className="text-white" />
-                    </button>
-                  </div>
-                ))}
+                      <img
+                        src={url}
+                        alt="Waste manifest"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => handleDeletePhoto(url, "waste")}
+                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      >
+                        <Trash2 size={16} className="text-white" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -740,24 +756,27 @@ export default function MethDeconReportSection({
             </div>
             {report.projectPhotos && report.projectPhotos.length > 0 && (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                {report.projectPhotos.map((photoUrl) => (
-                  <div
-                    key={photoUrl}
-                    className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 group"
-                  >
-                    <img
-                      src={photoUrl}
-                      alt="Project photo"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      onClick={() => handleDeletePhoto(photoUrl, "project")}
-                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                {report.projectPhotos.map((photo: any, idx: number) => {
+                  const url = typeof photo === "string" ? photo : photo.url;
+                  return (
+                    <div
+                      key={url || idx}
+                      className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 group"
                     >
-                      <Trash2 size={16} className="text-white" />
-                    </button>
-                  </div>
-                ))}
+                      <img
+                        src={url}
+                        alt="Project photo"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => handleDeletePhoto(url, "project")}
+                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      >
+                        <Trash2 size={16} className="text-white" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

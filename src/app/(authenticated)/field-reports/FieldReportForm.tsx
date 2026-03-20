@@ -12,7 +12,7 @@ type Project = {
   client: string;
 };
 
-type PhotoEntry = { filename: string; caption: string; dataUrl?: string };
+type PhotoEntry = { filename: string; caption: string; dataUrl?: string; url?: string };
 
 type FormData = {
   projectId: string;
@@ -301,16 +301,63 @@ export default function FieldReportForm({
     update("workAreaLocations", form.workAreaLocations.filter((_, idx) => idx !== i));
   };
 
+  /** Upload a single base64 photo to Supabase, return the public URL */
+  const uploadPhotoToStorage = async (photo: PhotoEntry, rid: string): Promise<PhotoEntry> => {
+    // Already uploaded (has URL, no base64) — skip
+    if (photo.url && !photo.dataUrl) return photo;
+    // No image data — skip
+    if (!photo.dataUrl) return photo;
+
+    try {
+      // Convert base64 data URL to a File
+      const match = photo.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!match) return photo;
+
+      const mimeType = match[1];
+      const base64 = match[2];
+      const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const ext = mimeType.split("/")[1] || "jpg";
+      const file = new File([binary], photo.filename || `photo.${ext}`, { type: mimeType });
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("reportId", rid);
+
+      const res = await fetch("/api/field-reports/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        console.error("Photo upload failed:", await res.text());
+        return photo; // Keep base64 as fallback
+      }
+
+      const data = await res.json();
+      return { filename: photo.filename, caption: photo.caption, url: data.url };
+    } catch (err) {
+      console.error("Photo upload error:", err);
+      return photo; // Keep base64 as fallback
+    }
+  };
+
   const save = async (status: string) => {
     if (!form.projectId) { alert("Please select a project"); return; }
     if (!form.date) { alert("Please select a date"); return; }
-    if (status === "submitted" && form.photos.filter(p => p.filename || p.dataUrl).length < 6) {
+    if (status === "submitted" && form.photos.filter(p => p.filename || p.dataUrl || p.url).length < 6) {
       if (!confirm("You have fewer than 6 photos. Submit anyway?")) return;
     }
     setSaving(true);
     try {
+      // Upload any photos that have base64 data to Supabase Storage
+      const rid = reportId || "new-" + Date.now();
+      const uploadedPhotos = await Promise.all(
+        form.photos.map((p) => uploadPhotoToStorage(p, rid))
+      );
+
       const payload = {
         ...form,
+        photos: uploadedPhotos,
         status,
         daysRemaining: form.daysRemaining ? parseInt(form.daysRemaining) : null,
         negativeAirMachineCount: form.negativeAirMachineCount ? parseInt(form.negativeAirMachineCount) : null,
@@ -330,7 +377,13 @@ export default function FieldReportForm({
         const data = await res.json();
         router.push(`/field-reports/${data.id || reportId}`);
         router.refresh();
+      } else {
+        const err = await res.json().catch(() => ({ error: "Save failed" }));
+        alert(err.error || "Failed to save report. Please try again.");
       }
+    } catch (err: any) {
+      console.error("Save error:", err);
+      alert("Failed to save report. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -672,8 +725,8 @@ export default function FieldReportForm({
           {form.photos.map((photo, i) => (
             <div key={i} className="flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg">
               <span className="text-xs text-slate-400 w-5 text-right mt-1 flex-shrink-0">{i + 1}.</span>
-              {photo.dataUrl ? (
-                <img src={photo.dataUrl} alt={photo.caption || `Photo ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200 flex-shrink-0" />
+              {(photo.url || photo.dataUrl) ? (
+                <img src={photo.url || photo.dataUrl} alt={photo.caption || `Photo ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200 flex-shrink-0" />
               ) : (
                 <div className="w-20 h-20 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
                   <label className="cursor-pointer flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-500 transition">
