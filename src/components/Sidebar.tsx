@@ -107,7 +107,7 @@ export default function Sidebar({
     const Icon = item.icon;
     // Check if this route requires a feature the org doesn't have
     const requiredFeature = FEATURE_ROUTE_MAP[item.href];
-    const isLocked = requiredFeature && !hasFeature(features, requiredFeature as any);
+    const isLocked = !isDemo && requiredFeature && !hasFeature(features, requiredFeature as any);
     return (
       <Link
         key={item.href}

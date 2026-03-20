@@ -124,9 +124,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Feature flag enforcement ──
+  // Demo accounts get full access to all features (read-only is already enforced above)
   // Block routes that require features the org hasn't paid for
   const features = (token.features as Record<string, boolean>) || {};
-  for (const [route, featureKey] of Object.entries(FEATURE_ROUTE_MAP)) {
+  if (!token.isDemo) for (const [route, featureKey] of Object.entries(FEATURE_ROUTE_MAP)) {
     if (pathname === route || pathname.startsWith(route + "/")) {
       if (features[featureKey] !== true) {
         const label = FEATURE_LABELS[featureKey] || featureKey;
