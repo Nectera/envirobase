@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "@/components/LanguageProvider";
-import { Users } from "lucide-react";
+import { Users, CheckSquare } from "lucide-react";
 
 const PROJECT_COLORS: Record<string, string> = {
   ASBESTOS: "bg-indigo-100 text-indigo-700 border-indigo-200",
@@ -30,7 +30,7 @@ interface ScheduledProject {
 
 interface WeekViewProps {
   currentDate: Date;
-  getEntriesForDay: (dateStr: string) => { scheduledProjects: ScheduledProject[]; timeOffs: any[]; events: any[] };
+  getEntriesForDay: (dateStr: string) => { scheduledProjects: ScheduledProject[]; timeOffs: any[]; events: any[]; tasks?: any[] };
   onDayClick: (dateStr: string) => void;
 }
 
@@ -141,7 +141,31 @@ export default function WeekView({ currentDate, getEntriesForDay, onDayClick }: 
                 </div>
               ))}
 
-              {entries.scheduledProjects.length === 0 && entries.timeOffs.length === 0 && entries.events.length === 0 && (
+              {/* Tasks */}
+              {(entries.tasks || []).map((task: any) => {
+                const priorityColors: Record<string, string> = {
+                  high: "bg-purple-100 text-purple-700 border-purple-200",
+                  medium: "bg-purple-50 text-purple-600 border-purple-200",
+                  low: "bg-purple-50/50 text-purple-500 border-purple-100",
+                };
+                const colors = priorityColors[task.priority] || priorityColors.medium;
+                return (
+                  <div
+                    key={`task-${task.id}`}
+                    className={`text-[11px] leading-snug px-2 py-1.5 rounded-lg border ${colors}`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <CheckSquare size={10} className="flex-shrink-0" />
+                      <span className="font-semibold truncate">{task.title}</span>
+                    </div>
+                    {task.priority === "high" && (
+                      <div className="text-[9px] opacity-60 mt-0.5">High Priority</div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {entries.scheduledProjects.length === 0 && entries.timeOffs.length === 0 && entries.events.length === 0 && (entries.tasks?.length || 0) === 0 && (
                 <div className="text-[10px] text-slate-300 text-center py-4">{t("calendar.noEntries")}</div>
               )}
             </div>

@@ -15,13 +15,25 @@ export default async function CalendarPage() {
   const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().split("T")[0];
   const endDate = new Date(now.getFullYear(), now.getMonth() + 4, 0).toISOString().split("T")[0];
 
+  // Find the user's worker profile (for "My Calendar" filtering)
+  const userWorker = userId
+    ? await prisma.worker.findFirst({ where: { userId } })
+    : null;
+  const userWorkerId = userWorker?.id || null;
+
   // Fetch all data in parallel
-  const [scheduleEntries, timeOffEntries, calendarEvents, workers, projects] = await Promise.all([
+  const [scheduleEntries, timeOffEntries, calendarEvents, workers, projects, tasks] = await Promise.all([
     prisma.scheduleEntry.findMany({ include: { worker: true, project: true } }),
     prisma.timeOff.findMany({ where: { dateRange: { start: startDate, end: endDate } }, include: { worker: true } }),
     prisma.calendarEvent.findMany({ where: { dateRange: { start: startDate, end: endDate } } }),
     prisma.worker.findMany(),
     prisma.project.findMany({ include: { workers: { include: { worker: true } } } }),
+    prisma.task.findMany({
+      where: {
+        dueDate: { not: null },
+        status: { not: "completed" },
+      },
+    }),
   ]);
 
   // Filter schedule entries to the date range
@@ -88,8 +100,10 @@ export default async function CalendarPage() {
       calendarEvents={calendarEvents as any[]}
       workers={workers as any[]}
       projects={projects as any[]}
+      tasks={tasks as any[]}
       userRole={userRole}
       userId={userId}
+      userWorkerId={userWorkerId}
     />
   );
 }

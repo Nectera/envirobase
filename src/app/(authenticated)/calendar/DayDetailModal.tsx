@@ -2,7 +2,7 @@
 
 import { useTranslation } from "@/components/LanguageProvider";
 import {
-  X, Check, XCircle, Trash2, Pencil, Palmtree, Plus, CalendarDays, Users,
+  X, Check, XCircle, Trash2, Pencil, Palmtree, Plus, CalendarDays, Users, CheckSquare,
 } from "lucide-react";
 
 const PROJECT_COLORS: Record<string, string> = {
@@ -22,7 +22,7 @@ interface ScheduledProject {
 
 interface DayDetailModalProps {
   dateStr: string;
-  entries: { scheduledProjects: ScheduledProject[]; timeOffs: any[]; events: any[] };
+  entries: { scheduledProjects: ScheduledProject[]; timeOffs: any[]; events: any[]; tasks?: any[] };
   isAdmin: boolean;
   onClose: () => void;
   onApproveTimeOff: (id: string) => void;
@@ -45,7 +45,7 @@ export default function DayDetailModal({
     weekday: "long", month: "long", day: "numeric", year: "numeric",
   });
 
-  const total = entries.scheduledProjects.length + entries.timeOffs.length + entries.events.length;
+  const total = entries.scheduledProjects.length + entries.timeOffs.length + entries.events.length + (entries.tasks?.length || 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
@@ -237,6 +237,54 @@ export default function DayDetailModal({
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tasks Section */}
+          {(entries.tasks?.length || 0) > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                Tasks ({entries.tasks!.length})
+              </h4>
+              <div className="space-y-2">
+                {entries.tasks!.map((task: any) => {
+                  const priorityBadge: Record<string, string> = {
+                    high: "bg-red-100 text-red-700",
+                    medium: "bg-amber-100 text-amber-700",
+                    low: "bg-slate-100 text-slate-600",
+                  };
+                  const statusBadge: Record<string, string> = {
+                    pending: "bg-slate-100 text-slate-600",
+                    in_progress: "bg-blue-100 text-blue-700",
+                  };
+                  return (
+                    <div key={task.id} className="px-3 py-2.5 rounded-xl border bg-purple-50 border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <CheckSquare size={13} className="text-purple-500" />
+                          <span className="font-medium text-sm text-purple-800">{task.title}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${priorityBadge[task.priority] || priorityBadge.medium}`}>
+                            {task.priority}
+                          </span>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusBadge[task.status] || statusBadge.pending}`}>
+                            {task.status?.replace("_", " ")}
+                          </span>
+                        </div>
+                      </div>
+                      {task.description && (
+                        <p className="text-xs text-purple-600 mt-1 line-clamp-2">{task.description}</p>
+                      )}
+                      {task.linkedEntityType && (
+                        <div className="text-[10px] text-purple-400 mt-1">
+                          Linked to {task.linkedEntityType}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

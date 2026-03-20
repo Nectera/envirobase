@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "@/components/LanguageProvider";
-import { Users } from "lucide-react";
+import { Users, CheckSquare } from "lucide-react";
 
 const PROJECT_COLORS: Record<string, string> = {
   ASBESTOS: "bg-indigo-100 text-indigo-700 border-indigo-200",
@@ -30,7 +30,7 @@ interface ScheduledProject {
 
 interface MonthViewProps {
   currentDate: Date;
-  getEntriesForDay: (dateStr: string) => { scheduledProjects: ScheduledProject[]; timeOffs: any[]; events: any[] };
+  getEntriesForDay: (dateStr: string) => { scheduledProjects: ScheduledProject[]; timeOffs: any[]; events: any[]; tasks?: any[] };
   onDayClick: (dateStr: string) => void;
 }
 
@@ -82,7 +82,7 @@ export default function MonthView({ currentDate, getEntriesForDay, onDayClick }:
             const isCurrentMonth = dayDate.getMonth() === currentMonth;
             const isToday = dateStr === today;
             const entries = getEntriesForDay(dateStr);
-            const totalItems = entries.scheduledProjects.length + entries.timeOffs.length + entries.events.length;
+            const totalItems = entries.scheduledProjects.length + entries.timeOffs.length + entries.events.length + (entries.tasks?.length || 0);
             const maxShow = 5;
             let shown = 0;
 
@@ -164,6 +164,27 @@ export default function MonthView({ currentDate, getEntriesForDay, onDayClick }:
                           style={{ backgroundColor: ev.color }}
                         />
                         {ev.title}
+                      </div>
+                    );
+                  })}
+
+                  {/* Tasks */}
+                  {(entries.tasks || []).map((task: any) => {
+                    if (shown >= maxShow - (totalItems > maxShow ? 1 : 0)) return null;
+                    shown++;
+                    const priorityColors: Record<string, string> = {
+                      high: "bg-purple-100 text-purple-700 border-purple-200",
+                      medium: "bg-purple-50 text-purple-600 border-purple-200",
+                      low: "bg-purple-50/50 text-purple-500 border-purple-100",
+                    };
+                    const colors = priorityColors[task.priority] || priorityColors.medium;
+                    return (
+                      <div
+                        key={`task-${task.id}`}
+                        className={`text-[10px] leading-tight px-1.5 py-0.5 rounded border truncate flex items-center gap-1 ${colors}`}
+                      >
+                        <CheckSquare size={8} className="flex-shrink-0" />
+                        <span className="truncate">{task.title}</span>
                       </div>
                     );
                   })}

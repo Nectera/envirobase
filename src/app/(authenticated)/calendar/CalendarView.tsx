@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "@/components/LanguageProvider";
 import {
   ChevronLeft, ChevronRight, CalendarDays, Plus,
-  Palmtree, FolderOpen, CalendarCheck,
+  Palmtree, FolderOpen, CalendarCheck, User as UserIcon, Users,
+  CheckSquare,
 } from "lucide-react";
 import MonthView from "./MonthView";
 import WeekView from "./WeekView";
@@ -25,12 +26,14 @@ interface CalendarViewProps {
   calendarEvents: any[];
   workers: any[];
   projects: any[];
+  tasks: any[];
   userRole: string;
   userId: string;
+  userWorkerId: string | null;
 }
 
 export default function CalendarView({
-  projectScheduleMap, timeOffEntries, calendarEvents, workers, projects, userRole, userId,
+  projectScheduleMap, timeOffEntries, calendarEvents, workers, projects, tasks, userRole, userId, userWorkerId,
 }: CalendarViewProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -44,7 +47,8 @@ export default function CalendarView({
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingTimeOff, setEditingTimeOff] = useState<any>(null);
   const [editingEvent, setEditingEvent] = useState<any>(null);
-  const [showFilters, setShowFilters] = useState({ projects: true, timeOff: true, events: true });
+  const [showFilters, setShowFilters] = useState({ projects: true, timeOff: true, events: true, tasks: true });
+  const [calendarScope, setCalendarScope] = useState<"all" | "mine">("all");
 
   // Navigation
   const goToday = () => setCurrentDate(new Date());
@@ -63,19 +67,38 @@ export default function CalendarView({
 
   const monthLabel = currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-  // Get entries for a specific day
+  // Get entries for a specific day (filtered by scope)
   const getEntriesForDay = useCallback((dateStr: string) => {
-    const scheduledProjects = showFilters.projects
+    const isMine = calendarScope === "mine" && userWorkerId;
+
+    let scheduledProjects = showFilters.projects
       ? Object.values(projectScheduleMap[dateStr] || {})
       : [];
-    const timeOffs = showFilters.timeOff
+    let timeOffs = showFilters.timeOff
       ? timeOffEntries.filter((e: any) => e.startDate <= dateStr && e.endDate >= dateStr)
       : [];
     const events = showFilters.events
       ? calendarEvents.filter((e: any) => e.startDate <= dateStr && e.endDate >= dateStr)
       : [];
-    return { scheduledProjects, timeOffs, events };
-  }, [projectScheduleMap, timeOffEntries, calendarEvents, showFilters]);
+    const dayTasks = showFilters.tasks
+      ? tasks.filter((t: any) => t.dueDate === dateStr)
+      : [];
+
+    // Apply "My Calendar" filtering
+    if (isMine) {
+      scheduledProjects = scheduledProjects.filter((sp) =>
+        sp.workers.some((w: any) => w.id === userWorkerId)
+      );
+      timeOffs = timeOffs.filter((e: any) => e.workerId === userWorkerId);
+    }
+
+    // Filter tasks to user when in "mine" mode
+    const filteredTasks = isMine
+      ? dayTasks.filter((t: any) => t.assignedTo === userWorkerId || t.createdBy === userId)
+      : dayTasks;
+
+    return { scheduledProjects, timeOffs, events, tasks: filteredTasks };
+  }, [projectScheduleMap, timeOffEntries, calendarEvents, tasks, showFilters, calendarScope, userWorkerId, userId]);
 
   // CRUD handlers
   const handleCreateTimeOff = async (data: any) => {
@@ -194,8 +217,33 @@ export default function CalendarView({
           </div>
         </div>
 
-        {/* Filter chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        {/* Scope toggle + Filter chips */}
+        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+          {/* My Calendar / All toggle */}
+          <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
+            <button
+              onClick={() => setCalendarScope("all")}
+              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                calendarScope === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
+              }`}
+            >
+              <Users size={11} />
+              All
+            </button>
+            <button
+              onClick={() => setCalendarScope("mine")}
+              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                calendarScope === "mine" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
+              }`}
+            >
+              <UserIcon size={11} />
+              My Calendar
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-slate-200 shrink-0" />
+
+          {/* Filter chips */}
           <button
             onClick={() => toggleFilter("projects")}
             className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg border transition-colors shrink-0 ${
@@ -229,6 +277,17 @@ export default function CalendarView({
             <CalendarDays size={12} />
             {t("calendar.events")}
           </button>
+          <button
+            onClick={() => toggleFilter("tasks")}
+            className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg border transition-colors shrink-0 ${
+              showFilters.tasks
+                ? "bg-purple-50 border-purple-200 text-purple-700"
+                : "bg-slate-50 border-slate-200 text-slate-400"
+            }`}
+          >
+            <CheckSquare size={12} />
+            Tasks
+          </button>
         </div>
       </div>
 
@@ -259,6 +318,7 @@ export default function CalendarView({
         <LegendItem color="bg-violet-200" label="Rebuild" />
         <LegendItem color="bg-blue-200" label={t("calendar.timeoff")} />
         <LegendItem color="bg-emerald-200" label={t("calendar.events")} />
+        <LegendItem color="bg-purple-200" label="Tasks" />
       </div>
 
       {/* Day Detail Modal */}
