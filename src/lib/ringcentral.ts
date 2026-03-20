@@ -18,7 +18,7 @@ export function getAuthUri(): string {
     response_type: "code",
     client_id: RC_CONFIG.clientId,
     redirect_uri: RC_CONFIG.redirectUri,
-    state: "xtract-rc-connect",
+    state: "envirobase-rc-connect",
   });
   return `${RC_CONFIG.serverUrl}/restapi/oauth/authorize?${params.toString()}`;
 }

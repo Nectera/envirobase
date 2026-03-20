@@ -376,7 +376,7 @@ function generatePdfHtml(report: ReportData): string {
   <!-- COVER PAGE -->
   <div class="page cover-page">
     <div>
-      <div class="header-logo">Xtract Environmental Services</div>
+      <div class="header-logo">EnviroBase Environmental Services</div>
       <div class="header-subtitle">Specialized Decontamination Solutions</div>
       <div class="cover-title">METHAMPHETAMINE<br>DECONTAMINATION<br>SUMMARY REPORT</div>
       <div class="cover-subtitle">Professional Remediation Services</div>
@@ -392,7 +392,7 @@ function generatePdfHtml(report: ReportData): string {
     </div>
 
     <div class="footer-company">
-      <p>Xtract Environmental Services</p>
+      <p>EnviroBase Environmental Services</p>
       <p>903 5th Street, Greeley, CO 80631</p>
       <p>(970) 282-4333</p>
     </div>
@@ -404,7 +404,7 @@ function generatePdfHtml(report: ReportData): string {
 
     <div class="section">
       <div class="intro-text">
-        Xtract Environmental Services Inc performed a methamphetamine decontamination at <strong>${escapeHtml(projectAddress)}</strong>. This report documents the procedures performed for this project.
+        EnviroBase Environmental Services performed a methamphetamine decontamination at <strong>${escapeHtml(projectAddress)}</strong>. This report documents the procedures performed for this project.
       </div>
     </div>
 

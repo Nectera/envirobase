@@ -30,7 +30,7 @@ export function getAuthUri(): string {
   const oauthClient = createOAuthClient();
   return oauthClient.authorizeUri({
     scope: [OAuthClient.scopes.Accounting],
-    state: "xtract-qb-connect",
+    state: "envirobase-qb-connect",
   });
 }
 

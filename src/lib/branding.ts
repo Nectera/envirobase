@@ -18,9 +18,9 @@ export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "EnviroBase";
 export const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || "EnviroBase Environmental Services";
 export const COMPANY_SHORT = process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase";
 export const BRAND_COLOR = process.env.NEXT_PUBLIC_BRAND_COLOR || "#7BC143";
-export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "info@xtractes.com";
-export const COMPANY_LOCATION = process.env.NEXT_PUBLIC_COMPANY_LOCATION || "Fort Collins, CO";
-export const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "xtract.team";
+export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@envirobase.app";
+export const COMPANY_LOCATION = process.env.NEXT_PUBLIC_COMPANY_LOCATION || "Colorado";
+export const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || "envirobase.app";
 export const LOGO_URL = process.env.NEXT_PUBLIC_LOGO_URL || "/logo.png";
 export const APP_URL = process.env.NEXTAUTH_URL || `https://${APP_DOMAIN}`;
 

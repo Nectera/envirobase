@@ -94,7 +94,7 @@ export const es: Record<string, string> = {
   "team.phoneLabel": "Teléfono",
   "team.emailLabel": "Correo electrónico",
   "team.emailPlaceholder": "worker@example.com",
-  "team.requiredEmail": "required@xtractes.com",
+  "team.requiredEmail": "user@company.com",
   "team.workEmailRequired": "Correo de trabajo requerido para roles de {role}",
   "team.emergencyContactName": "Nombre del Contacto de Emergencia",
   "team.emergencyContactPhone": "Teléfono del Contacto de Emergencia",

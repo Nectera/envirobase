@@ -94,7 +94,7 @@ export const en: Record<string, string> = {
   "team.phoneLabel": "Phone",
   "team.emailLabel": "Email",
   "team.emailPlaceholder": "worker@example.com",
-  "team.requiredEmail": "required@xtractes.com",
+  "team.requiredEmail": "user@company.com",
   "team.workEmailRequired": "Work email required for {role} roles",
   "team.emergencyContactName": "Emergency Contact Name",
   "team.emergencyContactPhone": "Emergency Contact Phone",

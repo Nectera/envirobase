@@ -31,8 +31,8 @@ const KB_CATEGORIES = [
   { key: "material_invoice", labelKey: "knowledgeBase.category.material_invoice", color: "bg-orange-100 text-orange-700" },
 ] as const;
 
-// Xtract target fields per data type
-const XTRACT_FIELDS: Record<string, { key: string; label: string; required?: boolean }[]> = {
+// Target fields per data type for import mapping
+const IMPORT_TARGET_FIELDS: Record<string, { key: string; label: string; required?: boolean }[]> = {
   companies: [
     { key: "name", label: "Company Name", required: true },
     { key: "type", label: "Type" },
@@ -232,7 +232,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
       }
       setPreviewData(data);
       setUploadedFile(file);
-      const targetFieldsList = XTRACT_FIELDS[importType] || [];
+      const targetFieldsList = IMPORT_TARGET_FIELDS[importType] || [];
       const autoMapping: Record<string, string> = {};
       for (const header of data.headers) {
         const headerLower = header.toLowerCase().replace(/[_\s]+/g, "").replace(/[^a-z0-9]/g, "");
@@ -310,7 +310,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const targetFields = XTRACT_FIELDS[importType] || [];
+  const targetFields = IMPORT_TARGET_FIELDS[importType] || [];
   const requiredFields = targetFields.filter((f) => f.required);
   const mappedRequiredFields = requiredFields.filter((f) => Object.values(fieldMapping).includes(f.key));
   const allRequiredMapped = mappedRequiredFields.length === requiredFields.length;

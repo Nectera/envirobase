@@ -373,13 +373,13 @@ export async function POST(req: NextRequest) {
       const fieldMapping: Record<string, string> = JSON.parse(fieldMappingRaw);
       rows = rawRows.map((row) => {
         const mapped: Record<string, any> = {};
-        for (const [sourceField, xtractField] of Object.entries(fieldMapping)) {
-          if (xtractField && xtractField !== "__skip__" && row[sourceField] !== undefined && row[sourceField] !== "") {
+        for (const [sourceField, targetField] of Object.entries(fieldMapping)) {
+          if (targetField && targetField !== "__skip__" && row[sourceField] !== undefined && row[sourceField] !== "") {
             // If multiple source fields map to the same target, concatenate with space
-            if (mapped[xtractField] !== undefined && mapped[xtractField] !== "") {
-              mapped[xtractField] = mapped[xtractField] + " " + row[sourceField];
+            if (mapped[targetField] !== undefined && mapped[targetField] !== "") {
+              mapped[targetField] = mapped[targetField] + " " + row[sourceField];
             } else {
-              mapped[xtractField] = row[sourceField];
+              mapped[targetField] = row[sourceField];
             }
           }
         }

@@ -10,7 +10,7 @@ import {
   DEFAULT_MATERIALS,
   DEFAULT_OPS_RATE,
   SITE_VISIT_REQUIREMENTS,
-  XTRACT_OFFICE,
+  DEFAULT_OFFICE,
   WASTE_RATE_PER_YARD,
   calcMaterialQty,
   calcFuelSurcharge,
@@ -178,8 +178,8 @@ function estimateMilesToCity(city: string): number {
   if (cityCoords) {
     return Math.round(
       haversineDistance(
-        XTRACT_OFFICE.lat,
-        XTRACT_OFFICE.lng,
+        DEFAULT_OFFICE.lat,
+        DEFAULT_OFFICE.lng,
         cityCoords.lat,
         cityCoords.lng
       )
@@ -708,7 +708,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         const data = await res.json();
         if (data.lat && data.lng) {
           const miles = Math.round(
-            haversineDistance(XTRACT_OFFICE.lat, XTRACT_OFFICE.lng, data.lat, data.lng)
+            haversineDistance(DEFAULT_OFFICE.lat, DEFAULT_OFFICE.lng, data.lat, data.lng)
           );
           handleInputChange("milesFromShop", miles);
           setEstimatingMiles(false);

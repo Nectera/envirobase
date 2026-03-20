@@ -104,7 +104,7 @@ export const LABOR_RATES = {
 };
 
 // office address for miles calculation
-export const XTRACT_OFFICE = {
+export const DEFAULT_OFFICE = {
   address: "903 5th St, Greeley, CO 80631",
   lat: 40.4189,
   lng: -104.7064,

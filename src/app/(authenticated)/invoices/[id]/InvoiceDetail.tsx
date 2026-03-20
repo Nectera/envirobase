@@ -404,7 +404,7 @@ export default function InvoiceDetail({ data }: { data: InvoiceData }) {
             <div>
               <h2 className="text-lg font-bold text-slate-900">{process.env.NEXT_PUBLIC_COMPANY_NAME || "EnviroBase Environmental Services"}</h2>
               <p className="text-sm text-slate-600">{process.env.NEXT_PUBLIC_COMPANY_LOCATION || "Fort Collins, CO"}</p>
-              <p className="text-sm text-slate-600">{process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "info@xtractes.com"}</p>
+              <p className="text-sm text-slate-600">{process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@envirobase.app"}</p>
             </div>
             <div className="text-right">
               <p className="text-sm text-slate-500">Invoice Number</p>
