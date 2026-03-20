@@ -24,6 +24,13 @@ import {
   ArrowRight,
   CheckCircle,
   ChevronDown,
+  Brain,
+  BookOpen,
+  Sparkles,
+  Bot,
+  Clock,
+  MessageSquare,
+  Check,
 } from "lucide-react";
 
 const FEATURES = [
@@ -151,16 +158,14 @@ export default function LoginPage() {
                 {process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"}
               </span>
             </div>
-            <div className="hidden sm:flex items-center gap-3">
-              <a
-                href="mailto:sales@envirobase.app"
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-full hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-600/20"
-              >
-                Contact Sales <ArrowRight className="w-3.5 h-3.5" />
-              </a>
+            <div className="hidden sm:flex items-center gap-6">
+              <a href="#features" className="text-sm text-slate-400 hover:text-white transition-colors">Features</a>
+              <a href="#ai" className="text-sm text-slate-400 hover:text-white transition-colors">AI</a>
+              <a href="#pricing" className="text-sm text-slate-400 hover:text-white transition-colors">Pricing</a>
+              <a href="#whitelabel" className="text-sm text-slate-400 hover:text-white transition-colors">White-Label</a>
               <a
                 href="#login"
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-400 border border-emerald-500/30 rounded-full hover:bg-emerald-500/10 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-full hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-600/20"
               >
                 Sign In
               </a>
@@ -292,15 +297,15 @@ export default function LoginPage() {
                 </div>
 
                 {/* Contact sales / Sign up links */}
-                <div className="mt-4 text-center">
-                  <p className="text-xs text-slate-500">
-                    Interested in EnviroBase?{" "}
+                <div className="mt-4 text-center space-y-1">
                   <p className="text-xs text-slate-500">
                     Don&apos;t have an account?{" "}
                     <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 font-medium">
                       Create your organization
                     </Link>
                   </p>
+                  <p className="text-xs text-slate-500">
+                    Questions?{" "}
                     <a href="mailto:sales@envirobase.app" className="text-emerald-400 hover:text-emerald-300 font-medium">
                       Contact sales
                     </a>
@@ -371,8 +376,209 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* ─── WHITE LABEL / SAAS SECTION ─── */}
+      {/* ─── AI CAPABILITIES ─── */}
+      <section id="ai" className="relative py-20 lg:py-28 border-t border-slate-800/50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-xs font-medium text-purple-400">AI-Powered</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              Intelligence built into every workflow
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              EnviroBase uses AI to automate tedious tasks, surface insights, and help your team work faster.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Bot,
+                title: "AI Assistant",
+                description: "Ask questions about your data in plain English. Get instant answers about project status, team availability, compliance deadlines, and more.",
+                color: "purple",
+              },
+              {
+                icon: Calendar,
+                title: "AI Scheduling",
+                description: "Automatically optimize crew schedules based on certifications, location, project requirements, and worker availability. One click to fill your week.",
+                color: "blue",
+              },
+              {
+                icon: BookOpen,
+                title: "AI Knowledge Base",
+                description: "Train a knowledge base on your company&apos;s SOPs, safety protocols, and best practices. Your team gets instant, accurate answers on the job.",
+                color: "emerald",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              const colorMap: Record<string, { bg: string; border: string; icon: string; glow: string }> = {
+                purple: { bg: "bg-purple-500/10", border: "border-purple-500/30", icon: "text-purple-400", glow: "shadow-purple-500/5" },
+                blue: { bg: "bg-blue-500/10", border: "border-blue-500/30", icon: "text-blue-400", glow: "shadow-blue-500/5" },
+                emerald: { bg: "bg-emerald-500/10", border: "border-emerald-500/30", icon: "text-emerald-400", glow: "shadow-emerald-500/5" },
+              };
+              const c = colorMap[item.color];
+              return (
+                <div
+                  key={item.title}
+                  className={`p-6 bg-slate-900/60 border ${c.border} rounded-2xl shadow-xl ${c.glow}`}
+                >
+                  <div className={`w-12 h-12 rounded-xl ${c.bg} flex items-center justify-center mb-5`}>
+                    <Icon className={`w-6 h-6 ${c.icon}`} />
+                  </div>
+                  <h3 className="font-semibold text-white text-lg mb-2">{item.title}</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">{item.description}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: FileText, label: "AI Field Report Summaries", desc: "Auto-generates professional summaries with photos" },
+              { icon: MessageSquare, label: "Smart Notifications", desc: "AI-prioritized alerts so nothing gets missed" },
+              { icon: Brain, label: "Compliance Insights", desc: "Proactive warnings before certs expire" },
+              { icon: Clock, label: "Time Optimization", desc: "Tracks patterns to reduce overtime and gaps" },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="flex items-start gap-3 p-4 bg-slate-900/40 rounded-xl border border-slate-800/40">
+                  <Icon className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-white">{item.label}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── PRICING ─── */}
+      <section id="pricing" className="relative py-20 lg:py-28 border-t border-slate-800/50">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              Simple, transparent pricing
+            </h2>
+            <p className="text-slate-400 max-w-xl mx-auto">
+              Start with what you need. Upgrade as you grow. No hidden fees, no per-user charges.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Starter */}
+            <div className="p-6 bg-slate-900/60 border border-slate-800/60 rounded-2xl">
+              <h3 className="text-lg font-semibold text-white mb-1">Starter</h3>
+              <p className="text-sm text-slate-500 mb-4">For small teams getting organized</p>
+              <div className="flex items-baseline gap-1 mb-6">
+                <span className="text-4xl font-bold text-white">$599</span>
+                <span className="text-slate-500 text-sm">/month</span>
+              </div>
+              <ul className="space-y-2.5 mb-6">
+                {["CRM & Lead Pipeline", "Project Management", "Scheduling & Time Clock", "Compliance Tracking", "Estimates & Invoicing", "Team Chat", "Business Metrics", "Up to 25 users"].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                    <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup"
+                className="block w-full py-2.5 text-center text-sm font-semibold text-emerald-400 border border-emerald-500/30 rounded-xl hover:bg-emerald-500/10 transition-colors"
+              >
+                Get Started
+              </Link>
+            </div>
+
+            {/* Pro */}
+            <div className="p-6 bg-slate-900/60 border-2 border-emerald-500/50 rounded-2xl relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-emerald-500 text-white text-xs font-bold rounded-full">
+                MOST POPULAR
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-1">Pro</h3>
+              <p className="text-sm text-slate-500 mb-4">For growing companies that want AI</p>
+              <div className="flex items-baseline gap-1 mb-6">
+                <span className="text-4xl font-bold text-white">$799</span>
+                <span className="text-slate-500 text-sm">/month</span>
+              </div>
+              <ul className="space-y-2.5 mb-6">
+                {["Everything in Starter", "AI Assistant", "AI Scheduling", "AI Knowledge Base", "Sales Pipeline", "Bonus Pool", "Content Inventory", "Review Requests", "Up to 75 users"].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                    <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup"
+                className="block w-full py-2.5 text-center text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-colors shadow-lg shadow-emerald-600/20"
+              >
+                Get Started
+              </Link>
+            </div>
+
+            {/* Enterprise */}
+            <div className="p-6 bg-slate-900/60 border border-slate-800/60 rounded-2xl">
+              <h3 className="text-lg font-semibold text-white mb-1">Enterprise</h3>
+              <p className="text-sm text-slate-500 mb-4">For multi-office operations</p>
+              <div className="flex items-baseline gap-1 mb-6">
+                <span className="text-4xl font-bold text-white">Custom</span>
+              </div>
+              <ul className="space-y-2.5 mb-6">
+                {["Everything in Pro", "White-label branding", "Custom domain", "Dedicated support", "Custom integrations", "SLA guarantees", "Unlimited users", "Multi-office management"].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                    <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="mailto:sales@envirobase.app"
+                className="block w-full py-2.5 text-center text-sm font-semibold text-emerald-400 border border-emerald-500/30 rounded-xl hover:bg-emerald-500/10 transition-colors"
+              >
+                Contact Sales
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── HOW IT WORKS ─── */}
       <section className="relative py-20 lg:py-28 border-t border-slate-800/50">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              Up and running in minutes
+            </h2>
+            <p className="text-slate-400 max-w-xl mx-auto">
+              No setup fees, no implementation consultants. Sign up and start managing your operation today.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { step: "1", title: "Create your account", description: "Pick a plan, enter your company info, and you're in. Your workspace is ready immediately." },
+              { step: "2", title: "Import or build", description: "Import existing data from spreadsheets or start fresh. Add your team, set up roles, and configure branding." },
+              { step: "3", title: "Run your operation", description: "Manage leads, schedule crews, track compliance, and send invoices — all from one dashboard." },
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                  <span className="text-lg font-bold text-emerald-400">{item.step}</span>
+                </div>
+                <h3 className="font-semibold text-white text-lg mb-2">{item.title}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── WHITE LABEL / SAAS SECTION ─── */}
+      <section id="whitelabel" className="relative py-20 lg:py-28 border-t border-slate-800/50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
