@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog, CreditCard, Palette } from "lucide-react";
+import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog, CreditCard, Palette, Video } from "lucide-react";
 import SmtpSettings from "./SmtpSettings";
 import BillingSettings from "./BillingSettings";
 import BrandingSettings from "./BrandingSettings";
@@ -18,7 +18,7 @@ interface Props {
 
 export default function SettingsView({ initialPositions, initialRoles, initialCertTypes, initialCogsRates }: Props) {
   const { t, language, setLanguage } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email" | "billing" | "branding">("roles");
+  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email" | "billing" | "branding" | "meetings">("roles");
   const [positions, setPositions] = useState(initialPositions);
   const [roles, setRoles] = useState(initialRoles);
   const [certTypes, setCertTypes] = useState(initialCertTypes);
@@ -41,6 +41,10 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
   const [certReqSaved, setCertReqSaved] = useState(false);
   const [newCertReqType, setNewCertReqType] = useState("");
   const [newCertReqCert, setNewCertReqCert] = useState("");
+  // Meeting platform config
+  const [meetingPlatform, setMeetingPlatform] = useState<string>("google_meet");
+  const [meetingSaving, setMeetingSaving] = useState(false);
+  const [meetingSaved, setMeetingSaved] = useState(false);
 
   useEffect(() => {
     fetch("/api/review-requests/config")
@@ -55,6 +59,10 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
       .then((r) => { if (r.ok) return r.json(); throw new Error("Failed"); })
       .then((d) => { if (d && !d.error) setCertReqConfig(d); })
       .catch(() => {});
+    fetch("/api/settings/meeting-platform")
+      .then((r) => { if (r.ok) return r.json(); throw new Error("Failed"); })
+      .then((d) => { if (d?.platform) setMeetingPlatform(d.platform); })
+      .catch(() => {});
   }, []);
 
   const tabs = [
@@ -67,6 +75,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
     { key: "estimateFollowUp" as const, label: t("settings.estimateFollowUp"), icon: Mail },
     { key: "certRequirements" as const, label: t("settings.certRequirements"), icon: ShieldCheck },
     { key: "branding" as const, label: "Branding", icon: Palette },
+    { key: "meetings" as const, label: "Meetings", icon: Video },
     { key: "email" as const, label: "Email / SMTP", icon: ServerCog },
     { key: "billing" as const, label: "Billing", icon: CreditCard },
   ];
@@ -1070,6 +1079,68 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
       {activeTab === "branding" && <BrandingSettings />}
 
       {activeTab === "email" && <SmtpSettings />}
+
+      {/* Meetings tab */}
+      {activeTab === "meetings" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">Video Meeting Platform</h3>
+            <p className="text-xs text-slate-500 mb-3">Choose which platform to use when starting meetings from chat. Users must be logged into their account on the selected platform.</p>
+          </div>
+          <div className="space-y-2">
+            {[
+              { value: "google_meet", label: "Google Meet", desc: "Opens meet.google.com/new — requires Google Workspace" },
+              { value: "zoom", label: "Zoom", desc: "Opens zoom.us/start — requires a Zoom account" },
+              { value: "disabled", label: "Disabled", desc: "Hide the video meeting button in chat" },
+            ].map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition ${
+                  meetingPlatform === opt.value
+                    ? "border-blue-300 bg-blue-50"
+                    : "border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="meetingPlatform"
+                  value={opt.value}
+                  checked={meetingPlatform === opt.value}
+                  onChange={() => setMeetingPlatform(opt.value)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <div className="text-sm font-medium text-slate-800">{opt.label}</div>
+                  <div className="text-xs text-slate-500">{opt.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+          <button
+            onClick={async () => {
+              setMeetingSaving(true);
+              setMeetingSaved(false);
+              try {
+                await fetch("/api/settings/meeting-platform", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ platform: meetingPlatform }),
+                });
+                setMeetingSaved(true);
+                setTimeout(() => setMeetingSaved(false), 2000);
+              } catch {} finally {
+                setMeetingSaving(false);
+              }
+            }}
+            disabled={meetingSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            <Save size={14} />
+            {meetingSaving ? "Saving..." : "Save"}
+          </button>
+          {meetingSaved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+        </div>
+      )}
 
       {/* Billing tab */}
       {activeTab === "billing" && <BillingSettings />}

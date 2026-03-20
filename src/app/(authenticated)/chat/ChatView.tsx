@@ -5,7 +5,7 @@ import {
   MessageSquare, Hash, Send, Paperclip, X, Plus, Search,
   Users, ChevronLeft, Loader2, Image as ImageIcon, FileText,
   AtSign, User as UserIcon, RefreshCw, Lock, Globe, Check,
-  Pencil, Trash2, UserPlus, UserMinus, SmilePlus,
+  Pencil, Trash2, UserPlus, UserMinus, SmilePlus, Video,
 } from "lucide-react";
 import EmojiReactions from "@/components/EmojiReactions";
 
@@ -189,6 +189,9 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
   const [showComposerEmoji, setShowComposerEmoji] = useState(false);
   const composerEmojiRef = useRef<HTMLDivElement>(null);
 
+  // Video meeting
+  const [startingMeet, setStartingMeet] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -349,6 +352,27 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
     } catch { } finally {
       setUploadingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // ─── Start video meeting ─────────────────────────────────────
+  const handleStartMeet = async () => {
+    if (!selectedChannelId || startingMeet) return;
+    setStartingMeet(true);
+    try {
+      const res = await fetch("/api/chat/meet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId: selectedChannelId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages((prev) => [...prev, data.message]);
+        lastMessageTime.current = data.message.createdAt;
+        window.open(data.meetUrl, "_blank");
+      }
+    } catch { } finally {
+      setStartingMeet(false);
     }
   };
 
@@ -567,6 +591,31 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
   // ─── Helper: render message content with @mentions highlighted ─
   const renderContent = (msg: Message) => {
     let text = msg.content;
+
+    // Detect meeting messages (Google Meet or Zoom)
+    const meetMatch = text.match(/📹 Started a (Google Meet|Zoom Meeting)\n(https:\/\/\S+)/);
+    if (meetMatch) {
+      const platformLabel = meetMatch[1];
+      const url = meetMatch[2];
+      const isZoom = platformLabel === "Zoom Meeting";
+      return (
+        <div className="inline-block bg-green-50 border border-green-200 rounded-lg px-3 py-2 mt-1">
+          <div className="flex items-center gap-2">
+            <Video size={16} className={isZoom ? "text-blue-600" : "text-green-600"} />
+            <span className="text-sm font-medium text-slate-800">{platformLabel}</span>
+          </div>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-xs font-medium mt-1 inline-block ${isZoom ? "text-blue-600 hover:text-blue-700" : "text-green-600 hover:text-green-700"}`}
+          >
+            Join meeting &rarr;
+          </a>
+        </div>
+      );
+    }
+
     // Highlight @mentions
     const mentionIds: string[] = msg.mentions ? JSON.parse(msg.mentions) : [];
 
@@ -801,6 +850,16 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                 </div>
               </div>
               <div className="ml-auto flex items-center gap-2">
+                {selectedChannel.type !== "dm" && (
+                  <button
+                    onClick={handleStartMeet}
+                    disabled={startingMeet}
+                    className="p-1.5 rounded-lg hover:bg-green-50 text-slate-400 hover:text-green-600 transition disabled:opacity-50"
+                    title="Start video meeting"
+                  >
+                    {startingMeet ? <Loader2 size={13} className="animate-spin" /> : <Video size={13} />}
+                  </button>
+                )}
                 {selectedChannel.type !== "dm" && (
                   <button
                     onClick={() => { setEditChannelName(selectedChannel.name); setEditChannelDesc(selectedChannel.description || ""); setShowEditChannel(true); }}
