@@ -38,6 +38,7 @@ export interface OrgBranding {
   accentColor: string | null;
   supportEmail: string;
   companyLocation: string;
+  state: string | null;
   domain: string;
   logoUrl: string;
   website: string | null;
@@ -81,6 +82,7 @@ export async function getOrgBranding(orgId: string | null): Promise<OrgBranding>
       accentColor: org.accentColor,
       supportEmail: org.supportEmail || SUPPORT_EMAIL,
       companyLocation: org.companyLocation || COMPANY_LOCATION,
+      state: (org as any).state || null,
       domain: org.domain || APP_DOMAIN,
       logoUrl: org.logoUrl || LOGO_URL,
       website: org.website,
@@ -144,6 +146,7 @@ function getDefaultBranding(): OrgBranding {
     accentColor: null,
     supportEmail: SUPPORT_EMAIL,
     companyLocation: COMPANY_LOCATION,
+    state: "CO",
     domain: APP_DOMAIN,
     logoUrl: LOGO_URL,
     website: null,

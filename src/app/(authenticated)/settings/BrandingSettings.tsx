@@ -12,9 +12,17 @@ interface BrandingData {
   accentColor: string | null;
   supportEmail: string | null;
   companyLocation: string | null;
+  state: string | null;
   domain: string | null;
   website: string | null;
 }
+
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
+  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
+  "VA","WA","WV","WI","WY","DC",
+];
 
 const DEFAULT_BRAND_COLOR = "#7BC143";
 const DEFAULT_ACCENT_COLOR = "#0068B5";
@@ -175,7 +183,7 @@ export default function BrandingSettings() {
       </div>
 
       {/* Contact & Location */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Support Email</label>
           <input type="email" value={branding.supportEmail || ""} onChange={(e) => updateField("supportEmail", e.target.value)} placeholder="support@yourcompany.com" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" />
@@ -183,6 +191,14 @@ export default function BrandingSettings() {
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
           <input type="text" value={branding.companyLocation || ""} onChange={(e) => updateField("companyLocation", e.target.value)} placeholder="Denver, CO" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">State</label>
+          <select value={branding.state || ""} onChange={(e) => updateField("state", e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+            <option value="">Select state...</option>
+            {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <p className="text-xs text-slate-400 mt-1">Drives compliance regulations</p>
         </div>
       </div>
 

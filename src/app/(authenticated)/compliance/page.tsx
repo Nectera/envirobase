@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/components/LanguageProvider";
 import { COMPLIANCE_CHECKLISTS } from "@/lib/regulations";
 import type { ChecklistSection } from "@/lib/regulations";
-import { FileDown } from "lucide-react";
+import { FileDown, Loader2, MapPin, RefreshCw } from "lucide-react";
 
 type ServiceType = "ASBESTOS" | "LEAD" | "METH" | "MOLD";
 
@@ -15,9 +15,15 @@ const SERVICE_PDF: Record<ServiceType, { href: string; label: string }> = {
   MOLD: { href: "/regulations/mold-regulations.pdf", label: "Mold Regulations" },
 };
 
-type RowData = [string, string];
+const TABS: { key: ServiceType; label: string; color: string }[] = [
+  { key: "ASBESTOS", label: "Asbestos", color: "bg-[#7BC143]" },
+  { key: "LEAD", label: "Lead", color: "bg-amber-500" },
+  { key: "METH", label: "Meth Lab", color: "bg-red-500" },
+  { key: "MOLD", label: "Mold", color: "bg-teal-600" },
+];
 
-const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]> = {
+// Colorado fallback data (hardcoded) — used as instant fallback for CO orgs
+const CO_REGULATION_DATA: Record<ServiceType, { title: string; rows: [string, string][] }[]> = {
   ASBESTOS: [
     {
       title: "Abatement Contractor & Crew Requirements",
@@ -35,8 +41,8 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
       title: "Project Notification & Permits",
       rows: [
         ["CDPHE Notification", "10 working days advance to CDPHE before work begins"],
-        ["Residential Trigger", "≥32 sq ft or ≥50 linear ft of ACM"],
-        ["Commercial Trigger", "≥160 sq ft or ≥260 linear ft of ACM"],
+        ["Residential Trigger", "\u226532 sq ft or \u226550 linear ft of ACM"],
+        ["Commercial Trigger", "\u2265160 sq ft or \u2265260 linear ft of ACM"],
         ["EPA/NESHAP Notification", "10 working days before demolition/renovation"],
         ["Permit Fee (30-day)", "$400"],
         ["Permit Fee (90-day)", "$800"],
@@ -60,7 +66,7 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
       title: "Clearance & Records",
       rows: [
         ["Air Clearance (PCM)", "<0.01 f/cc (min 1,199L sample)"],
-        ["Air Clearance (TEM)", "70 structures/mm²"],
+        ["Air Clearance (TEM)", "70 structures/mm\u00B2"],
         ["Medical Record Retention", "Duration of employment + 30 years"],
         ["Exposure Record Retention", "30 years"],
         ["Training Record Retention", "1 year beyond last employment"],
@@ -79,9 +85,9 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
         ["Certified Renovator", "Must be designated to each RRP job"],
         ["Firm Certification (EPA)", "Valid 5 years"],
         ["BLL Baseline", "Required for all workers before lead exposure"],
-        ["BLL Monitoring", "Every 2 months × 6, then every 6 months"],
-        ["Medical Removal", "BLL > 50 µg/dL → remove worker from exposure"],
-        ["Return to Work", "BLL ≤ 40 µg/dL"],
+        ["BLL Monitoring", "Every 2 months \u00D7 6, then every 6 months"],
+        ["Medical Removal", "BLL > 50 \u00B5g/dL \u2192 remove worker from exposure"],
+        ["Return to Work", "BLL \u2264 40 \u00B5g/dL"],
       ],
     },
     {
@@ -90,27 +96,27 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
         ["Pre-Renovation Notice", "7 days before work to occupants"],
         ["Required Pamphlet", "'Renovate Right' to owners/occupants before work"],
         ["Applicability", "Pre-1978 housing, child care, kindergartens"],
-        ["Interior Trigger (RRP)", "≥6 sq ft disturbed"],
-        ["Exterior Trigger (RRP)", "≥20 sq ft disturbed"],
-        ["PEL (8hr TWA)", "50 µg/m³"],
-        ["Action Level", "30 µg/m³"],
+        ["Interior Trigger (RRP)", "\u22656 sq ft disturbed"],
+        ["Exterior Trigger (RRP)", "\u226520 sq ft disturbed"],
+        ["PEL (8hr TWA)", "50 \u00B5g/m\u00B3"],
+        ["Action Level", "30 \u00B5g/m\u00B3"],
       ],
     },
     {
       title: "Removal Practices & Containment",
       rows: [
         ["Work Practices", "HEPA vacuum + wet methods required"],
-        ["Containment", "Per RRP rule — plastic sheeting, sealed work area"],
-        ["Prohibited Methods", "No open flame burning, power sanding without HEPA, heat gun >1100°F"],
+        ["Containment", "Per RRP rule \u2014 plastic sheeting, sealed work area"],
+        ["Prohibited Methods", "No open flame burning, power sanding without HEPA, heat gun >1100\u00B0F"],
         ["Waste Handling", "Contained, labeled, disposed per CO/EPA requirements"],
       ],
     },
     {
       title: "Clearance & Records",
       rows: [
-        ["Clearance - Floors", "≤5 µg/ft²"],
-        ["Clearance - Windowsills", "≤40 µg/ft²"],
-        ["Clearance - Window Troughs", "≤100 µg/ft²"],
+        ["Clearance - Floors", "\u22645 \u00B5g/ft\u00B2"],
+        ["Clearance - Windowsills", "\u226440 \u00B5g/ft\u00B2"],
+        ["Clearance - Window Troughs", "\u2264100 \u00B5g/ft\u00B2"],
         ["Clearance Report Note", "Must state hazards may remain even below DLAL"],
         ["RRP Record Retention", "3 years after project completion"],
         ["Medical/Exposure Records", "Duration + 30 years (OSHA)"],
@@ -124,7 +130,7 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
         ["Decon Worker Cert", "State certification + 40hr HAZWOPER + Dept training"],
         ["Decon Supervisor Cert", "State certification + Dept supervisor training"],
         ["Annual HAZWOPER Refresher", "8 hours"],
-        ["Supervisor On-Site", "Required — must oversee all decontamination work"],
+        ["Supervisor On-Site", "Required \u2014 must oversee all decontamination work"],
         ["Medical Surveillance", "Baseline + periodic + post-assignment exams"],
         ["PPE Levels", "A, B, C, or D based on site hazard assessment"],
         ["Site Safety Plan", "Required for each remediation site"],
@@ -138,16 +144,16 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
         ["Negative Air", "Containment with negative pressure required"],
         ["Porous Materials", "Remove if unable to be decontaminated"],
         ["Ventilation System", "Must be decontaminated per Appendix C"],
-        ["Sampling Method", "Isopropanol wet wipe on 100 cm² area"],
+        ["Sampling Method", "Isopropanol wet wipe on 100 cm\u00B2 area"],
       ],
     },
     {
       title: "Clearance & Reporting",
       rows: [
-        ["Clearance - Habitable Areas", "≤0.5 µg/100 cm²"],
-        ["Clearance - Limited Exposure", "≤4.0 µg/100 cm² (attics, crawlspaces)"],
-        ["Clearance - Painted Surfaces", "≤1.5 µg/100 cm²"],
-        ["Screening Level", "0.2 µg/cm² (no further action if below)"],
+        ["Clearance - Habitable Areas", "\u22640.5 \u00B5g/100 cm\u00B2"],
+        ["Clearance - Limited Exposure", "\u22644.0 \u00B5g/100 cm\u00B2 (attics, crawlspaces)"],
+        ["Clearance - Painted Surfaces", "\u22641.5 \u00B5g/100 cm\u00B2"],
+        ["Screening Level", "0.2 \u00B5g/cm\u00B2 (no further action if below)"],
         ["Consultant Requirement", "CIH, independent from contractor"],
         ["Report Deadline", "30 days to governing body after lab results"],
         ["CDPHE Registry", "Properties listed on meth-affected listing"],
@@ -162,7 +168,7 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
         ["State Licensing", "No specific mold remediation license in Colorado"],
         ["Industry Standard", "Follow IICRC S520 + EPA guidelines"],
         ["Small Jobs (<10 sq ft)", "N95 respirator minimum"],
-        ["Medium Jobs (10–100 sq ft)", "Half-face P100 respirator, trained personnel"],
+        ["Medium Jobs (10\u2013100 sq ft)", "Half-face P100 respirator, trained personnel"],
         ["Large Jobs (>100 sq ft)", "Full containment + HAZMAT-level procedures"],
         ["Medical Evaluation", "Recommended for workers with recurring mold exposure"],
         ["Indoor Humidity Target", "Maintain below 60% during and after work"],
@@ -172,8 +178,8 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
       title: "Remediation Levels (EPA Guidelines)",
       rows: [
         ["Level 1 (<10 sq ft)", "Regular trained staff, N95, no containment"],
-        ["Level 2 (10–30 sq ft)", "Trained personnel, limited containment"],
-        ["Level 3 (30–100 sq ft)", "Professional remediation, full containment"],
+        ["Level 2 (10\u201330 sq ft)", "Trained personnel, limited containment"],
+        ["Level 3 (30\u2013100 sq ft)", "Professional remediation, full containment"],
         ["Level 4 (>100 sq ft)", "HAZMAT procedures, full containment, HEPA neg. air"],
         ["HVAC Contamination", "Specialized contractor required, isolate system"],
         ["Porous Materials", "Remove and discard if active growth present"],
@@ -183,9 +189,9 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
     {
       title: "Clearance & Conditions (IICRC S520)",
       rows: [
-        ["Condition 1", "Normal fungal ecology — no remediation needed"],
-        ["Condition 2", "Settled spores, no active growth — cleanup required"],
-        ["Condition 3", "Active growth present — full remediation required"],
+        ["Condition 1", "Normal fungal ecology \u2014 no remediation needed"],
+        ["Condition 2", "Settled spores, no active growth \u2014 cleanup required"],
+        ["Condition 3", "Active growth present \u2014 full remediation required"],
         ["Clearance Goal", "Restore to Condition 1 or 2"],
         ["Post-Remediation Verification", "Visual inspection + air/surface sampling"],
         ["Moisture Source", "Must be identified and corrected before clearance"],
@@ -195,46 +201,129 @@ const REGULATION_DATA: Record<ServiceType, { title: string; rows: RowData[] }[]>
   ],
 };
 
-const TABS: { key: ServiceType; label: string; color: string }[] = [
-  { key: "ASBESTOS", label: "Asbestos", color: "bg-[#7BC143]" },
-  { key: "LEAD", label: "Lead", color: "bg-amber-500" },
-  { key: "METH", label: "Meth Lab", color: "bg-red-500" },
-  { key: "MOLD", label: "Mold", color: "bg-teal-600" },
-];
+type RegSection = { title: string; rows: [string, string][] };
+type ChecklistData = { section: string; items: { key: string; req: string; reg: string; critical: boolean }[] };
 
 export default function CompliancePage() {
   const { t } = useTranslation();
   const [activeType, setActiveType] = useState<ServiceType>("ASBESTOS");
   const [view, setView] = useState<"regulations" | "checklists">("regulations");
 
-  const checklist = COMPLIANCE_CHECKLISTS[activeType] || [];
-  const regSections = REGULATION_DATA[activeType] || [];
+  // Org state
+  const [orgState, setOrgState] = useState<string | null>(null);
+  const [stateName, setStateName] = useState<string>("Colorado");
+  const [loadingState, setLoadingState] = useState(true);
+
+  // Dynamic regulation data per type
+  const [dynamicRegs, setDynamicRegs] = useState<Record<string, RegSection[]>>({});
+  const [dynamicChecklists, setDynamicChecklists] = useState<Record<string, ChecklistData[]>>({});
+  const [loadingRegs, setLoadingRegs] = useState<Record<string, boolean>>({});
+  const [regErrors, setRegErrors] = useState<Record<string, string>>({});
+
+  // Fetch org state on mount
+  useEffect(() => {
+    fetch("/api/settings/branding")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.state) {
+          setOrgState(data.state);
+        } else {
+          setOrgState("CO"); // Default to Colorado
+        }
+      })
+      .catch(() => setOrgState("CO"))
+      .finally(() => setLoadingState(false));
+  }, []);
+
+  // Fetch regulations for active type when state is known
+  const fetchRegs = useCallback(async (state: string, type: ServiceType) => {
+    const cacheKey = `${state}-${type}`;
+    if (dynamicRegs[cacheKey] || loadingRegs[cacheKey]) return;
+
+    // For Colorado, use hardcoded data immediately
+    if (state === "CO") {
+      setDynamicRegs((prev) => ({ ...prev, [cacheKey]: CO_REGULATION_DATA[type] }));
+      const coChecklist = COMPLIANCE_CHECKLISTS[type] || [];
+      setDynamicChecklists((prev) => ({ ...prev, [cacheKey]: coChecklist }));
+      return;
+    }
+
+    setLoadingRegs((prev) => ({ ...prev, [cacheKey]: true }));
+    setRegErrors((prev) => ({ ...prev, [cacheKey]: "" }));
+
+    try {
+      const res = await fetch(`/api/compliance/regulations?state=${state}&type=${type}`);
+      if (!res.ok) throw new Error("Failed to load");
+      const data = await res.json();
+      setStateName(data.stateName || state);
+      setDynamicRegs((prev) => ({ ...prev, [cacheKey]: data.data || [] }));
+      setDynamicChecklists((prev) => ({ ...prev, [cacheKey]: data.checklists || [] }));
+    } catch {
+      setRegErrors((prev) => ({ ...prev, [cacheKey]: "Failed to load regulations. Using federal defaults." }));
+      // Fall back to Colorado data as a reasonable default
+      setDynamicRegs((prev) => ({ ...prev, [cacheKey]: CO_REGULATION_DATA[type] }));
+      setDynamicChecklists((prev) => ({ ...prev, [cacheKey]: COMPLIANCE_CHECKLISTS[type] || [] }));
+    } finally {
+      setLoadingRegs((prev) => ({ ...prev, [cacheKey]: false }));
+    }
+  }, [dynamicRegs, loadingRegs]);
+
+  useEffect(() => {
+    if (orgState) {
+      fetchRegs(orgState, activeType);
+      if (orgState === "CO") setStateName("Colorado");
+    }
+  }, [orgState, activeType, fetchRegs]);
+
+  const cacheKey = orgState ? `${orgState}-${activeType}` : "";
+  const regSections = dynamicRegs[cacheKey] || [];
+  const checklist: ChecklistData[] = dynamicChecklists[cacheKey] || [];
+  const isLoadingRegs = loadingRegs[cacheKey] || false;
+  const regError = regErrors[cacheKey] || "";
   const pdf = SERVICE_PDF[activeType];
+
+  const handleRefresh = () => {
+    if (!orgState) return;
+    const key = `${orgState}-${activeType}`;
+    setDynamicRegs((prev) => { const next = { ...prev }; delete next[key]; return next; });
+    setDynamicChecklists((prev) => { const next = { ...prev }; delete next[key]; return next; });
+    // Re-trigger fetch
+    setTimeout(() => fetchRegs(orgState, activeType), 0);
+  };
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900">{t("compliance.title")}</h1>
-        <p className="text-sm text-slate-500">{t("compliance.subtitle")}</p>
+        <p className="text-sm text-slate-500">
+          {loadingState ? (
+            "Loading..."
+          ) : (
+            <>
+              <MapPin size={12} className="inline mr-1" />
+              {stateName}, OSHA, and EPA standards, checklists, and reference documents
+            </>
+          )}
+        </p>
       </div>
 
       {/* Service type tabs */}
       <div className="space-y-3 mb-4">
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {TABS.map((t) => (
+          {TABS.map((tab) => (
             <button
-              key={t.key}
-              onClick={() => setActiveType(t.key)}
+              key={tab.key}
+              onClick={() => setActiveType(tab.key)}
               className={`px-3 py-1.5 text-sm rounded-full font-medium transition whitespace-nowrap shrink-0 ${
-                activeType === t.key ? `${t.color} text-white` : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                activeType === tab.key ? `${tab.color} text-white` : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {t.label}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* View toggle + PDF download */}
+        {/* View toggle + PDF download + refresh */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1 bg-slate-100 rounded-full p-0.5">
             <button
@@ -254,21 +343,49 @@ export default function CompliancePage() {
               {t("compliance.checklists")}
             </button>
           </div>
-          <a
-            href={pdf.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full hover:bg-slate-50 hover:border-slate-300 transition shrink-0"
-          >
-            <FileDown size={13} />
-            <span className="hidden sm:inline">{pdf.label}</span>
-            <span className="sm:hidden">PDF</span>
-          </a>
+          <div className="flex items-center gap-2">
+            {orgState && orgState !== "CO" && (
+              <button
+                onClick={handleRefresh}
+                disabled={isLoadingRegs}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition shrink-0 disabled:opacity-50"
+                title="Regenerate regulations"
+              >
+                <RefreshCw size={12} className={isLoadingRegs ? "animate-spin" : ""} />
+              </button>
+            )}
+            <a
+              href={pdf.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full hover:bg-slate-50 hover:border-slate-300 transition shrink-0"
+            >
+              <FileDown size={13} />
+              <span className="hidden sm:inline">{pdf.label}</span>
+              <span className="sm:hidden">PDF</span>
+            </a>
+          </div>
         </div>
       </div>
 
+      {/* Loading state */}
+      {isLoadingRegs && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center mb-4">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400 mx-auto mb-3" />
+          <p className="text-sm text-slate-500">Generating {stateName} regulations for {TABS.find((t) => t.key === activeType)?.label}...</p>
+          <p className="text-xs text-slate-400 mt-1">This may take a few seconds on first load. Results are cached for future visits.</p>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {regError && (
+        <div className="mb-4 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+          {regError}
+        </div>
+      )}
+
       {/* Regulation Reference Tables */}
-      {view === "regulations" && (
+      {view === "regulations" && !isLoadingRegs && (
         <div className="space-y-4">
           {regSections.map((section) => (
             <div key={section.title} className="bg-white rounded-2xl border border-slate-100 shadow-sm">
@@ -299,13 +416,18 @@ export default function CompliancePage() {
               </div>
             </div>
           ))}
+          {regSections.length === 0 && !isLoadingRegs && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center">
+              <p className="text-sm text-slate-500">No regulation data available.</p>
+            </div>
+          )}
         </div>
       )}
 
       {/* Compliance Checklists */}
-      {view === "checklists" && (
+      {view === "checklists" && !isLoadingRegs && (
         <div className="space-y-4">
-          {checklist.map((section: ChecklistSection) => (
+          {checklist.map((section: ChecklistData) => (
             <div key={section.section} className="bg-white rounded-2xl border border-slate-100 shadow-sm">
               <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="text-sm font-semibold">{section.section}</h3>
@@ -330,7 +452,7 @@ export default function CompliancePage() {
             </div>
           ))}
 
-          {checklist.length === 0 && (
+          {checklist.length === 0 && !isLoadingRegs && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center">
               <p className="text-sm text-slate-500">{t("compliance.noChecklists")}</p>
             </div>

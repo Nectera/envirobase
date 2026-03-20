@@ -25,6 +25,7 @@ model Organization {
   accentColor      String?  // Secondary color
   supportEmail     String?  // e.g., "hello@envirobase.app"
   companyLocation  String?  // e.g., "Fort Collins, CO"
+  state            String?  // 2-letter state code, e.g., "CO" — drives compliance regulations
   domain           String?  // Custom domain (e.g., "app.envirobase.app")
   website          String?  // Marketing website URL
 
@@ -330,6 +331,18 @@ model Notification {
 }
 
 // ─── Compliance & Inspections ────────────────────────────────────
+
+model StateRegulation {
+  id           String   @id @default(uuid())
+  state        String   // 2-letter state code, e.g., "CO", "TX"
+  serviceType  String   // "ASBESTOS", "LEAD", "METH", "MOLD"
+  data         Json     // AI-generated regulation data (sections + rows)
+  checklists   Json?    // AI-generated compliance checklists
+  generatedAt  DateTime @default(now())
+
+  @@unique([state, serviceType])
+  @@map("state_regulations")
+}
 
 model ComplianceCheck {
   id        String  @id @default(uuid())

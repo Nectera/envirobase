@@ -453,7 +453,7 @@ export const en: Record<string, string> = {
 
   // Compliance
   "compliance.title": "Compliance & Regulations",
-  "compliance.subtitle": "Colorado, OSHA, and EPA standards, checklists, and reference documents",
+  "compliance.subtitle": "State, OSHA, and EPA standards, checklists, and reference documents",
   "compliance.quickReference": "Quick Reference",
   "compliance.checklists": "Checklists",
   "compliance.required": "REQUIRED",

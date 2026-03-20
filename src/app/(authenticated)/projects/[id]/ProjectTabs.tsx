@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { formatDate, getStatusColor, getProjectTypes, hasProjectType } from "@/lib/utils";
-import { TYPE_LABELS, REGULATIONS } from "@/lib/regulations";
+import { TYPE_LABELS } from "@/lib/regulations";
 import { Check, Circle, Loader2, Plus, FileDown, ChevronRight, ChevronDown, AlertTriangle, ClipboardList, Clock, Shield, CheckSquare, Award, BarChart3, CalendarDays, Pencil, Save, X, FileText, FolderOpen, Activity, Play, CheckCircle2, User, Upload, FileCheck, ShieldAlert, Trash2, MoreHorizontal, ExternalLink, Star, Send, MessageSquare } from "lucide-react";
 import ActivityFeed from "@/components/ActivityFeed";
 import TaskDetailModal from "@/components/TaskDetailModal";
@@ -213,7 +213,7 @@ export default function ProjectTabs({
     { key: "dashboard" as const, label: "Dashboard" },
     { key: "tasks" as const, label: "Tasks" },
     { key: "reports" as const, label: `Reports (${reportsCount})` },
-    ...(project.type === "METH" ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
+    ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
     { key: "documents" as const, label: `Documents (${projectDocuments.length})` },
     { key: "activity" as const, label: `Activity (${(activities || []).length + (linkedActivities || []).length})` },
     { key: "inventory" as const, label: "Inventory" },
@@ -633,9 +633,7 @@ export default function ProjectTabs({
   const done = project.tasks.filter((t: Task) => t.status === "completed").length;
   const checkMap = new Map(complianceChecks.map((c) => [c.itemKey, c.checked]));
 
-  // Use first type for regulations; show all applicable
-  const regKey = (getProjectTypes(project.type)[0] || "asbestos").toLowerCase() as "asbestos" | "lead" | "meth";
-  const regs = REGULATIONS[regKey] || REGULATIONS["asbestos"];
+
 
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",

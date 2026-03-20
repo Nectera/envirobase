@@ -19,7 +19,7 @@ export async function GET() {
     select: {
       appName: true, companyName: true, companyShort: true, logoUrl: true,
       brandColor: true, accentColor: true, supportEmail: true,
-      companyLocation: true, domain: true, website: true,
+      companyLocation: true, state: true, domain: true, website: true,
     },
   });
 
@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest) {
   const allowedFields = [
     "appName", "companyName", "companyShort", "logoUrl",
     "brandColor", "accentColor", "supportEmail",
-    "companyLocation", "domain", "website",
+    "companyLocation", "state", "domain", "website",
   ];
 
   const updateData: Record<string, any> = {};
@@ -55,7 +55,7 @@ export async function PUT(req: NextRequest) {
     select: {
       appName: true, companyName: true, companyShort: true, logoUrl: true,
       brandColor: true, accentColor: true, supportEmail: true,
-      companyLocation: true, domain: true, website: true,
+      companyLocation: true, state: true, domain: true, website: true,
     },
   });
 
