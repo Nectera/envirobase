@@ -32,7 +32,7 @@ const TECHNICIAN_ALLOWED = ["/schedule", "/time-clock", "/my-documents", "/tasks
 const OFFICE_ALLOWED = ["/crm", "/leads", "/companies", "/contacts", "/estimates", "/tasks", "/pipeline"];
 
 // Routes that don't need auth
-const PUBLIC_ROUTES = ["/login", "/signup", "/api/auth", "/api/organizations/signup", "/api/stripe/webhook", "/forgot-password", "/reset-password"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/api/auth", "/api/organizations/signup", "/api/stripe/webhook", "/forgot-password", "/reset-password", "/privacy", "/terms"];
 
 // Security headers applied to all responses
 function addSecurityHeaders(response: NextResponse): NextResponse {

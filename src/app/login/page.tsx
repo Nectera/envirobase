@@ -452,12 +452,21 @@ export default function LoginPage() {
               {process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase"} &copy; {new Date().getFullYear()}
             </span>
           </div>
-          <p className="text-xs text-slate-600">
-            Built by{" "}
-            <a href="https://necteraholdings.com" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-400 transition-colors">
-              Nectera Holdings
-            </a>
-          </p>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">
+              Privacy
+            </Link>
+            <Link href="/terms" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">
+              Terms
+            </Link>
+            <span className="text-xs text-slate-700">|</span>
+            <span className="text-xs text-slate-600">
+              Built by{" "}
+              <a href="https://necteraholdings.com" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-400 transition-colors">
+                Nectera Holdings
+              </a>
+            </span>
+          </div>
         </div>
       </footer>
     </div>
