@@ -135,6 +135,15 @@ interface KBArticle {
   updatedAt: string;
 }
 
+/** Safely parse tags — handles both JSON string and plain array from DB */
+function parseTags(tags: any): string[] {
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === "string") {
+    try { const parsed = JSON.parse(tags); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  }
+  return [];
+}
+
 interface Props {
   counts: Record<string, number>;
   initialArticles?: KBArticle[];
@@ -332,7 +341,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
       return (
         a.title.toLowerCase().includes(q) ||
         a.content.toLowerCase().includes(q) ||
-        (a.tags || []).some((t: string) => t.toLowerCase().includes(q))
+        parseTags(a.tags).some((t: string) => t.toLowerCase().includes(q))
       );
     }
     return true;
@@ -351,7 +360,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
     setArticleForm({
       title: article.title,
       category: article.category,
-      tags: (article.tags || []).join(", "),
+      tags: parseTags(article.tags).join(", "),
       content: article.content,
     });
     setArticleFile(null);
@@ -1009,7 +1018,7 @@ export default function DataManagementView({ counts, initialArticles = [] }: Pro
                           <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full ${catInfo.color}`}>
                             {t(catInfo.labelKey)}
                           </span>
-                          {(article.tags || []).slice(0, 3).map((tag: string) => (
+                          {parseTags(article.tags).slice(0, 3).map((tag: string) => (
                             <span key={tag} className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-slate-500 bg-slate-100 rounded-full">
                               <Tag size={9} />
                               {tag}
