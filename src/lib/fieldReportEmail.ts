@@ -374,6 +374,20 @@ export async function sendFieldReportEmail(
 
     if (result.success) {
       console.log("[DFR-EMAIL] Email sent successfully!", { messageId: result.messageId, to: customer.email });
+
+      // Log activity on the project
+      try {
+        await prisma.activity.create({
+          data: {
+            parentType: "project",
+            parentId: projectId,
+            type: "email",
+            content: `Daily Field Report sent to ${customer.name} (${customer.email}) — ${project.name} (${reportDate})`,
+            user: reportData.supervisorName || "system",
+            organizationId: (project as any).organizationId || undefined,
+          },
+        });
+      } catch { /* activity logging should not block */ }
     } else {
       console.error("[DFR-EMAIL] Email send FAILED:", result.error);
     }

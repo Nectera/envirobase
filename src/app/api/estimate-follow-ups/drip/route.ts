@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         status: "active",
       },
       include: {
-        estimate: { select: { id: true, status: true } },
+        estimate: { select: { id: true, status: true, organizationId: true } },
       },
       take: 50,
     });
@@ -134,6 +134,18 @@ export async function POST(req: NextRequest) {
             status: isLastTouch ? "completed" : "active",
           },
         });
+
+        // Log activity on the estimate
+        await prisma.activity.create({
+          data: {
+            parentType: "estimate",
+            parentId: fu.estimateId,
+            type: "email",
+            content: `Estimate follow-up (touch ${touchIndex + 1}/${sequence.length}) sent to ${fu.clientName || ""} (${fu.clientEmail})`,
+            user: "system",
+            organizationId: fu.estimate?.organizationId || undefined,
+          },
+        }).catch(() => {});
       } else {
         failed++;
         await prisma.estimateFollowUp.update({

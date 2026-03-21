@@ -119,6 +119,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         html,
         text: `Your content inventory is ready for review. Please visit: ${reviewUrl}`,
       }).catch((err: any) => console.error("Failed to send review email:", err));
+
+      // Log activity on the project
+      await prisma.activity.create({
+        data: orgData(orgId, {
+          parentType: "project",
+          parentId: params.id,
+          type: "email",
+          content: `Content Inventory Review sent to ${customerName || ""} (${customerEmail.trim()}) — ${project?.name || "Project"}`,
+          user: (session.user as any)?.name || "system",
+        }),
+      }).catch(() => {});
     }
 
     return NextResponse.json(review, { status: 201 });
