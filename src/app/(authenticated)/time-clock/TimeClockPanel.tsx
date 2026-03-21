@@ -1179,7 +1179,6 @@ export default function TimeClockPanel({
                   })}
                 </div>
               </div>
-            </div>
 
               {/* Document Upload Section */}
               <div>
