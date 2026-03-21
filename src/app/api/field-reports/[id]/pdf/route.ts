@@ -186,10 +186,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
     // === WORK ===
     sectionHeader("Work Completed Today");
-    fieldRow("Summary:", report.workCompletedToday);
-
-    sectionHeader("Workflow");
-    longField("", report.workflow);
+    longField("", [report.workCompletedToday, report.workflow].filter(Boolean).join("\n\n"));
 
     // === SHIFT REVIEW ===
     sectionHeader("End of Shift Review");

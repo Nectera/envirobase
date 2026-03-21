@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
       workAreaLocations: latest.workAreaLocations || [],
       goalsForWeek: latest.goalsForWeek || "",
       negativeAirMachineCount: latest.negativeAirMachineCount != null ? String(latest.negativeAirMachineCount) : "",
+      negativeAirEstablished: latest.negativeAirEstablished ?? false,
       asbestosInWorkArea: latest.asbestosInWorkArea || "",
       estimatedCompletionDate: latest.estimatedCompletionDate || "",
       estimatedHoursTotal: latest.estimatedHoursTotal != null ? String(latest.estimatedHoursTotal) : "",

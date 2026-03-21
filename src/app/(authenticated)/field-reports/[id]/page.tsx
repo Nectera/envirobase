@@ -155,9 +155,10 @@ export default async function FieldReportDetailPage({ params }: { params: { id: 
       {/* Work */}
       <SectionBlock title="Work Completed Today">
         <dl className="space-y-3">
-          <Field label="Summary" value={report.workCompletedToday} fullWidth />
-          <Field label="Workflow" value={
-            <p className="whitespace-pre-wrap text-slate-700">{report.workflow}</p>
+          <Field label="Work Completed" value={
+            <p className="whitespace-pre-wrap text-slate-700">
+              {[report.workCompletedToday, report.workflow].filter(Boolean).join("\n\n")}
+            </p>
           } fullWidth />
         </dl>
       </SectionBlock>

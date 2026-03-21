@@ -36,7 +36,6 @@ type FormData = {
   estimatedHoursTotal: string;
   // Work
   workCompletedToday: string;
-  workflow: string;
   // End of Shift
   shiftReview: string;
   incident: boolean;
@@ -106,7 +105,6 @@ const defaultForm: FormData = {
   daysRemaining: "",
   estimatedHoursTotal: "",
   workCompletedToday: "",
-  workflow: "",
   shiftReview: "",
   incident: false,
   incidentDetails: "",
@@ -219,6 +217,7 @@ export default function FieldReportForm({
         workAreaLocations: cf.data.workAreaLocations?.length ? cf.data.workAreaLocations : prev.workAreaLocations,
         goalsForWeek: cf.data.goalsForWeek || prev.goalsForWeek,
         negativeAirMachineCount: cf.data.negativeAirMachineCount || prev.negativeAirMachineCount,
+        negativeAirEstablished: cf.data.negativeAirEstablished ?? prev.negativeAirEstablished,
         asbestosInWorkArea: cf.data.asbestosInWorkArea || prev.asbestosInWorkArea,
         estimatedCompletionDate: cf.data.estimatedCompletionDate || prev.estimatedCompletionDate,
         estimatedHoursTotal: cf.data.estimatedHoursTotal || prev.estimatedHoursTotal,
@@ -538,15 +537,11 @@ export default function FieldReportForm({
       <Section title="Work Completed Today" defaultOpen={true}>
         <div>
           <Label required>Work Completed</Label>
-          <Input value={form.workCompletedToday} onChange={(e) => update("workCompletedToday", e.target.value)} placeholder="Brief summary (e.g., Detail, Demolition, Setup)" />
-        </div>
-        <div>
-          <Label required>Workflow</Label>
           <TextArea
-            rows={5}
-            value={form.workflow}
-            onChange={(e) => update("workflow", e.target.value)}
-            placeholder="Describe the day's workflow in detail..."
+            rows={6}
+            value={form.workCompletedToday}
+            onChange={(e) => update("workCompletedToday", e.target.value)}
+            placeholder="Describe the work completed today in detail (e.g., setup, demolition, containment, removal, detail work, workflow)..."
           />
         </div>
       </Section>
