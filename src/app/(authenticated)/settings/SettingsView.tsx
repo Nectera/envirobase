@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog, CreditCard, Palette, Video, Building2 } from "lucide-react";
+import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog, CreditCard, Palette, Video, Building2, ClipboardList } from "lucide-react";
 import SmtpSettings from "./SmtpSettings";
 import BillingSettings from "./BillingSettings";
 import BrandingSettings from "./BrandingSettings";
+import ConsultationFieldSettings from "./ConsultationFieldSettings";
 import { useTranslation } from "@/components/LanguageProvider";
 import { logger } from "@/lib/logger";
 import { DEFAULT_COGS_RATES, type COGSRates } from "@/lib/materials";
@@ -18,7 +19,7 @@ interface Props {
 
 export default function SettingsView({ initialPositions, initialRoles, initialCertTypes, initialCogsRates }: Props) {
   const { t, language, setLanguage } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email" | "billing" | "branding" | "meetings" | "offices">("roles");
+  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email" | "billing" | "branding" | "meetings" | "offices" | "consultationFields">("roles");
   const [positions, setPositions] = useState(initialPositions);
   const [roles, setRoles] = useState(initialRoles);
   const [certTypes, setCertTypes] = useState(initialCertTypes);
@@ -85,6 +86,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
     { key: "certRequirements" as const, label: t("settings.certRequirements"), icon: ShieldCheck },
     { key: "branding" as const, label: "Branding", icon: Palette },
     { key: "offices" as const, label: "Offices", icon: Building2 },
+    { key: "consultationFields" as const, label: "Consultation Fields", icon: ClipboardList },
     { key: "meetings" as const, label: "Meetings", icon: Video },
     { key: "email" as const, label: "Email / SMTP", icon: ServerCog },
     { key: "billing" as const, label: "Billing", icon: CreditCard },
@@ -1246,6 +1248,9 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
 
       {/* Billing tab */}
       {activeTab === "billing" && <BillingSettings />}
+
+      {/* Consultation Fields tab */}
+      {activeTab === "consultationFields" && <ConsultationFieldSettings />}
 
       {/* Save button */}
       {(activeTab === "roles" || activeTab === "positions" || activeTab === "certifications") && (

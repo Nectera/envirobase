@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_OPS_RATE, DEFAULT_COGS_RATES } from "@/lib/materials";
+import { DEFAULT_CONSULTATION_FIELDS } from "@/lib/consultationFieldConfig";
+import { requireOrg } from "@/lib/org-context";
+import { NextResponse } from "next/server";
 import ConsultationForm from "./ConsultationForm";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +12,10 @@ export default async function ConsultationEstimatePage({
 }: {
   searchParams: { leadId?: string };
 }) {
+  // Get org context for org-scoped settings
+  const auth = await requireOrg();
+  const orgId = auth instanceof NextResponse ? null : auth.orgId;
+
   let lead = null;
   if (searchParams.leadId) {
     lead = await prisma.lead.findUnique({
@@ -77,6 +84,19 @@ export default async function ConsultationEstimatePage({
     orderBy: { name: "asc" },
   });
 
+  // Load consultation field config (tenant-customizable Step 2 fields)
+  let fieldConfig = DEFAULT_CONSULTATION_FIELDS;
+  if (orgId) {
+    try {
+      const configSetting = await prisma.setting.findUnique({
+        where: { key: `consultationFieldConfig_${orgId}` },
+      });
+      if (configSetting?.value) {
+        fieldConfig = JSON.parse(configSetting.value);
+      }
+    } catch {}
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -94,6 +114,7 @@ export default async function ConsultationEstimatePage({
         contacts={contacts}
         settingsOpsRate={settingsOpsRate}
         cogsRates={cogsRates}
+        fieldConfig={fieldConfig}
       />
     </div>
   );

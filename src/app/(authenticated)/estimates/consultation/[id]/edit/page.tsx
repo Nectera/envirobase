@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_OPS_RATE, DEFAULT_COGS_RATES } from "@/lib/materials";
+import { DEFAULT_CONSULTATION_FIELDS } from "@/lib/consultationFieldConfig";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isAdmin, isOffice } from "@/lib/roles";
+import { requireOrg } from "@/lib/org-context";
+import { NextResponse } from "next/server";
 import ConsultationForm from "../../ConsultationForm";
 
 export const dynamic = "force-dynamic";
@@ -39,13 +42,28 @@ export default async function EditConsultationPage({ params }: { params: { id: s
     cogsRates[key] = parseFloat(s.value);
   });
 
+  // Load consultation field config
+  const auth = await requireOrg();
+  const orgId = auth instanceof NextResponse ? null : auth.orgId;
+  let fieldConfig = DEFAULT_CONSULTATION_FIELDS;
+  if (orgId) {
+    try {
+      const configSetting = await prisma.setting.findUnique({
+        where: { key: `consultationFieldConfig_${orgId}` },
+      });
+      if (configSetting?.value) {
+        fieldConfig = JSON.parse(configSetting.value);
+      }
+    } catch {}
+  }
+
   return (
     <div>
       <div className="mb-4">
         <h1 className="text-xl font-bold text-slate-900">Edit Consultation Estimate</h1>
         <p className="text-sm text-slate-500">Editing estimate for {(data as any).customerName}</p>
       </div>
-      <ConsultationForm editId={params.id} initialData={data} settingsOpsRate={settingsOpsRate} cogsRates={cogsRates} />
+      <ConsultationForm editId={params.id} initialData={data} settingsOpsRate={settingsOpsRate} cogsRates={cogsRates} fieldConfig={fieldConfig} />
     </div>
   );
 }

@@ -19,6 +19,12 @@ import {
   DEFAULT_COGS_RATES,
   type COGSRates,
 } from "@/lib/materials";
+import {
+  DEFAULT_CONSULTATION_FIELDS,
+  KNOWN_COLUMN_FIELDS,
+  FORMULA_FIELDS,
+  type ConsultationFieldDef,
+} from "@/lib/consultationFieldConfig";
 import { ChevronDown, ChevronUp, Calculator, MapPin, Search, X } from "lucide-react";
 
 interface Lead {
@@ -207,9 +213,10 @@ interface ConsultationFormProps {
   contacts?: ContactOption[];
   settingsOpsRate?: number;
   cogsRates?: Partial<COGSRates>;
+  fieldConfig?: ConsultationFieldDef[];
 }
 
-export default function ConsultationForm({ lead, editId, initialData, companies = [], leads = [], contacts = [], settingsOpsRate, cogsRates: propCogsRates }: ConsultationFormProps) {
+export default function ConsultationForm({ lead, editId, initialData, companies = [], leads = [], contacts = [], settingsOpsRate, cogsRates: propCogsRates, fieldConfig = DEFAULT_CONSULTATION_FIELDS }: ConsultationFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -406,6 +413,19 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
   };
 
   const [formData, setFormData] = useState<ConsultationFormData>(buildInitialFormData);
+
+  // Custom fields state — for fields not in KNOWN_COLUMN_FIELDS
+  // These get stored in the `data` JSON column on save
+  const [customFields, setCustomFields] = useState<Record<string, any>>(() => {
+    if (initialData?.data && typeof initialData.data === "object") {
+      return (initialData.data as Record<string, any>).customFields || {};
+    }
+    return {};
+  });
+
+  const handleCustomFieldChange = useCallback((fieldId: string, value: any) => {
+    setCustomFields((prev) => ({ ...prev, [fieldId]: value }));
+  }, []);
 
   // Auto-markup: 15% base + 1% per difficulty rating
   useEffect(() => {
@@ -794,6 +814,8 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         customerPriceOverride: formData.customerPriceOverride,
         serviceDescription: formData.serviceDescription,
         customerPrice: totals.customerPrice,
+        // Include custom field data in the JSON data column
+        data: { customFields },
       };
 
       const url = isEditMode
@@ -1108,475 +1130,272 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
           </div>
         )}
 
-        {/* Step 2: Field Consultation */}
-        {currentStep === 2 && (
-          <div className="space-y-6">
-            <StepNav showBack showNext onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />
-            <h2 className="text-2xl font-bold">Step 2: Field Consultation</h2>
+        {/* Step 2: Field Consultation — dynamically rendered from fieldConfig */}
+        {currentStep === 2 && (() => {
+          // Helper to get/set value for a field — known columns use formData, custom fields use customFields
+          const getFieldValue = (field: ConsultationFieldDef): any => {
+            if (KNOWN_COLUMN_FIELDS.has(field.id)) {
+              return (formData as any)[field.id] ?? (field.type === "checkbox" ? false : field.type === "checkboxGroup" ? [] : "");
+            }
+            return customFields[field.id] ?? (field.type === "checkbox" ? false : field.type === "checkboxGroup" ? [] : "");
+          };
+          const setFieldValue = (field: ConsultationFieldDef, value: any) => {
+            if (KNOWN_COLUMN_FIELDS.has(field.id)) {
+              handleInputChange(field.id, value);
+            } else {
+              handleCustomFieldChange(field.id, value);
+            }
+          };
 
-            {/* Site Visit Requirements */}
-            <div className="border p-4 rounded">
-              <label className="block text-sm font-medium mb-4">
-                Site Visit Requirements
-              </label>
-              <div className="space-y-2">
-                {SITE_VISIT_REQUIREMENTS.map((req) => (
-                  <label key={req} className="flex items-center gap-2">
+          // Group fields by their group property
+          const grouped: { group: string; fields: ConsultationFieldDef[] }[] = [];
+          let currentGroup: string | null = null;
+          for (const f of fieldConfig) {
+            if (FORMULA_FIELDS.includes(f.id)) continue; // skip formula fields — rendered separately
+            const g = f.group || "";
+            if (g !== currentGroup) {
+              grouped.push({ group: g, fields: [f] });
+              currentGroup = g;
+            } else {
+              grouped[grouped.length - 1].fields.push(f);
+            }
+          }
+
+          // Render a single field based on its type
+          const renderField = (field: ConsultationFieldDef) => {
+            const value = getFieldValue(field);
+            const wrapperClass = field.fullWidth ? "col-span-full" : "";
+
+            switch (field.type) {
+              case "checkboxGroup":
+                return (
+                  <div key={field.id} className={`border p-4 rounded ${wrapperClass}`}>
+                    <label className="block text-sm font-medium mb-4">{field.label}</label>
+                    <div className="space-y-2">
+                      {(field.options || []).map((opt) => {
+                        const checked = Array.isArray(value) ? value.includes(opt) : false;
+                        return (
+                          <label key={opt} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                const arr = Array.isArray(value) ? [...value] : [];
+                                if (checked) {
+                                  setFieldValue(field, arr.filter((v: string) => v !== opt));
+                                } else {
+                                  setFieldValue(field, [...arr, opt]);
+                                }
+                              }}
+                              className="w-4 h-4 md:min-h-[44px] md:w-5 md:h-5"
+                            />
+                            <span className="text-sm">{opt}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+
+              case "checkbox":
+                return (
+                  <label key={field.id} className={`flex items-center gap-2 ${wrapperClass}`}>
                     <input
                       type="checkbox"
-                      checked={formData.siteVisitRequirements.includes(req)}
-                      onChange={() => handleSiteVisitCheckbox(req)}
-                      className="w-4 h-4 md:min-h-[44px] md:w-5 md:h-5"
-                    />
-                    <span className="text-sm">{req}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Scope of Work
-              </label>
-              <textarea
-                value={formData.scopeOfWork}
-                onChange={(e) => handleInputChange("scopeOfWork", e.target.value)}
-                className="w-full px-3 py-2 border rounded min-h-[100px]"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Days Needed
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.daysNeeded}
-                  onChange={(e) =>
-                    handleInputChange("daysNeeded", parseInt(e.target.value) || 1)
-                  }
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Crew Size
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.crewSize}
-                  onChange={(e) =>
-                    handleInputChange("crewSize", parseInt(e.target.value) || 1)
-                  }
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Payment Type
-                </label>
-                <select
-                  value={formData.paymentType}
-                  onChange={(e) => handleInputChange("paymentType", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                >
-                  <option value="">Select...</option>
-                  <option value="Insurance">Insurance</option>
-                  <option value="Self Pay">Self Pay</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Type of Loss
-                </label>
-                <input
-                  type="text"
-                  value={formData.typeOfLoss}
-                  onChange={(e) => handleInputChange("typeOfLoss", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Drive Time Hours
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={formData.driveTimeHours}
-                  onChange={(e) =>
-                    handleInputChange("driveTimeHours", parseFloat(e.target.value) || 0)
-                  }
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Vacate Property
-                </label>
-                <select
-                  value={formData.vacateNeeded}
-                  onChange={(e) => handleInputChange("vacateNeeded", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                >
-                  <option value="">Select...</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.septicSystem}
-                  onChange={(e) => handleInputChange("septicSystem", e.target.checked)}
-                  className="w-4 h-4 md:w-5 md:h-5"
-                />
-                <span className="text-sm">Septic System</span>
-              </label>
-
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.sufficientPower}
-                  onChange={(e) => handleInputChange("sufficientPower", e.target.checked)}
-                  className="w-4 h-4 md:w-5 md:h-5"
-                />
-                <span className="text-sm">Power Available</span>
-              </label>
-
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.goodWaterSource}
-                  onChange={(e) =>
-                    handleInputChange("goodWaterSource", e.target.checked)
-                  }
-                  className="w-4 h-4 md:w-5 md:h-5"
-                />
-                <span className="text-sm">Water Source</span>
-              </label>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Difficulty Rating (1-5)
-                </label>
-                <select
-                  value={formData.difficultyRating}
-                  onChange={(e) =>
-                    handleInputChange("difficultyRating", parseInt(e.target.value))
-                  }
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                >
-                  <option value={1}>1 - Easy</option>
-                  <option value={2}>2</option>
-                  <option value={3}>3 - Medium</option>
-                  <option value={4}>4</option>
-                  <option value={5}>5 - Very Difficult</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Estimated Waste (Cubic Yards)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={formData.wasteYards}
-                  onChange={(e) =>
-                    handleInputChange("wasteYards", parseFloat(e.target.value) || 0)
-                  }
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Permit Required
-                </label>
-                <select
-                  value={formData.permitRequired}
-                  onChange={(e) => handleInputChange("permitRequired", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                >
-                  <option value="">Select...</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                  <option value="TBD">TBD</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Air Clearances
-                </label>
-                <input
-                  type="text"
-                  value={formData.airClearances}
-                  onChange={(e) => handleInputChange("airClearances", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Project Design
-                </label>
-                <input
-                  type="text"
-                  value={formData.projectDesign}
-                  onChange={(e) => handleInputChange("projectDesign", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Decon/Loadout Location
-                </label>
-                <input
-                  type="text"
-                  value={formData.deconLoadout}
-                  onChange={(e) => handleInputChange("deconLoadout", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  NAMs Count
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.namsCount}
-                  onChange={(e) =>
-                    handleInputChange("namsCount", parseInt(e.target.value) || 0)
-                  }
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Duct Cleaning Eligibility
-                </label>
-                <input
-                  type="text"
-                  value={formData.ductCleaning}
-                  onChange={(e) => handleInputChange("ductCleaning", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-            </div>
-
-            {/* Dumpster Section - Only show if dumpsterNeeded is true */}
-            <div className="border p-4 rounded">
-              <label className="block text-sm font-medium mb-4">
-                Dumpster Needed?
-              </label>
-              <label className="flex items-center gap-2 mb-4">
-                <input
-                  type="checkbox"
-                  checked={formData.dumpsterNeeded}
-                  onChange={(e) => handleInputChange("dumpsterNeeded", e.target.checked)}
-                  className="w-4 h-4 md:w-5 md:h-5"
-                />
-                <span className="text-sm">Yes, dumpster needed</span>
-              </label>
-
-              {formData.dumpsterNeeded && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.asbestosDumpster}
-                      onChange={(e) =>
-                        handleInputChange("asbestosDumpster", e.target.checked)
-                      }
+                      checked={!!value}
+                      onChange={(e) => setFieldValue(field, e.target.checked)}
                       className="w-4 h-4 md:w-5 md:h-5"
                     />
-                    <span className="text-sm">Asbestos Dumpster</span>
+                    <span className="text-sm">{field.label}</span>
                   </label>
+                );
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Dumpster Swaps
-                    </label>
+              case "textarea":
+                return (
+                  <div key={field.id} className={wrapperClass}>
+                    <label className="block text-sm font-medium mb-2">{field.label}</label>
+                    <textarea
+                      value={value || ""}
+                      onChange={(e) => setFieldValue(field, e.target.value)}
+                      placeholder={field.placeholder}
+                      className="w-full px-3 py-2 border rounded min-h-[100px]"
+                    />
+                  </div>
+                );
+
+              case "select":
+                return (
+                  <div key={field.id} className={wrapperClass}>
+                    <label className="block text-sm font-medium mb-2">{field.label}</label>
+                    <select
+                      value={value || ""}
+                      onChange={(e) => setFieldValue(field, e.target.value)}
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded"
+                    >
+                      <option value="">Select...</option>
+                      {(field.options || []).map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+
+              case "number":
+                return (
+                  <div key={field.id} className={wrapperClass}>
+                    <label className="block text-sm font-medium mb-2">{field.label}</label>
                     <input
-                      type="text"
-                      value={formData.dumpsterSwaps}
-                      onChange={(e) =>
-                        handleInputChange("dumpsterSwaps", e.target.value)
-                      }
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={value || 0}
+                      onChange={(e) => setFieldValue(field, parseFloat(e.target.value) || 0)}
                       className="w-full px-3 py-2 md:min-h-[44px] border rounded"
                     />
                   </div>
+                );
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Open Dumpster
-                    </label>
+              case "text":
+              default:
+                return (
+                  <div key={field.id} className={wrapperClass}>
+                    <label className="block text-sm font-medium mb-2">{field.label}</label>
                     <input
                       type="text"
-                      value={formData.openDumpster}
-                      onChange={(e) =>
-                        handleInputChange("openDumpster", e.target.value)
-                      }
+                      value={value || ""}
+                      onChange={(e) => setFieldValue(field, e.target.value)}
+                      placeholder={field.placeholder}
                       className="w-full px-3 py-2 md:min-h-[44px] border rounded"
                     />
                   </div>
+                );
+            }
+          };
 
+          return (
+            <div className="space-y-6">
+              <StepNav showBack showNext onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />
+              <h2 className="text-2xl font-bold">Step 2: Field Consultation</h2>
+
+              {/* Render configurable fields by group */}
+              {grouped.map((g, gi) => {
+                // Fields without a group render directly
+                if (!g.group) {
+                  return g.fields.map((f) => renderField(f));
+                }
+                // Group checkboxes together in a row
+                const allCheckboxes = g.fields.every((f) => f.type === "checkbox");
+                if (allCheckboxes) {
+                  return (
+                    <div key={g.group} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {g.fields.map((f) => renderField(f))}
+                    </div>
+                  );
+                }
+                // Standard group: 2-col grid with heading
+                return (
+                  <div key={g.group}>
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">{g.group}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {g.fields.map((f) => renderField(f))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Formula fields — always present, cannot be removed */}
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded">
+                <h3 className="text-sm font-semibold text-blue-900 mb-3">
+                  Cost Calculation Fields
+                </h3>
+                <p className="text-xs text-blue-700 mb-4">These fields drive the cost calculations on Steps 3–7.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Dumpster Placement
-                    </label>
+                    <label className="block text-sm font-medium mb-2">Days Needed</label>
                     <input
-                      type="text"
-                      value={formData.dumpsterPlacement}
-                      onChange={(e) =>
-                        handleInputChange("dumpsterPlacement", e.target.value)
-                      }
-                      className="w-full px-3 py-2 md:min-h-[44px] border rounded"
+                      type="number"
+                      min="1"
+                      value={formData.daysNeeded}
+                      onChange={(e) => handleInputChange("daysNeeded", parseInt(e.target.value) || 1)}
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Crew Size</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.crewSize}
+                      onChange={(e) => handleInputChange("crewSize", parseInt(e.target.value) || 1)}
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Drive Time Hours</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={formData.driveTimeHours}
+                      onChange={(e) => handleInputChange("driveTimeHours", parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Difficulty Rating (1-5)</label>
+                    <select
+                      value={formData.difficultyRating}
+                      onChange={(e) => handleInputChange("difficultyRating", parseInt(e.target.value))}
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
+                    >
+                      <option value={1}>1 - Easy</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3 - Medium</option>
+                      <option value={4}>4</option>
+                      <option value={5}>5 - Very Difficult</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Estimated Waste (Cubic Yards)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={formData.wasteYards}
+                      onChange={(e) => handleInputChange("wasteYards", parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Permit Required</label>
+                    <select
+                      value={formData.permitRequired}
+                      onChange={(e) => handleInputChange("permitRequired", e.target.value)}
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                      <option value="TBD">TBD</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">NAMs Count</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.namsCount}
+                      onChange={(e) => handleInputChange("namsCount", parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
                     />
                   </div>
                 </div>
-              )}
+              </div>
+
+              <StepNav showBack showNext onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.portableBathroom}
-                  onChange={(e) =>
-                    handleInputChange("portableBathroom", e.target.checked)
-                  }
-                  className="w-4 h-4 md:w-5 md:h-5"
-                />
-                <span className="text-sm">Portable Bathroom</span>
-              </label>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Flooring Layers
-                </label>
-                <input
-                  type="text"
-                  value={formData.floringLayers}
-                  onChange={(e) => handleInputChange("floringLayers", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Drywall Layers
-                </label>
-                <input
-                  type="text"
-                  value={formData.dryWallLayers}
-                  onChange={(e) => handleInputChange("dryWallLayers", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  HVAC/Ducting
-                </label>
-                <input
-                  type="text"
-                  value={formData.hvacRemoval}
-                  onChange={(e) => handleInputChange("hvacRemoval", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Spill/ACM Quantity
-                </label>
-                <input
-                  type="text"
-                  value={formData.acmDisturbed}
-                  onChange={(e) => handleInputChange("acmDisturbed", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Contents Removal
-                </label>
-                <input
-                  type="text"
-                  value={formData.contentsRemove}
-                  onChange={(e) => handleInputChange("contentsRemove", e.target.value)}
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Furniture/Appliances
-                </label>
-                <input
-                  type="text"
-                  value={formData.furnitureAppliances}
-                  onChange={(e) =>
-                    handleInputChange("furnitureAppliances", e.target.value)
-                  }
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-
-              <div className="col-span-full">
-                <label className="block text-sm font-medium mb-2">
-                  Customer Responsibilities
-                </label>
-                <input
-                  type="text"
-                  value={formData.customerInformed}
-                  onChange={(e) =>
-                    handleInputChange("customerInformed", e.target.value)
-                  }
-                  className="w-full px-3 py-2 md:min-h-[44px] border rounded"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Field Notes
-              </label>
-              <textarea
-                value={formData.fieldNotes}
-                onChange={(e) => handleInputChange("fieldNotes", e.target.value)}
-                className="w-full px-3 py-2 border rounded min-h-[100px]"
-              />
-            </div>
-
-            <StepNav showBack showNext onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />
-          </div>
-        )}
+          );
+        })()}
 
         {/* Step 3: Labor */}
         {currentStep === 3 && (

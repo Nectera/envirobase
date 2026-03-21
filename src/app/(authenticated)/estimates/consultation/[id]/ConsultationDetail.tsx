@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FileText, DollarSign, X, Pencil } from "lucide-react";
 import { LABOR_RATES, DEFAULT_COGS, DEFAULT_MATERIALS } from "@/lib/materials";
+import {
+  DEFAULT_CONSULTATION_FIELDS,
+  KNOWN_COLUMN_FIELDS,
+  FORMULA_FIELDS,
+  type ConsultationFieldDef,
+} from "@/lib/consultationFieldConfig";
 import { logger } from "@/lib/logger";
 
 // Flexible type that handles both old nested and new flat data shapes
@@ -164,8 +170,10 @@ function YesNoBadge({ value }: { value: boolean }) {
 
 export default function ConsultationDetail({
   data,
+  fieldConfig = DEFAULT_CONSULTATION_FIELDS,
 }: {
   data: ConsultationEstimateData;
+  fieldConfig?: ConsultationFieldDef[];
 }) {
   const router = useRouter();
   const [isConverting, setIsConverting] = useState(false);
@@ -640,6 +648,61 @@ export default function ConsultationDetail({
               </p>
             </div>
           )}
+
+          {/* Custom fields (tenant-defined, stored in data.customFields) */}
+          {(() => {
+            const customFieldDefs = fieldConfig.filter(
+              (f) => !KNOWN_COLUMN_FIELDS.has(f.id) && !FORMULA_FIELDS.includes(f.id)
+            );
+            const cfData = (data as any).data?.customFields || {};
+            const fieldsWithValues = customFieldDefs.filter((f) => {
+              const v = cfData[f.id];
+              if (v == null || v === "" || v === false) return false;
+              if (Array.isArray(v) && v.length === 0) return false;
+              return true;
+            });
+            if (fieldsWithValues.length === 0) return null;
+
+            // Group by group property
+            const grouped: { group: string; fields: ConsultationFieldDef[] }[] = [];
+            let curGroup: string | null = null;
+            for (const f of fieldsWithValues) {
+              const g = f.group || "Additional Fields";
+              if (g !== curGroup) {
+                grouped.push({ group: g, fields: [f] });
+                curGroup = g;
+              } else {
+                grouped[grouped.length - 1].fields.push(f);
+              }
+            }
+
+            return grouped.map((g) => (
+              <div key={g.group}>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">{g.group}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {g.fields.map((f) => {
+                    const v = cfData[f.id];
+                    return (
+                      <div key={f.id}>
+                        <p className="text-xs text-slate-600 mb-1">{f.label}</p>
+                        {f.type === "checkbox" ? (
+                          <YesNoBadge value={!!v} />
+                        ) : f.type === "checkboxGroup" && Array.isArray(v) ? (
+                          <div className="flex flex-wrap gap-2">
+                            {v.map((item: string, idx: number) => (
+                              <span key={idx} className="inline-block px-3 py-1 text-xs font-medium rounded bg-green-100 text-green-800">{item}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-900 whitespace-pre-wrap">{String(v)}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ));
+          })()}
         </div>
       </div>
 
