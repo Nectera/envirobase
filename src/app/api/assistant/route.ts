@@ -38,7 +38,7 @@ function buildSystemPrompt(memories: any[], role: string, knowledgeBaseArticles:
     knowledgeBaseBlock = kb;
   }
 
-  const isAdmin = role === "ADMIN" || role === "SUPERVISOR";
+  const isAdmin = role === "ADMIN" || role === "PROJECT_MANAGER" || role === "SUPERVISOR";
 
   const adminCapabilities = isAdmin
     ? `
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = buildSystemPrompt(allMemories, userRole, knowledgeBaseArticles);
 
     // Filter tools based on role — hide admin-only tools from non-admin users
-    const isAdmin = userRole === "ADMIN" || userRole === "SUPERVISOR";
+    const isAdmin = userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR";
     const filteredTools = isAdmin
       ? toolDefinitions
       : toolDefinitions.filter((t) => !ADMIN_ONLY_TOOLS.has(t.name));

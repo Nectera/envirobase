@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const { session, orgId } = auth;
 
     const role = session.user.role || "TECHNICIAN";
-    const isAdmin = role === "ADMIN" || role === "SUPERVISOR";
+    const isAdmin = role === "ADMIN" || role === "PROJECT_MANAGER" || role === "SUPERVISOR";
 
     if (!isAdmin) {
       return NextResponse.json({ error: "Admin or supervisor access required" }, { status: 403 });

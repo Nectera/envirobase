@@ -9,7 +9,7 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-const VALID_ROLES = ["ADMIN", "SUPERVISOR", "OFFICE", "TECHNICIAN"];
+const VALID_ROLES = ["ADMIN", "PROJECT_MANAGER", "SUPERVISOR", "OFFICE", "TECHNICIAN"];
 
 function isAdmin(role: string): boolean {
   return role === "ADMIN";

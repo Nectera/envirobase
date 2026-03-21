@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     const role = session.user.role || "TECHNICIAN";
     const body = await req.json();
 
-    const isAdmin = role === "ADMIN" || role === "SUPERVISOR";
+    const isAdmin = role === "ADMIN" || role === "PROJECT_MANAGER" || role === "SUPERVISOR";
 
     const entry = await prisma.timeOff.create({
       data: orgData(orgId, {

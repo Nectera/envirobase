@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (auth instanceof NextResponse) return auth;
     const { session, orgId } = auth;
     const role = (session?.user as any)?.role || "TECHNICIAN";
-    if (role !== "ADMIN" && role !== "SUPERVISOR") {
+    if (role !== "ADMIN" && role !== "PROJECT_MANAGER" && role !== "SUPERVISOR") {
       return NextResponse.json({ error: "Admin or supervisor access required" }, { status: 403 });
     }
 
@@ -43,7 +43,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (auth instanceof NextResponse) return auth;
     const { session, orgId } = auth;
     const role = (session?.user as any)?.role || "TECHNICIAN";
-    if (role !== "ADMIN" && role !== "SUPERVISOR") {
+    if (role !== "ADMIN" && role !== "PROJECT_MANAGER" && role !== "SUPERVISOR") {
       return NextResponse.json({ error: "Admin or supervisor access required" }, { status: 403 });
     }
 

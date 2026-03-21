@@ -30,7 +30,7 @@ export default async function TimeClockPage() {
     : null;
 
   // Determine clock role from user profile
-  const isSupOrAdmin = userRole === "ADMIN" || userRole === "SUPERVISOR";
+  const isSupOrAdmin = userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR";
   const clockRole = isSupOrAdmin ? "supervisor" : "technician";
 
   // Get today's date and start of week (Monday)

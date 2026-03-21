@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   const rolesSetting = await prisma.setting.findUnique({ where: { key: "roles" } });
   const roles: string[] = rolesSetting?.value
     ? JSON.parse(rolesSetting.value)
-    : ["ADMIN", "SUPERVISOR", "TECHNICIAN", "OFFICE"];
+    : ["ADMIN", "PROJECT_MANAGER", "SUPERVISOR", "TECHNICIAN", "OFFICE"];
 
   const certTypesSetting = await prisma.setting.findUnique({ where: { key: "certificationTypes" } });
   const certTypes: string[] = certTypesSetting?.value

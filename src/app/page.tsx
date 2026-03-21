@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { isTechnician, isOffice, isSupervisor } from "@/lib/roles";
+import { isTechnician, isOffice, isSupervisor, isProjectManager } from "@/lib/roles";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);

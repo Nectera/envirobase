@@ -43,6 +43,7 @@ export default function Sidebar({
   const isTech = userRole === "TECHNICIAN";
   const isOffice = userRole === "OFFICE";
   const isSupervisor = userRole === "SUPERVISOR";
+  const isPM = userRole === "PROJECT_MANAGER";
   const isAdmin = userRole === "ADMIN";
 
   const crmNavItems: NavItem[] = [
@@ -74,6 +75,12 @@ export default function Sidebar({
     { href: "/plugins", labelKey: "sidebar.plugins", icon: Puzzle },
     { href: "/settings/notifications", labelKey: "sidebar.notifications", icon: Bell },
     { href: "/settings", labelKey: "sidebar.settings", icon: Settings },
+  ];
+
+  const pmSettingsNavItems: NavItem[] = [
+    { href: "/workers", labelKey: "sidebar.team", icon: Users },
+    { href: "/data-management", labelKey: "sidebar.dataManagement", icon: Database },
+    { href: "/settings/notifications", labelKey: "sidebar.notifications", icon: Bell },
   ];
 
   const technicianNavItems: NavItem[] = [
@@ -131,7 +138,7 @@ export default function Sidebar({
     );
   };
 
-  const subtitleKey = isTech ? "sidebar.myPortal" : isOffice ? "sidebar.salesPortal" : isSupervisor ? "sidebar.myPortal" : "sidebar.pms";
+  const subtitleKey = isTech ? "sidebar.myPortal" : isOffice ? "sidebar.salesPortal" : isSupervisor ? "sidebar.myPortal" : isPM ? "sidebar.pms" : "sidebar.pms";
 
   const sectionDivider = (
     <div className="mx-4 my-2 border-t border-white/[0.06]" />
@@ -179,6 +186,19 @@ export default function Sidebar({
             {chatNavItem()}
           </>
         )}
+        {isPM && (
+          <>
+            {renderNavItem({ href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock })}
+            {renderNavItem({ href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift })}
+            {chatNavItem()}
+            {sectionDivider}
+            {sectionLabel("sidebar.projectManagement")}
+            {pmNavItems.map((item) => renderNavItem(item))}
+            {sectionDivider}
+            {sectionLabel("sidebar.settings")}
+            {pmSettingsNavItems.map((item) => renderNavItem(item))}
+          </>
+        )}
         {isAdmin && (
           <>
             {renderNavItem({ href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock })}
@@ -217,7 +237,7 @@ export default function Sidebar({
         {!collapsed && (isTech || isOffice || isSupervisor) && userName && (
           <div className="text-xs text-slate-400 font-medium">{userName}</div>
         )}
-        {(isTech || isOffice || isSupervisor) && (
+        {(isTech || isOffice || isSupervisor) && !isPM && (
           <Link
             href="/settings/notifications"
             onClick={close}

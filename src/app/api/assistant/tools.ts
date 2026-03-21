@@ -452,7 +452,7 @@ export async function executeTool(name: string, input: any, role?: string): Prom
   try {
     // Role guard — reject admin-only tools for non-admin/supervisor users
     if (ADMIN_ONLY_TOOLS.has(name)) {
-      const allowed = role === "ADMIN" || role === "SUPERVISOR";
+      const allowed = role === "ADMIN" || role === "PROJECT_MANAGER" || role === "SUPERVISOR";
       if (!allowed) {
         return JSON.stringify({ error: "Permission denied. This action requires admin or supervisor privileges." });
       }

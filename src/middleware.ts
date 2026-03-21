@@ -31,6 +31,15 @@ const TECHNICIAN_ALLOWED = ["/schedule", "/time-clock", "/my-documents", "/tasks
 // Routes office/sales staff are allowed to access
 const OFFICE_ALLOWED = ["/crm", "/leads", "/companies", "/contacts", "/estimates", "/tasks", "/pipeline"];
 
+// Routes project managers are allowed to access
+const PM_ALLOWED = [
+  "/dashboard", "/projects", "/schedule", "/time-clock",
+  "/field-reports", "/psi-jha-spa", "/pre-abatement-inspection",
+  "/post-project-inspection", "/certificate-of-completion",
+  "/calendar", "/workers", "/tasks", "/chat",
+  "/settings/notifications", "/bonus-pool", "/data-management", "/incidents",
+];
+
 // Routes supervisors are allowed to access
 const SUPERVISOR_ALLOWED = [
   "/projects", "/schedule", "/time-clock",
@@ -159,6 +168,14 @@ export async function middleware(request: NextRequest) {
   // Admin dashboard — ADMIN only
   if (pathname.startsWith("/admin")) {
     if (token.role !== "ADMIN") {
+      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
+    }
+  }
+
+  // Project Manager route protection
+  if (token.role === "PROJECT_MANAGER") {
+    const isAllowed = PM_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + "/"));
+    if (!isAllowed && !isApi && !isRoot) {
       return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
     }
   }

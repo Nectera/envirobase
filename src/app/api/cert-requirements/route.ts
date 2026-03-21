@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest) {
     const { session } = auth;
 
     const user = session.user as any;
-    if (user?.role !== "ADMIN" && user?.role !== "SUPERVISOR") {
+    if (user?.role !== "ADMIN" && user?.role !== "PROJECT_MANAGER" && user?.role !== "SUPERVISOR") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 

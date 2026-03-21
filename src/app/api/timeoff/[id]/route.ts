@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (auth instanceof NextResponse) return auth;
     const { session, orgId } = auth;
     const role = (session?.user as any)?.role || "TECHNICIAN";
-    const isAdmin = role === "ADMIN" || role === "SUPERVISOR";
+    const isAdmin = role === "ADMIN" || role === "PROJECT_MANAGER" || role === "SUPERVISOR";
     const body = await req.json();
 
     const existing = await prisma.timeOff.findFirst({ where: { id: params.id, organizationId: orgId } });
@@ -61,7 +61,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (auth instanceof NextResponse) return auth;
     const { session, orgId } = auth;
     const role = (session?.user as any)?.role || "TECHNICIAN";
-    const isAdmin = role === "ADMIN" || role === "SUPERVISOR";
+    const isAdmin = role === "ADMIN" || role === "PROJECT_MANAGER" || role === "SUPERVISOR";
 
     const existing = await prisma.timeOff.findFirst({ where: { id: params.id, organizationId: orgId } });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });

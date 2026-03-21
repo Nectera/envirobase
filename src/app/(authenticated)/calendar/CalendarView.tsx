@@ -37,7 +37,7 @@ export default function CalendarView({
 }: CalendarViewProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const isAdmin = userRole === "ADMIN" || userRole === "SUPERVISOR";
+  const isAdmin = userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR";
 
   // State
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
