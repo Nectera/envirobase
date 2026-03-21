@@ -36,7 +36,7 @@ type TeamViewProps = {
 };
 
 const WORKER_TYPES = ["ASBESTOS", "LEAD", "METH", "MOLD", "SELECT_DEMO", "REBUILD"];
-const WORKER_ROLES = ["ADMIN", "SUPERVISOR", "TECHNICIAN", "OFFICE"];
+const WORKER_ROLES = ["ADMIN", "PROJECT_MANAGER", "SUPERVISOR", "TECHNICIAN", "OFFICE"];
 
 const TYPE_COLORS: Record<string, string> = {
   ASBESTOS: "bg-indigo-100 text-indigo-700",
