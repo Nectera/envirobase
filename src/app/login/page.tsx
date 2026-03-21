@@ -122,7 +122,7 @@ export default function LoginPage() {
         }
         setLoading(false);
       } else if (result?.ok) {
-        router.push("/dashboard");
+        router.push("/");
       } else {
         setError("Login failed. Please try again.");
         setLoading(false);
