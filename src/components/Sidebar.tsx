@@ -89,6 +89,7 @@ export default function Sidebar({
     { href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift },
     { href: "/my-documents", labelKey: "sidebar.myDocuments", icon: FileText },
     { href: "/tasks", labelKey: "sidebar.myTasks", icon: CheckSquare },
+    { href: "/compliance", labelKey: "sidebar.compliance", icon: ClipboardCheck },
   ];
 
   const supervisorNavItems: NavItem[] = [
@@ -96,6 +97,7 @@ export default function Sidebar({
     { href: "/schedule", labelKey: "sidebar.schedule", icon: Calendar },
     { href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock },
     { href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift },
+    { href: "/compliance", labelKey: "sidebar.compliance", icon: ClipboardCheck },
   ];
 
   const chatNavItem = () => {

@@ -36,7 +36,7 @@ export function isOffice(role: string | undefined | null): boolean {
 }
 
 // Technician-accessible routes
-const TECHNICIAN_ROUTES = ["/schedule", "/time-clock", "/my-documents", "/tasks", "/bonus-pool", "/chat", "/settings/notifications"];
+const TECHNICIAN_ROUTES = ["/schedule", "/time-clock", "/my-documents", "/tasks", "/bonus-pool", "/chat", "/settings/notifications", "/compliance"];
 
 // Office/Sales-accessible routes
 const OFFICE_ROUTES = ["/crm", "/leads", "/companies", "/contacts", "/estimates"];
@@ -55,7 +55,7 @@ const SUPERVISOR_ROUTES = [
   "/projects", "/schedule", "/time-clock",
   "/field-reports", "/psi-jha-spa", "/pre-abatement-inspection",
   "/post-project-inspection", "/certificate-of-completion",
-  "/chat", "/settings/notifications", "/bonus-pool",
+  "/chat", "/settings/notifications", "/bonus-pool", "/compliance",
 ];
 
 export function canAccessRoute(role: string | undefined | null, pathname: string): boolean {

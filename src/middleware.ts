@@ -26,7 +26,7 @@ const FEATURE_LABELS: Record<string, string> = {
 };
 
 // Routes technicians are allowed to access
-const TECHNICIAN_ALLOWED = ["/schedule", "/time-clock", "/my-documents", "/tasks", "/bonus-pool", "/chat", "/settings/notifications"];
+const TECHNICIAN_ALLOWED = ["/schedule", "/time-clock", "/my-documents", "/tasks", "/bonus-pool", "/chat", "/settings/notifications", "/compliance"];
 
 // Routes office/sales staff are allowed to access
 const OFFICE_ALLOWED = ["/crm", "/leads", "/companies", "/contacts", "/estimates", "/tasks", "/pipeline"];
@@ -45,7 +45,7 @@ const SUPERVISOR_ALLOWED = [
   "/projects", "/schedule", "/time-clock",
   "/field-reports", "/psi-jha-spa", "/pre-abatement-inspection",
   "/post-project-inspection", "/certificate-of-completion",
-  "/chat", "/settings/notifications", "/bonus-pool",
+  "/chat", "/settings/notifications", "/bonus-pool", "/compliance",
 ];
 
 // Routes that don't need auth
