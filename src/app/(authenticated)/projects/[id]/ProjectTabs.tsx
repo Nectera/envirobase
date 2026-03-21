@@ -209,17 +209,27 @@ export default function ProjectTabs({
   // Sub-tab within Reports
   const [reportsSub, setReportsSub] = useState<"daily" | "safety" | "closeout">("daily");
 
-  const tabs = [
-    { key: "dashboard" as const, label: "Dashboard" },
-    { key: "tasks" as const, label: "Tasks" },
-    { key: "reports" as const, label: `Reports (${reportsCount})` },
-    ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
-    { key: "documents" as const, label: `Documents (${projectDocuments.length})` },
-    { key: "activity" as const, label: `Activity (${(activities || []).length + (linkedActivities || []).length})` },
-    { key: "inventory" as const, label: "Inventory" },
-    { key: "notes" as const, label: "Notes" },
-    ...(userRole === "ADMIN" ? [{ key: "budget" as const, label: "Budget" }] : []),
-  ];
+  const isSupervisor = userRole === "SUPERVISOR";
+
+  const tabs = isSupervisor
+    ? [
+        { key: "dashboard" as const, label: "Dashboard" },
+        { key: "reports" as const, label: `Reports (${reportsCount})` },
+        ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
+        { key: "inventory" as const, label: "Inventory" },
+        { key: "notes" as const, label: "Notes" },
+      ]
+    : [
+        { key: "dashboard" as const, label: "Dashboard" },
+        { key: "tasks" as const, label: "Tasks" },
+        { key: "reports" as const, label: `Reports (${reportsCount})` },
+        ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
+        { key: "documents" as const, label: `Documents (${projectDocuments.length})` },
+        { key: "activity" as const, label: `Activity (${(activities || []).length + (linkedActivities || []).length})` },
+        { key: "inventory" as const, label: "Inventory" },
+        { key: "notes" as const, label: "Notes" },
+        ...(userRole === "ADMIN" ? [{ key: "budget" as const, label: "Budget" }] : []),
+      ];
 
   // Close quick-add on outside click
   useEffect(() => {
@@ -809,6 +819,7 @@ export default function ProjectTabs({
           invoices={invoices}
           allWorkers={allWorkers}
           postProjectInspections={postProjectInspections}
+          isSupervisor={isSupervisor}
         />
       )}
 
@@ -2311,6 +2322,7 @@ function DashboardTab({
   invoices = [],
   allWorkers = [],
   postProjectInspections = [],
+  isSupervisor = false,
 }: {
   project: any;
   timeEntries: TimeEntry[];
@@ -2328,6 +2340,7 @@ function DashboardTab({
   invoices?: any[];
   allWorkers?: any[];
   postProjectInspections?: PostProjectEntry[];
+  isSupervisor?: boolean;
 }) {
   const [editingDays, setEditingDays] = useState(false);
   const [editingHours, setEditingHours] = useState(false);
@@ -2754,82 +2767,84 @@ function DashboardTab({
         </div>
       </div>
 
-      {/* === Tasks + Safety + Financials Row === */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Tasks Summary */}
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <ClipboardList size={14} className="text-indigo-500" />
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Tasks</span>
+      {/* === Tasks + Safety + Financials Row (hidden for supervisors) === */}
+      {!isSupervisor && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Tasks Summary */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ClipboardList size={14} className="text-indigo-500" />
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Tasks</span>
+            </div>
+            <div className="flex items-center gap-4 mb-3">
+              <div className="relative w-14 h-14 flex-shrink-0">
+                <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="#6366f1" strokeWidth="3"
+                    strokeDasharray={`${tasksTotal > 0 ? (tasksDone / tasksTotal) * 88 : 0} 88`}
+                    strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700">{taskPercent}%</div>
+              </div>
+              <div className="space-y-1 text-[11px]">
+                <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Done: <strong>{tasksDone}</strong></div>
+                <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Open: <strong>{openTasksArr.length}</strong></div>
+                {overdueTasksArr.length > 0 && <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Overdue: <strong className="text-red-600">{overdueTasksArr.length}</strong></div>}
+              </div>
+            </div>
+            {highPriorityTasks.length > 0 && (
+              <div className="border-t border-slate-100 pt-2 space-y-1">
+                {highPriorityTasks.slice(0, 3).map((t) => (
+                  <div key={t.id} className="flex items-start gap-1.5 text-[11px]">
+                    <span className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${t.priority === "urgent" ? "bg-red-500" : "bg-orange-400"}`} />
+                    <span className="text-slate-700 line-clamp-1">{t.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-4 mb-3">
-            <div className="relative w-14 h-14 flex-shrink-0">
-              <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                <circle cx="18" cy="18" r="14" fill="none" stroke="#6366f1" strokeWidth="3"
-                  strokeDasharray={`${tasksTotal > 0 ? (tasksDone / tasksTotal) * 88 : 0} 88`}
-                  strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700">{taskPercent}%</div>
-            </div>
-            <div className="space-y-1 text-[11px]">
-              <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Done: <strong>{tasksDone}</strong></div>
-              <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Open: <strong>{openTasksArr.length}</strong></div>
-              {overdueTasksArr.length > 0 && <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Overdue: <strong className="text-red-600">{overdueTasksArr.length}</strong></div>}
-            </div>
-          </div>
-          {highPriorityTasks.length > 0 && (
-            <div className="border-t border-slate-100 pt-2 space-y-1">
-              {highPriorityTasks.slice(0, 3).map((t) => (
-                <div key={t.id} className="flex items-start gap-1.5 text-[11px]">
-                  <span className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${t.priority === "urgent" ? "bg-red-500" : "bg-orange-400"}`} />
-                  <span className="text-slate-700 line-clamp-1">{t.title}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Safety & Documentation */}
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Shield size={14} className="text-emerald-500" />
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Safety & Docs</span>
-          </div>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between"><span className="text-slate-500">Field Reports</span><span className="font-semibold text-slate-800">{fieldReports.length}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">PSI / JHA / SPA</span><span className="font-semibold text-slate-800">{psiCount}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Pre-Abatement Insp.</span><span className="font-semibold text-slate-800">{preAbatementCount}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Certs of Completion</span><span className="font-semibold text-slate-800">{certsCount}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Post-Project Insp.</span><span className="font-semibold text-slate-800">{postProjectInspections.length}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Documents</span><span className="font-semibold text-slate-800">{docCount}</span></div>
-          </div>
-          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex gap-2 text-[10px]">
-            <span className={`px-1.5 py-0.5 rounded ${permitDoc ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-              {permitDoc ? "Permit" : "No Permit"}
-            </span>
-            <span className={`px-1.5 py-0.5 rounded ${samplingDoc ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-              {samplingDoc ? "Sampling" : "No Sampling"}
-            </span>
-          </div>
-        </div>
-
-        {/* Incidents */}
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <ShieldAlert size={14} className="text-red-400" />
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Incidents</span>
-          </div>
-          {incidents.length > 0 ? (
-            <div className="flex gap-3 text-[11px]">
-              <span className="text-slate-600">Total: <strong>{incidents.length}</strong></span>
-              {openIncidents.length > 0 && <span className="text-red-600">Open: <strong>{openIncidents.length}</strong></span>}
+          {/* Safety & Documentation */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Shield size={14} className="text-emerald-500" />
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Safety & Docs</span>
             </div>
-          ) : (
-            <p className="text-xs text-slate-400">No incidents reported</p>
-          )}
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between"><span className="text-slate-500">Field Reports</span><span className="font-semibold text-slate-800">{fieldReports.length}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">PSI / JHA / SPA</span><span className="font-semibold text-slate-800">{psiCount}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Pre-Abatement Insp.</span><span className="font-semibold text-slate-800">{preAbatementCount}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Certs of Completion</span><span className="font-semibold text-slate-800">{certsCount}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Post-Project Insp.</span><span className="font-semibold text-slate-800">{postProjectInspections.length}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Documents</span><span className="font-semibold text-slate-800">{docCount}</span></div>
+            </div>
+            <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex gap-2 text-[10px]">
+              <span className={`px-1.5 py-0.5 rounded ${permitDoc ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                {permitDoc ? "Permit" : "No Permit"}
+              </span>
+              <span className={`px-1.5 py-0.5 rounded ${samplingDoc ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                {samplingDoc ? "Sampling" : "No Sampling"}
+              </span>
+            </div>
+          </div>
+
+          {/* Incidents */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldAlert size={14} className="text-red-400" />
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Incidents</span>
+            </div>
+            {incidents.length > 0 ? (
+              <div className="flex gap-3 text-[11px]">
+                <span className="text-slate-600">Total: <strong>{incidents.length}</strong></span>
+                {openIncidents.length > 0 && <span className="text-red-600">Open: <strong>{openIncidents.length}</strong></span>}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">No incidents reported</p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );
