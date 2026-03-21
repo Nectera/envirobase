@@ -7,12 +7,10 @@ export default async function Home() {
   const session = await getServerSession(authOptions);
   const userRole = (session?.user as any)?.role;
 
-  if (isTechnician(userRole)) {
-    redirect("/schedule");
+  if (isTechnician(userRole) || isSupervisor(userRole)) {
+    redirect("/time-clock");
   } else if (isOffice(userRole)) {
     redirect("/crm");
-  } else if (isSupervisor(userRole)) {
-    redirect("/projects");
   } else {
     redirect("/dashboard");
   }

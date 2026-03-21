@@ -167,7 +167,7 @@ export async function middleware(request: NextRequest) {
   if (token.role === "SUPERVISOR") {
     const isAllowed = SUPERVISOR_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + "/"));
     if (!isAllowed && !isApi && !isRoot) {
-      return addSecurityHeaders(NextResponse.redirect(new URL("/projects", request.url)));
+      return addSecurityHeaders(NextResponse.redirect(new URL("/time-clock", request.url)));
     }
   }
 
@@ -175,7 +175,7 @@ export async function middleware(request: NextRequest) {
   if (token.role === "TECHNICIAN") {
     const isAllowed = TECHNICIAN_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + "/"));
     if (!isAllowed && !isApi && !isRoot) {
-      return addSecurityHeaders(NextResponse.redirect(new URL("/schedule", request.url)));
+      return addSecurityHeaders(NextResponse.redirect(new URL("/time-clock", request.url)));
     }
   }
 
