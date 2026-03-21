@@ -83,7 +83,7 @@ export default async function TimeClockPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {!isTech && (
+          {userRole === "ADMIN" && (
             <Link
               href="/time-clock/payroll"
               className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl flex items-center gap-1.5 transition"

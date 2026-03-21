@@ -12,6 +12,11 @@ export async function GET(req: NextRequest) {
     if (result instanceof NextResponse) return result;
     const { session, orgId } = result;
 
+    const userRole = (session.user as any)?.role;
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const url = new URL(req.url);
     const startDate = url.searchParams.get("startDate");
     const endDate = url.searchParams.get("endDate");

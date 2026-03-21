@@ -8,7 +8,7 @@ export default async function PayrollReportPage() {
   if (!session) redirect("/login");
 
   const role = (session.user as any)?.role || "TECHNICIAN";
-  if (role === "TECHNICIAN") redirect("/time-clock");
+  if (role !== "ADMIN") redirect("/time-clock");
 
   return (
     <div className="min-h-screen bg-slate-50">
