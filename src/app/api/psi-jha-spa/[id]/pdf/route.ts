@@ -60,7 +60,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       ["Task Location", item.taskLocation || "—"],
       ["Muster Point", item.musterPoint || "—"],
       ["Job Site Address", item.jobSiteAddress || "—"],
-      ["Nearest Hospital", `${item.nearestHospital || "—"} — ${item.nearestHospitalAddress || ""}`],
+      ["Nearest ER", `${item.nearestHospital || "—"} — ${item.nearestHospitalAddress || ""}`],
     ];
     for (const [label, value] of infoLines) {
       page.drawText(`${label}:`, { x: 50, y, font: fontBold, size: 8, color: gray });

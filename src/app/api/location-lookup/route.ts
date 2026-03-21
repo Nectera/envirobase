@@ -102,19 +102,53 @@ export async function GET(req: NextRequest) {
       forecastHeatIndex: `${forecastHeatIndex}°F`,
     };
 
-    // Step 3: Find nearest hospital via Overpass API (OpenStreetMap)
+    // Step 3: Find nearest emergency room via Overpass API (OpenStreetMap)
+    // Priority: 1) hospitals with emergency=yes, 2) standalone emergency rooms, 3) any hospital as fallback
     let hospital = { name: "", address: "" };
     try {
-      // Search within ~15km radius for hospitals
-      const overpassQuery = `[out:json][timeout:10];(node["amenity"="hospital"](around:15000,${lat},${lon});way["amenity"="hospital"](around:15000,${lat},${lon}););out center 1;`;
-      const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
-      const hospRes = await fetch(overpassUrl);
-      const hospData = await hospRes.json();
+      // First try: hospitals with emergency departments within 25km
+      const erQuery = `[out:json][timeout:10];(node["amenity"="hospital"]["emergency"="yes"](around:25000,${lat},${lon});way["amenity"="hospital"]["emergency"="yes"](around:25000,${lat},${lon});node["amenity"="hospital"]["emergency"~"."](around:25000,${lat},${lon});way["amenity"="hospital"]["emergency"~"."](around:25000,${lat},${lon}););out center 3;`;
+      const erUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(erQuery)}`;
+      const erRes = await fetch(erUrl);
+      const erData = await erRes.json();
 
-      if (hospData.elements?.length > 0) {
-        const h = hospData.elements[0];
+      // Filter for elements that actually have emergency services
+      let candidates = (erData.elements || []).filter((el: any) => {
+        const tags = el.tags || {};
+        return tags.emergency === "yes" || tags["emergency"] !== "no";
+      });
+
+      // Fallback: if no ER-specific results, search for any hospital within 25km
+      if (candidates.length === 0) {
+        const fallbackQuery = `[out:json][timeout:10];(node["amenity"="hospital"](around:25000,${lat},${lon});way["amenity"="hospital"](around:25000,${lat},${lon}););out center 1;`;
+        const fallbackUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(fallbackQuery)}`;
+        const fallbackRes = await fetch(fallbackUrl);
+        const fallbackData = await fallbackRes.json();
+        candidates = fallbackData.elements || [];
+      }
+
+      // Pick the closest candidate by distance
+      if (candidates.length > 0) {
+        let closest = candidates[0];
+        let closestDist = Infinity;
+        for (const el of candidates) {
+          const eLat = el.center?.lat || el.lat;
+          const eLon = el.center?.lon || el.lon;
+          if (eLat && eLon) {
+            const d = Math.sqrt((eLat - lat) ** 2 + (eLon - lon) ** 2);
+            if (d < closestDist) { closestDist = d; closest = el; }
+          }
+        }
+
+        const h = closest;
         const tags = h.tags || {};
-        hospital.name = tags.name || "Hospital";
+        // Prefer emergency department name if available
+        hospital.name = tags["emergency:name"] || tags.name || "Emergency Room";
+
+        // Append "Emergency Room" to name if it's a hospital that has an ER but name doesn't indicate it
+        if (tags.name && tags.emergency === "yes" && !tags.name.toLowerCase().includes("emergency")) {
+          hospital.name = `${tags.name} — Emergency Room`;
+        }
 
         // Build address from OSM tags
         const parts = [
@@ -128,7 +162,7 @@ export async function GET(req: NextRequest) {
         if (parts.length >= 2) {
           hospital.address = parts.join(", ");
         } else {
-          // Fallback: reverse geocode the hospital's coordinates
+          // Fallback: reverse geocode the facility's coordinates
           const hLat = h.center?.lat || h.lat;
           const hLon = h.center?.lon || h.lon;
           if (hLat && hLon) {
@@ -146,7 +180,7 @@ export async function GET(req: NextRequest) {
         }
       }
     } catch {
-      // Hospital lookup is best-effort — don't fail the whole request
+      // ER lookup is best-effort — don't fail the whole request
     }
 
     return NextResponse.json({ weather, hospital, coordinates: { lat, lon } });

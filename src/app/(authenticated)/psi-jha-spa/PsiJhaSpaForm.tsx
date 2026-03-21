@@ -344,7 +344,7 @@ export default function PsiJhaSpaForm({ presetProjectId }: { presetProjectId?: s
 
           <div>
             <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1">
-              Nearest Hospital
+              Nearest Emergency Room
               {lookupDone && <span className="text-[10px] text-green-600 font-normal">(auto)</span>}
             </label>
             <input type="text" value={nearestHospital} onChange={(e) => setNearestHospital(e.target.value)}
@@ -352,7 +352,7 @@ export default function PsiJhaSpaForm({ presetProjectId }: { presetProjectId?: s
           </div>
           <div className="sm:col-span-2">
             <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1">
-              Nearest Hospital Address
+              Nearest Emergency Room Address
               {lookupDone && <span className="text-[10px] text-green-600 font-normal">(auto)</span>}
             </label>
             <AddressAutocomplete

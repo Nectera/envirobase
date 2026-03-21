@@ -74,8 +74,8 @@ export default async function PsiJhaSpaDetailPage({ params }: { params: { id: st
             <div><span className="text-slate-500">Task Location</span><div className="font-medium">{item.taskLocation || "—"}</div></div>
             <div><span className="text-slate-500">Muster Point</span><div className="font-medium">{item.musterPoint || "—"}</div></div>
             <div className="col-span-3"><span className="text-slate-500">Job Site Address</span><div className="font-medium">{item.jobSiteAddress || "—"}</div></div>
-            <div><span className="text-slate-500">Nearest Hospital</span><div className="font-medium">{item.nearestHospital || "—"}</div></div>
-            <div className="col-span-2"><span className="text-slate-500">Hospital Address</span><div className="font-medium">{item.nearestHospitalAddress || "—"}</div></div>
+            <div><span className="text-slate-500">Nearest Emergency Room</span><div className="font-medium">{item.nearestHospital || "—"}</div></div>
+            <div className="col-span-2"><span className="text-slate-500">Emergency Room Address</span><div className="font-medium">{item.nearestHospitalAddress || "—"}</div></div>
           </div>
         </div>
 
