@@ -14,12 +14,14 @@ interface User {
 const ROLES = [
   { value: "TECHNICIAN", label: "Technician", desc: "Field crew — schedule, time clock, tasks" },
   { value: "OFFICE", label: "Office", desc: "CRM, leads, pipeline, estimates" },
-  { value: "SUPERVISOR", label: "Supervisor", desc: "Full access + admin" },
+  { value: "SUPERVISOR", label: "Supervisor", desc: "Projects, field work, schedule" },
+  { value: "PROJECT_MANAGER", label: "Project Manager", desc: "PM sections, calendar, workers — no CRM or budget" },
   { value: "ADMIN", label: "Admin", desc: "Full access + admin" },
 ];
 
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: "bg-purple-100 text-purple-700",
+  PROJECT_MANAGER: "bg-indigo-100 text-indigo-700",
   SUPERVISOR: "bg-blue-100 text-blue-700",
   OFFICE: "bg-amber-100 text-amber-700",
   TECHNICIAN: "bg-green-100 text-green-700",
