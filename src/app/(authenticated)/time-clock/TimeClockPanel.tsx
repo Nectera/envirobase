@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Clock, LogIn, LogOut, Coffee, ChevronDown, User, AlertTriangle, FileDown, Users,
-  MapPin, Navigation, Pencil, X, Trash2, Calendar,
+  MapPin, Navigation, Pencil, X, Trash2, Calendar, Camera, Upload, FileText, Image as ImageIcon,
 } from "lucide-react";
 
 type Project = { id: string; name: string; type: string };
@@ -98,6 +98,13 @@ export default function TimeClockPanel({
   const [tempAgency, setTempAgency] = useState("");
   const [tempCerts, setTempCerts] = useState<string[]>([]);
   const [tempSaving, setTempSaving] = useState(false);
+  const [tempFiles, setTempFiles] = useState<{ file: File; type: string }[]>([]);
+  const [showDocsModal, setShowDocsModal] = useState(false);
+  const [docsWorkerId, setDocsWorkerId] = useState<string | null>(null);
+  const [docsWorkerName, setDocsWorkerName] = useState("");
+  const [existingDocs, setExistingDocs] = useState<{ url: string; fileName: string; type: string; uploadedAt: string }[]>([]);
+  const [docsUploading, setDocsUploading] = useState(false);
+  const [docsLoading, setDocsLoading] = useState(false);
 
   // Edit modal state (admin only)
   const [editModalEntry, setEditModalEntry] = useState<TimeEntry | null>(null);
@@ -192,6 +199,20 @@ export default function TimeClockPanel({
         return;
       }
       const newWorker = await res.json();
+
+      // Upload any attached files
+      if (tempFiles.length > 0) {
+        for (const { file, type } of tempFiles) {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("type", type);
+          await fetch(`/api/temp-workers/${newWorker.id}/upload`, {
+            method: "POST",
+            body: fd,
+          });
+        }
+      }
+
       // Auto-select the new temp worker for clock-in
       setClockingForOther(true);
       setSelectedWorker(newWorker.id);
@@ -201,6 +222,7 @@ export default function TimeClockPanel({
       setTempName("");
       setTempAgency("");
       setTempCerts([]);
+      setTempFiles([]);
       // Refresh to get updated worker list
       router.refresh();
     } catch {
@@ -632,6 +654,33 @@ export default function TimeClockPanel({
                   ))}
                 </optgroup>
               </select>
+              {/* Manage Docs link for selected temp worker */}
+              {(() => {
+                const w = workers.find((w) => w.id === selectedWorker);
+                return w?.isTemp ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setDocsWorkerId(w.id);
+                      setDocsWorkerName(w.name);
+                      setExistingDocs([]);
+                      setDocsLoading(true);
+                      setShowDocsModal(true);
+                      try {
+                        const res = await fetch(`/api/workers/${w.id}`);
+                        if (res.ok) {
+                          const data = await res.json();
+                          setExistingDocs(data.tempDocuments || []);
+                        }
+                      } catch {}
+                      setDocsLoading(false);
+                    }}
+                    className="mt-1 text-xs text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1"
+                  >
+                    <FileText size={12} /> Manage Docs & IDs
+                  </button>
+                ) : null;
+              })()}
             </div>
 
             <div>
@@ -1132,9 +1181,82 @@ export default function TimeClockPanel({
               </div>
             </div>
 
+              {/* Document Upload Section */}
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">Certifications & ID Photos</label>
+                <div className="space-y-2">
+                  {tempFiles.map((tf, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 text-xs">
+                      {tf.file.type.startsWith("image/") ? <ImageIcon size={14} className="text-indigo-500 shrink-0" /> : <FileText size={14} className="text-indigo-500 shrink-0" />}
+                      <span className="truncate flex-1 text-slate-700">{tf.file.name}</span>
+                      <span className="text-[10px] text-slate-400 shrink-0">{tf.type === "certification" ? "Cert" : tf.type === "id" ? "ID" : "Other"}</span>
+                      <button type="button" onClick={() => setTempFiles((prev) => prev.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-red-500">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-dashed border-slate-300 rounded-xl text-xs text-slate-500 hover:border-amber-400 hover:text-amber-600 cursor-pointer transition">
+                      <Camera size={14} />
+                      <span>Take Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setTempFiles((prev) => [...prev, { file: f, type: "certification" }]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-dashed border-slate-300 rounded-xl text-xs text-slate-500 hover:border-amber-400 hover:text-amber-600 cursor-pointer transition">
+                      <Upload size={14} />
+                      <span>Upload File</span>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setTempFiles((prev) => [...prev, ...files.map((f) => ({ file: f, type: "certification" }))]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {tempFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {tempFiles.map((tf, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() =>
+                            setTempFiles((prev) =>
+                              prev.map((item, i) =>
+                                i === idx
+                                  ? { ...item, type: item.type === "certification" ? "id" : item.type === "id" ? "other" : "certification" }
+                                  : item
+                              )
+                            )
+                          }
+                          className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-amber-100 hover:text-amber-700 transition"
+                          title="Click to toggle type"
+                        >
+                          {tf.file.name.slice(0, 15)}{tf.file.name.length > 15 ? "…" : ""} → {tf.type === "certification" ? "Cert" : tf.type === "id" ? "ID" : "Other"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
               <button
-                onClick={() => setShowTempModal(false)}
+                onClick={() => { setShowTempModal(false); setTempFiles([]); }}
                 className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
               >
                 Cancel
@@ -1144,9 +1266,134 @@ export default function TimeClockPanel({
                 disabled={!tempName.trim() || tempSaving}
                 className="px-5 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-sm font-medium rounded-full transition"
               >
-                {tempSaving ? "Adding..." : "Add & Select"}
+                {tempSaving ? (tempFiles.length > 0 ? "Uploading..." : "Adding...") : "Add & Select"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Temp Worker Docs Modal */}
+      {showDocsModal && docsWorkerId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDocsModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                <FileText size={18} className="text-amber-500" />
+                Documents — {docsWorkerName}
+              </h3>
+              <button onClick={() => setShowDocsModal(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded">
+                <X size={18} />
+              </button>
+            </div>
+
+            {docsLoading ? (
+              <p className="text-sm text-slate-400 py-8 text-center">Loading documents…</p>
+            ) : (
+              <>
+                {/* Existing documents */}
+                {existingDocs.length === 0 ? (
+                  <p className="text-sm text-slate-400 py-4 text-center">No documents uploaded yet.</p>
+                ) : (
+                  <div className="space-y-2 mb-4">
+                    {existingDocs.map((doc, idx) => (
+                      <div key={idx} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2.5">
+                        {doc.fileName?.match(/\.(pdf)$/i) ? <FileText size={16} className="text-red-500 shrink-0" /> : <ImageIcon size={16} className="text-indigo-500 shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate block">
+                            {doc.fileName}
+                          </a>
+                          <span className="text-[10px] text-slate-400">
+                            {doc.type === "certification" ? "Certification" : doc.type === "id" ? "ID" : "Other"}
+                            {doc.uploadedAt ? ` • ${new Date(doc.uploadedAt).toLocaleDateString()}` : ""}
+                          </span>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            await fetch(`/api/temp-workers/${docsWorkerId}/upload`, {
+                              method: "DELETE",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ url: doc.url }),
+                            });
+                            setExistingDocs((prev) => prev.filter((_, i) => i !== idx));
+                          }}
+                          className="text-slate-400 hover:text-red-500 shrink-0"
+                          title="Remove"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload new documents */}
+                <div className="border-t border-slate-100 pt-4">
+                  <label className="text-xs font-medium text-slate-600 mb-2 block">Add Documents</label>
+                  <div className="flex gap-2">
+                    <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-3 border border-dashed border-slate-300 rounded-xl text-xs text-slate-500 hover:border-amber-400 hover:text-amber-600 cursor-pointer transition">
+                      <Camera size={14} />
+                      <span>Take Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setDocsUploading(true);
+                          const fd = new FormData();
+                          fd.append("file", f);
+                          fd.append("type", "certification");
+                          try {
+                            const res = await fetch(`/api/temp-workers/${docsWorkerId}/upload`, { method: "POST", body: fd });
+                            if (res.ok) {
+                              const newDoc = await res.json();
+                              setExistingDocs((prev) => [...prev, newDoc]);
+                            }
+                          } catch {}
+                          setDocsUploading(false);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-3 border border-dashed border-slate-300 rounded-xl text-xs text-slate-500 hover:border-amber-400 hover:text-amber-600 cursor-pointer transition">
+                      <Upload size={14} />
+                      <span>Upload File</span>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        multiple
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (!files.length) return;
+                          setDocsUploading(true);
+                          for (const f of files) {
+                            const fd = new FormData();
+                            fd.append("file", f);
+                            fd.append("type", "certification");
+                            try {
+                              const res = await fetch(`/api/temp-workers/${docsWorkerId}/upload`, { method: "POST", body: fd });
+                              if (res.ok) {
+                                const newDoc = await res.json();
+                                setExistingDocs((prev) => [...prev, newDoc]);
+                              }
+                            } catch {}
+                          }
+                          setDocsUploading(false);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {docsUploading && (
+                    <p className="text-xs text-amber-600 mt-2 text-center">Uploading…</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

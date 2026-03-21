@@ -134,6 +134,7 @@ model Worker {
   isTemp                Boolean @default(false)
   tempAgency            String?
   tempCertifications    String? // Comma-separated cert names for quick reference
+  tempDocuments         Json?   // Array of { url, fileName, type, uploadedAt } for cert/ID photos
   skillRating           Int?
   userId                String?
   user                  User?   @relation(fields: [userId], references: [id])
