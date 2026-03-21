@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog, CreditCard, Palette, Video } from "lucide-react";
+import { Plus, X, Save, Users, Shield, Award, CheckCircle, Loader2, Globe, Calculator, Star, Mail, ShieldCheck, ServerCog, CreditCard, Palette, Video, Building2 } from "lucide-react";
 import SmtpSettings from "./SmtpSettings";
 import BillingSettings from "./BillingSettings";
 import BrandingSettings from "./BrandingSettings";
@@ -18,7 +18,7 @@ interface Props {
 
 export default function SettingsView({ initialPositions, initialRoles, initialCertTypes, initialCogsRates }: Props) {
   const { t, language, setLanguage } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email" | "billing" | "branding" | "meetings">("roles");
+  const [activeTab, setActiveTab] = useState<"roles" | "positions" | "certifications" | "language" | "pricing" | "reviews" | "estimateFollowUp" | "certRequirements" | "email" | "billing" | "branding" | "meetings" | "offices">("roles");
   const [positions, setPositions] = useState(initialPositions);
   const [roles, setRoles] = useState(initialRoles);
   const [certTypes, setCertTypes] = useState(initialCertTypes);
@@ -41,6 +41,11 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
   const [certReqSaved, setCertReqSaved] = useState(false);
   const [newCertReqType, setNewCertReqType] = useState("");
   const [newCertReqCert, setNewCertReqCert] = useState("");
+  // Offices config
+  const [offices, setOffices] = useState<{ value: string; label: string }[]>([]);
+  const [newOfficeName, setNewOfficeName] = useState("");
+  const [officesSaving, setOfficesSaving] = useState(false);
+  const [officesSaved, setOfficesSaved] = useState(false);
   // Meeting platform config
   const [meetingPlatform, setMeetingPlatform] = useState<string>("google_meet");
   const [meetingSaving, setMeetingSaving] = useState(false);
@@ -63,6 +68,10 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
       .then((r) => { if (r.ok) return r.json(); throw new Error("Failed"); })
       .then((d) => { if (d?.platform) setMeetingPlatform(d.platform); })
       .catch(() => {});
+    fetch("/api/settings/offices")
+      .then((r) => { if (r.ok) return r.json(); throw new Error("Failed"); })
+      .then((d) => { if (d?.offices) setOffices(d.offices); })
+      .catch(() => {});
   }, []);
 
   const tabs = [
@@ -75,6 +84,7 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
     { key: "estimateFollowUp" as const, label: t("settings.estimateFollowUp"), icon: Mail },
     { key: "certRequirements" as const, label: t("settings.certRequirements"), icon: ShieldCheck },
     { key: "branding" as const, label: "Branding", icon: Palette },
+    { key: "offices" as const, label: "Offices", icon: Building2 },
     { key: "meetings" as const, label: "Meetings", icon: Video },
     { key: "email" as const, label: "Email / SMTP", icon: ServerCog },
     { key: "billing" as const, label: "Billing", icon: CreditCard },
@@ -1079,6 +1089,98 @@ export default function SettingsView({ initialPositions, initialRoles, initialCe
       {activeTab === "branding" && <BrandingSettings />}
 
       {activeTab === "email" && <SmtpSettings />}
+
+      {/* Offices tab */}
+      {activeTab === "offices" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">Office Locations</h3>
+            <p className="text-xs text-slate-500 mb-3">Add your office locations. These are used for filtering the dashboard metrics and assigning workers/projects to offices.</p>
+          </div>
+
+          {/* Add new office */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newOfficeName}
+              onChange={(e) => setNewOfficeName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const label = newOfficeName.trim();
+                  if (!label) return;
+                  const value = label.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+                  if (offices.some((o) => o.value === value)) return;
+                  setOffices([...offices, { value, label }]);
+                  setNewOfficeName("");
+                }
+              }}
+              placeholder="e.g. Denver, Austin, etc."
+              className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            />
+            <button
+              onClick={() => {
+                const label = newOfficeName.trim();
+                if (!label) return;
+                const value = label.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+                if (offices.some((o) => o.value === value)) return;
+                setOffices([...offices, { value, label }]);
+                setNewOfficeName("");
+              }}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={14} />
+              Add
+            </button>
+          </div>
+
+          {/* Office list */}
+          {offices.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-4">No offices configured yet. Add your first office above.</p>
+          ) : (
+            <div className="space-y-2">
+              {offices.map((office) => (
+                <div key={office.value} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <Building2 size={14} className="text-slate-400" />
+                    <span className="text-sm font-medium text-slate-700">{office.label}</span>
+                    <span className="text-[10px] text-slate-400">({office.value})</span>
+                  </div>
+                  <button
+                    onClick={() => setOffices(offices.filter((o) => o.value !== office.value))}
+                    className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={async () => {
+              setOfficesSaving(true);
+              setOfficesSaved(false);
+              try {
+                await fetch("/api/settings/offices", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ offices }),
+                });
+                setOfficesSaved(true);
+                setTimeout(() => setOfficesSaved(false), 2000);
+              } catch {} finally {
+                setOfficesSaving(false);
+              }
+            }}
+            disabled={officesSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            <Save size={14} />
+            {officesSaving ? "Saving..." : "Save"}
+          </button>
+          {officesSaved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
+        </div>
+      )}
 
       {/* Meetings tab */}
       {activeTab === "meetings" && (
