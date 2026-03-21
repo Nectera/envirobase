@@ -139,7 +139,13 @@ export async function GET(req: NextRequest) {
   try {
     const result = await requireOrg();
     if (result instanceof NextResponse) return result;
-    const { orgId } = result;
+    const { session, orgId } = result;
+
+    // Only ADMIN can export data
+    const userRole = (session.user as any)?.role;
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const type = req.nextUrl.searchParams.get("type") || "all";
     const format = req.nextUrl.searchParams.get("format") || "csv";

@@ -26,7 +26,7 @@ const FEATURE_LABELS: Record<string, string> = {
 };
 
 // Routes technicians are allowed to access
-const TECHNICIAN_ALLOWED = ["/schedule", "/time-clock", "/my-documents", "/tasks"];
+const TECHNICIAN_ALLOWED = ["/schedule", "/time-clock", "/my-documents", "/tasks", "/bonus-pool", "/chat", "/settings/notifications"];
 
 // Routes office/sales staff are allowed to access
 const OFFICE_ALLOWED = ["/crm", "/leads", "/companies", "/contacts", "/estimates", "/tasks", "/pipeline"];

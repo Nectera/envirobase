@@ -20,7 +20,13 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const auth = await requireOrg();
   if (auth instanceof NextResponse) return auth;
-  const { orgId } = auth;
+  const { session, orgId } = auth;
+
+  // Only ADMIN can modify settings
+  const userRole = (session.user as any)?.role;
+  if (userRole !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const body = await req.json();
 

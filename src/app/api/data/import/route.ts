@@ -327,6 +327,12 @@ export async function POST(req: NextRequest) {
     if (auth instanceof NextResponse) return auth;
     const { session, orgId } = auth;
 
+    // Only ADMIN can import data
+    const userRole = (session.user as any)?.role;
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const userId = (session?.user as any)?.id || "anonymous";
     const rl = checkRateLimit(`write:${userId}`, API_WRITE_LIMIT);
     if (!rl.allowed) {

@@ -18,6 +18,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Technicians cannot send emails
+    const userRole = (session.user as any)?.role;
+    if (userRole === "TECHNICIAN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     // Check rate limit: 10 emails per minute per session
     const rateLimitKey = `email:${session.user.email}`;
     const rateLimitResult = checkRateLimit(rateLimitKey, {

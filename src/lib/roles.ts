@@ -24,7 +24,7 @@ export function isOffice(role: string | undefined | null): boolean {
 }
 
 // Technician-accessible routes
-const TECHNICIAN_ROUTES = ["/schedule", "/time-clock", "/my-documents"];
+const TECHNICIAN_ROUTES = ["/schedule", "/time-clock", "/my-documents", "/tasks", "/bonus-pool", "/chat", "/settings/notifications"];
 
 // Office/Sales-accessible routes
 const OFFICE_ROUTES = ["/crm", "/leads", "/companies", "/contacts", "/estimates"];
