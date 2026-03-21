@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { isTechnician, isOffice } from "@/lib/roles";
+import { isTechnician, isOffice, isSupervisor } from "@/lib/roles";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
@@ -11,6 +11,8 @@ export default async function Home() {
     redirect("/schedule");
   } else if (isOffice(userRole)) {
     redirect("/crm");
+  } else if (isSupervisor(userRole)) {
+    redirect("/projects");
   } else {
     redirect("/dashboard");
   }

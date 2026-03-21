@@ -31,7 +31,7 @@ const OFFICE_ROUTES = ["/crm", "/leads", "/companies", "/contacts", "/estimates"
 
 // Supervisor-accessible routes — projects, forms, schedule, time clock, chat
 const SUPERVISOR_ROUTES = [
-  "/dashboard", "/projects", "/schedule", "/time-clock",
+  "/projects", "/schedule", "/time-clock",
   "/field-reports", "/psi-jha-spa", "/pre-abatement-inspection",
   "/post-project-inspection", "/certificate-of-completion",
   "/chat", "/settings/notifications", "/bonus-pool",

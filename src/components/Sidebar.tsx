@@ -85,7 +85,6 @@ export default function Sidebar({
   ];
 
   const supervisorNavItems: NavItem[] = [
-    { href: "/dashboard", labelKey: "sidebar.dashboard", icon: Home },
     { href: "/projects", labelKey: "sidebar.projects", icon: FolderOpen },
     { href: "/schedule", labelKey: "sidebar.schedule", icon: Calendar },
     { href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock },

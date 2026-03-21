@@ -33,7 +33,7 @@ const OFFICE_ALLOWED = ["/crm", "/leads", "/companies", "/contacts", "/estimates
 
 // Routes supervisors are allowed to access
 const SUPERVISOR_ALLOWED = [
-  "/dashboard", "/projects", "/schedule", "/time-clock",
+  "/projects", "/schedule", "/time-clock",
   "/field-reports", "/psi-jha-spa", "/pre-abatement-inspection",
   "/post-project-inspection", "/certificate-of-completion",
   "/chat", "/settings/notifications", "/bonus-pool",
@@ -167,7 +167,7 @@ export async function middleware(request: NextRequest) {
   if (token.role === "SUPERVISOR") {
     const isAllowed = SUPERVISOR_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + "/"));
     if (!isAllowed && !isApi && !isRoot) {
-      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
+      return addSecurityHeaders(NextResponse.redirect(new URL("/projects", request.url)));
     }
   }
 
