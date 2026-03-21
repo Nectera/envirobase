@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const VALID_ROLES = ["ADMIN", "SUPERVISOR", "OFFICE", "TECHNICIAN"];
 
 function isAdmin(role: string): boolean {
-  return role === "ADMIN" || role === "SUPERVISOR";
+  return role === "ADMIN";
 }
 
 export async function GET() {

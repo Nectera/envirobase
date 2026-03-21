@@ -31,6 +31,14 @@ const TECHNICIAN_ALLOWED = ["/schedule", "/time-clock", "/my-documents", "/tasks
 // Routes office/sales staff are allowed to access
 const OFFICE_ALLOWED = ["/crm", "/leads", "/companies", "/contacts", "/estimates", "/tasks", "/pipeline"];
 
+// Routes supervisors are allowed to access
+const SUPERVISOR_ALLOWED = [
+  "/dashboard", "/projects", "/schedule", "/time-clock",
+  "/field-reports", "/psi-jha-spa", "/pre-abatement-inspection",
+  "/post-project-inspection", "/certificate-of-completion",
+  "/chat", "/settings/notifications", "/bonus-pool",
+];
+
 // Routes that don't need auth
 const PUBLIC_ROUTES = ["/login", "/signup", "/api/auth", "/api/organizations/signup", "/api/stripe/webhook", "/forgot-password", "/reset-password", "/privacy", "/terms"];
 
@@ -151,6 +159,14 @@ export async function middleware(request: NextRequest) {
   // Admin dashboard — ADMIN only
   if (pathname.startsWith("/admin")) {
     if (token.role !== "ADMIN") {
+      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
+    }
+  }
+
+  // Supervisor route protection
+  if (token.role === "SUPERVISOR") {
+    const isAllowed = SUPERVISOR_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + "/"));
+    if (!isAllowed && !isApi && !isRoot) {
       return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
     }
   }

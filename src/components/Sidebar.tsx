@@ -42,7 +42,8 @@ export default function Sidebar({
   const { collapsed, toggle } = useSidebarCollapse();
   const isTech = userRole === "TECHNICIAN";
   const isOffice = userRole === "OFFICE";
-  const isAdmin = userRole === "ADMIN" || userRole === "SUPERVISOR";
+  const isSupervisor = userRole === "SUPERVISOR";
+  const isAdmin = userRole === "ADMIN";
 
   const crmNavItems: NavItem[] = [
     { href: "/crm", labelKey: "sidebar.crmDashboard", icon: LayoutDashboard },
@@ -81,6 +82,14 @@ export default function Sidebar({
     { href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift },
     { href: "/my-documents", labelKey: "sidebar.myDocuments", icon: FileText },
     { href: "/tasks", labelKey: "sidebar.myTasks", icon: CheckSquare },
+  ];
+
+  const supervisorNavItems: NavItem[] = [
+    { href: "/dashboard", labelKey: "sidebar.dashboard", icon: Home },
+    { href: "/projects", labelKey: "sidebar.projects", icon: FolderOpen },
+    { href: "/schedule", labelKey: "sidebar.schedule", icon: Calendar },
+    { href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock },
+    { href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift },
   ];
 
   const chatNavItem = () => {
@@ -123,7 +132,7 @@ export default function Sidebar({
     );
   };
 
-  const subtitleKey = isTech ? "sidebar.myPortal" : isOffice ? "sidebar.salesPortal" : "sidebar.pms";
+  const subtitleKey = isTech ? "sidebar.myPortal" : isOffice ? "sidebar.salesPortal" : isSupervisor ? "sidebar.myPortal" : "sidebar.pms";
 
   const sectionDivider = (
     <div className="mx-4 my-2 border-t border-white/[0.06]" />
@@ -164,6 +173,13 @@ export default function Sidebar({
             {chatNavItem()}
           </>
         )}
+        {isSupervisor && (
+          <>
+            {supervisorNavItems.map((item) => renderNavItem(item))}
+            {sectionDivider}
+            {chatNavItem()}
+          </>
+        )}
         {isAdmin && (
           <>
             {renderNavItem({ href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock })}
@@ -199,10 +215,10 @@ export default function Sidebar({
           {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
           {!collapsed && <span className="text-xs flex-1">Collapse</span>}
         </button>
-        {!collapsed && (isTech || isOffice) && userName && (
+        {!collapsed && (isTech || isOffice || isSupervisor) && userName && (
           <div className="text-xs text-slate-400 font-medium">{userName}</div>
         )}
-        {(isTech || isOffice) && (
+        {(isTech || isOffice || isSupervisor) && (
           <Link
             href="/settings/notifications"
             onClick={close}
