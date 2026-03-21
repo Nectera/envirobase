@@ -15,6 +15,7 @@ import {
   X,
   AlertCircle,
   RefreshCw,
+  Building2,
 } from "lucide-react";
 import { hasProjectType } from "@/lib/utils";
 import { useTranslation } from "@/components/LanguageProvider";
@@ -42,10 +43,12 @@ type Opportunity = {
   invoiceStatus: string | null;
   estimateStatus: string | null;
   createdAt: string;
+  office?: string | null;
 };
 
 type PipelineViewProps = {
   opportunities: Opportunity[];
+  offices?: { value: string; label: string }[];
 };
 
 const SERVICE_TYPES = [
@@ -115,11 +118,18 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
-export default function PipelineView({ opportunities }: PipelineViewProps) {
+export default function PipelineView({ opportunities, offices = [] }: PipelineViewProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const [activeService, setActiveService] = useState("all");
   const [search, setSearch] = useState("");
+  const [officeFilter, setOfficeFilter] = useState("all");
+
+  const hasOffices = offices.length > 0;
+  const officeOptions = useMemo(() => [
+    { value: "all", label: "All Offices" },
+    ...offices,
+  ], [offices]);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -170,6 +180,10 @@ export default function PipelineView({ opportunities }: PipelineViewProps) {
 
   const filtered = useMemo(() => {
     let result = [...localOpps];
+    // Office filter
+    if (officeFilter !== "all") {
+      result = result.filter((o) => o.office === officeFilter);
+    }
     if (activeService !== "all") {
       // Match if the lead's projectType contains the selected service type
       if (activeService === "SELECT_DEMO") {
@@ -190,7 +204,7 @@ export default function PipelineView({ opportunities }: PipelineViewProps) {
       );
     }
     return result;
-  }, [localOpps, activeService, search]);
+  }, [localOpps, activeService, search, officeFilter]);
 
   const totalValue = filtered.reduce((sum, o) => sum + o.value, 0);
 
@@ -377,15 +391,39 @@ export default function PipelineView({ opportunities }: PipelineViewProps) {
             </div>
           </div>
         </div>
-        <button
-          onClick={handleSyncPayments}
-          disabled={syncing}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-full hover:bg-slate-200 disabled:opacity-50 transition"
-          title="Sync payment status from QuickBooks"
-        >
-          <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
-          {syncing ? t("pipeline.syncing") : t("pipeline.syncQB")}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSyncPayments}
+            disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-full hover:bg-slate-200 disabled:opacity-50 transition"
+            title="Sync payment status from QuickBooks"
+          >
+            <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
+            {syncing ? t("pipeline.syncing") : t("pipeline.syncQB")}
+          </button>
+
+          {/* Office filter — only shown if offices are configured */}
+          {hasOffices && (
+            <div className="flex items-center gap-2">
+              <Building2 size={14} className="text-slate-400" />
+              <div className="flex bg-slate-100 rounded-lg p-0.5">
+                {officeOptions.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setOfficeFilter(o.value)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                      officeFilter === o.value
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Summary stat cards */}

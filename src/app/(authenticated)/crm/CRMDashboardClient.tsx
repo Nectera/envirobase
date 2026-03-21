@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { TrendingUp, DollarSign, CheckCircle, BarChart3, Calendar, Clock, CreditCard, Target } from "lucide-react";
+import { TrendingUp, DollarSign, CheckCircle, BarChart3, Calendar, Clock, CreditCard, Target, Building2 } from "lucide-react";
 import { useTranslation } from "@/components/LanguageProvider";
 
 type TimePeriod = "month" | "quarter" | "ytd";
@@ -21,6 +21,7 @@ type Lead = {
   projectId?: string | null;
   updatedAt?: string;
   lostDate?: string | null;
+  office?: string | null;
   company?: { name: string } | null;
   contact?: { name: string } | null;
 };
@@ -131,20 +132,35 @@ function getPeriodLabel(period: TimePeriod, sn: ServerNow): string {
 }
 
 export default function CRMDashboardClient({
-  leads,
+  leads: allLeads,
   estimates,
   invoices,
   consultationEstimates,
   serverNow,
+  offices = [],
 }: {
   leads: Lead[];
   estimates: Estimate[];
   invoices: Invoice[];
   consultationEstimates: ConsultationEstimate[];
   serverNow: ServerNow;
+  offices?: { value: string; label: string }[];
 }) {
   const { t } = useTranslation();
   const [period, setPeriod] = useState<TimePeriod>("month");
+  const [officeFilter, setOfficeFilter] = useState("all");
+
+  const hasOffices = offices.length > 0;
+  const officeOptions = useMemo(() => [
+    { value: "all", label: "All Offices" },
+    ...offices,
+  ], [offices]);
+
+  // Filter leads by office
+  const leads = useMemo(
+    () => officeFilter === "all" ? allLeads : allLeads.filter((l) => l.office === officeFilter),
+    [allLeads, officeFilter]
+  );
 
   const periodStart = useMemo(() => getPeriodStart(period, serverNow), [period, serverNow]);
 
@@ -244,21 +260,45 @@ export default function CRMDashboardClient({
           <p className="text-sm text-slate-500">{t("crm.subtitle")}</p>
         </div>
 
-        {/* Period filter pills */}
-        <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm rounded-full p-1 border border-slate-100 shadow-sm">
-          {periods.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all duration-200 ${
-                period === p.value
-                  ? "bg-[#7BC143] text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          {/* Office filter — only shown if offices are configured */}
+          {hasOffices && (
+            <div className="flex items-center gap-2">
+              <Building2 size={14} className="text-slate-400" />
+              <div className="flex bg-slate-100 rounded-lg p-0.5">
+                {officeOptions.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setOfficeFilter(o.value)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                      officeFilter === o.value
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Period filter pills */}
+          <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm rounded-full p-1 border border-slate-100 shadow-sm">
+            {periods.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all duration-200 ${
+                  period === p.value
+                    ? "bg-[#7BC143] text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

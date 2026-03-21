@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
+import { requireOrg } from "@/lib/org-context";
+import { NextResponse } from "next/server";
 import CRMDashboardClient from "./CRMDashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function CRMDashboard() {
+  const auth = await requireOrg();
+  const orgId = auth instanceof NextResponse ? null : auth.orgId;
   // Fetch all required data
   const leads = await prisma.lead.findMany({
     include: { company: true, contact: true, estimates: true },
@@ -34,6 +38,7 @@ export default async function CRMDashboard() {
     projectId: l.projectId ?? null,
     updatedAt: l.updatedAt ?? l.createdAt,
     lostDate: l.lostDate ?? null,
+    office: (l as any).office ?? null,
     company: l.company ? { name: l.company.name } : null,
     contact: l.contact ? { name: [(l.contact as any).firstName, (l.contact as any).lastName].filter(Boolean).join(" ") || l.contact.name } : null,
   }));
@@ -74,6 +79,19 @@ export default async function CRMDashboard() {
     createdAt: ce.createdAt,
   }));
 
+  // Fetch org's configured offices
+  let offices: { value: string; label: string }[] = [];
+  if (orgId) {
+    try {
+      const officeSetting = await prisma.setting.findUnique({
+        where: { key: `offices_${orgId}` },
+      });
+      if (officeSetting?.value) {
+        offices = JSON.parse(officeSetting.value);
+      }
+    } catch {}
+  }
+
   // Pass server timestamp so client renders consistently
   const now = new Date();
   const serverNow = {
@@ -89,6 +107,7 @@ export default async function CRMDashboard() {
       invoices={serializedInvoices}
       consultationEstimates={serializedConsultationEstimates}
       serverNow={serverNow}
+      offices={offices}
     />
   );
 }

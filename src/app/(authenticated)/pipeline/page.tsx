@@ -1,7 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { requireOrg } from "@/lib/org-context";
+import { NextResponse } from "next/server";
 import PipelineView from "./PipelineView";
 
+export const dynamic = "force-dynamic";
+
 export default async function PipelinePage() {
+  const auth = await requireOrg();
+  const orgId = auth instanceof NextResponse ? null : auth.orgId;
+
   // Fetch won leads with relations
   const leads = await prisma.lead.findMany({
     where: { status: "won" },
@@ -89,12 +96,26 @@ export default async function PipelinePage() {
       estimateStatus: estimate?.status || null,
       leadStatus: lead.status || null,
       createdAt: lead.createdAt,
+      office: lead.office ?? null,
     };
   });
 
+  // Fetch org's configured offices
+  let offices: { value: string; label: string }[] = [];
+  if (orgId) {
+    try {
+      const officeSetting = await prisma.setting.findUnique({
+        where: { key: `offices_${orgId}` },
+      });
+      if (officeSetting?.value) {
+        offices = JSON.parse(officeSetting.value);
+      }
+    } catch {}
+  }
+
   return (
     <div>
-      <PipelineView opportunities={opportunities} />
+      <PipelineView opportunities={opportunities} offices={offices} />
     </div>
   );
 }
