@@ -85,6 +85,7 @@ model Organization {
   settings               Setting[]
   notes                  Note[]
   methDeconReports       MethDeconReport[]
+  changeOrders           ChangeOrder[]
 
   @@map("organizations")
 }
@@ -244,6 +245,7 @@ model Project {
   budgetLines        ProjectBudgetLine[]
   methDeconReport    MethDeconReport?
   customerPortals    CustomerPortal[]
+  changeOrders       ChangeOrder[]
 
   @@index([organizationId])
   @@map("projects")
@@ -1429,4 +1431,31 @@ model PortalMessage {
 
   @@index([portalId])
   @@map("portal_messages")
+}
+
+// ─── Change Orders ──────────────────────────────────────────────
+
+model ChangeOrder {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number        Int      // Sequential per project (CO-1, CO-2, etc.)
+  title         String
+  description   String
+  reason        String?  // scope_change, unforeseen_conditions, client_request, regulatory, other
+  costImpact    Float    @default(0)
+  daysImpact    Int      @default(0)
+  status        String   @default("draft") // draft, pending_approval, approved, rejected
+  createdBy     String
+  approvedBy    String?
+  approvedAt    String?
+  rejectionNote String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([organizationId])
+  @@map("change_orders")
 }

@@ -148,7 +148,7 @@ export default function ProjectTabs({
   officeManagerId?: string | null;
   linkedConsultationEstimate?: any;
 }) {
-  const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "decon_report" | "documents" | "activity" | "inventory" | "notes" | "budget">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "decon_report" | "documents" | "activity" | "inventory" | "notes" | "budget" | "change_orders">("dashboard");
   const router = useRouter();
   const { data: sessionData } = useSession();
   const userRole = (sessionData?.user as any)?.role;
@@ -196,6 +196,36 @@ export default function ProjectTabs({
   const [portalLink, setPortalLink] = useState<string | null>(null);
   const [portalCopied, setPortalCopied] = useState(false);
 
+  // Change order state
+  type ChangeOrder = {
+    id: string;
+    number: number;
+    title: string;
+    description: string;
+    reason: string | null;
+    costImpact: number;
+    daysImpact: number;
+    status: string;
+    createdBy: string;
+    approvedBy: string | null;
+    approvedAt: string | null;
+    rejectionNote: string | null;
+    createdAt: string;
+  };
+  const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>([]);
+  const [coLoading, setCoLoading] = useState(false);
+  const [coShowCreate, setCoShowCreate] = useState(false);
+  const [coSaving, setCoSaving] = useState(false);
+  const [coTitle, setCoTitle] = useState("");
+  const [coDescription, setCoDescription] = useState("");
+  const [coReason, setCoReason] = useState("");
+  const [coCostImpact, setCoCostImpact] = useState("");
+  const [coDaysImpact, setCoDaysImpact] = useState("");
+  const [coApprovingId, setCoApprovingId] = useState<string | null>(null);
+  const [coRejectingId, setCoRejectingId] = useState<string | null>(null);
+  const [coRejectionNote, setCoRejectionNote] = useState("");
+  const [coDeletingId, setCoDeletingId] = useState<string | null>(null);
+
   async function handleGeneratePortalLink() {
     setPortalLoading(true);
     try {
@@ -210,6 +240,97 @@ export default function ProjectTabs({
       }
     } catch {}
     setPortalLoading(false);
+  }
+
+  // Fetch change orders when tab is active
+  useEffect(() => {
+    if (tab !== "change_orders") return;
+    setCoLoading(true);
+    fetch(`/api/change-orders?projectId=${project.id}`)
+      .then((r) => r.json())
+      .then((data) => setChangeOrders(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setCoLoading(false));
+  }, [tab, project.id]);
+
+  async function handleCreateCO() {
+    if (!coTitle.trim() || !coDescription.trim()) return;
+    setCoSaving(true);
+    try {
+      const res = await fetch("/api/change-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: project.id,
+          title: coTitle,
+          description: coDescription,
+          reason: coReason || undefined,
+          costImpact: coCostImpact || 0,
+          daysImpact: coDaysImpact || 0,
+        }),
+      });
+      if (res.ok) {
+        const newCo = await res.json();
+        setChangeOrders((prev) => [...prev, newCo]);
+        setCoShowCreate(false);
+        setCoTitle("");
+        setCoDescription("");
+        setCoReason("");
+        setCoCostImpact("");
+        setCoDaysImpact("");
+        router.refresh();
+      }
+    } catch {}
+    finally { setCoSaving(false); }
+  }
+
+  async function handleApproveCO(id: string) {
+    setCoApprovingId(id);
+    try {
+      const res = await fetch(`/api/change-orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setChangeOrders((prev) => prev.map((co) => (co.id === id ? { ...co, ...updated } : co)));
+        router.refresh();
+      }
+    } catch {}
+    finally { setCoApprovingId(null); }
+  }
+
+  async function handleRejectCO(id: string) {
+    setCoApprovingId(id);
+    try {
+      const res = await fetch(`/api/change-orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", rejectionNote: coRejectionNote || undefined }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setChangeOrders((prev) => prev.map((co) => (co.id === id ? { ...co, ...updated } : co)));
+        setCoRejectingId(null);
+        setCoRejectionNote("");
+        router.refresh();
+      }
+    } catch {}
+    finally { setCoApprovingId(null); }
+  }
+
+  async function handleDeleteCO(id: string) {
+    if (!confirm("Delete this change order?")) return;
+    setCoDeletingId(id);
+    try {
+      const res = await fetch(`/api/change-orders/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setChangeOrders((prev) => prev.filter((co) => co.id !== id));
+        router.refresh();
+      }
+    } catch {}
+    finally { setCoDeletingId(null); }
   }
 
   // Quick-add FAB
@@ -250,6 +371,7 @@ export default function ProjectTabs({
         { key: "inventory" as const, label: "Inventory" },
         { key: "notes" as const, label: "Notes" },
         ...(userRole === "ADMIN" ? [{ key: "budget" as const, label: "Budget" }] : []),
+        ...((userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR") ? [{ key: "change_orders" as const, label: "Change Orders" }] : []),
       ];
 
   // Close quick-add on outside click
@@ -1438,6 +1560,306 @@ export default function ProjectTabs({
 
       {tab === "budget" && (
         <ProjectBudgetTab projectId={project.id} />
+      )}
+
+      {/* ════════════════════ Change Orders Tab ════════════════════ */}
+      {tab === "change_orders" && (
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-800">Change Orders</h2>
+            {(userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR") && (
+              <button
+                onClick={() => setCoShowCreate(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
+                <Plus size={14} /> New Change Order
+              </button>
+            )}
+          </div>
+
+          {/* Loading */}
+          {coLoading && (
+            <div className="flex items-center justify-center py-12 text-sm text-slate-400">
+              <Loader2 size={18} className="animate-spin mr-2" /> Loading change orders...
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!coLoading && changeOrders.length === 0 && (
+            <div className="text-center py-12 text-sm text-slate-400">
+              <ClipboardList size={28} className="mx-auto mb-2 opacity-40" />
+              No change orders yet
+            </div>
+          )}
+
+          {/* Change order list */}
+          {!coLoading && changeOrders.length > 0 && (
+            <div className="space-y-3">
+              {/* Summary banner */}
+              {(() => {
+                const approved = changeOrders.filter((co) => co.status === "approved");
+                const totalCost = approved.reduce((sum, co) => sum + co.costImpact, 0);
+                const totalDays = approved.reduce((sum, co) => sum + co.daysImpact, 0);
+                const pending = changeOrders.filter((co) => co.status === "pending_approval").length;
+                return (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-wrap gap-4 text-xs">
+                    <div>
+                      <span className="text-slate-500">Total COs:</span>{" "}
+                      <span className="font-semibold text-slate-700">{changeOrders.length}</span>
+                    </div>
+                    {pending > 0 && (
+                      <div>
+                        <span className="text-slate-500">Pending:</span>{" "}
+                        <span className="font-semibold text-amber-600">{pending}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-slate-500">Approved Cost Impact:</span>{" "}
+                      <span className={`font-semibold ${totalCost > 0 ? "text-red-600" : totalCost < 0 ? "text-emerald-600" : "text-slate-600"}`}>
+                        {totalCost >= 0 ? "+" : ""}${totalCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {totalDays !== 0 && (
+                      <div>
+                        <span className="text-slate-500">Timeline Impact:</span>{" "}
+                        <span className={`font-semibold ${totalDays > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                          {totalDays > 0 ? "+" : ""}{totalDays} day{Math.abs(totalDays) !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {changeOrders.map((co) => {
+                const statusColors: Record<string, string> = {
+                  draft: "bg-slate-100 text-slate-600",
+                  pending_approval: "bg-amber-100 text-amber-700",
+                  approved: "bg-emerald-100 text-emerald-700",
+                  rejected: "bg-red-100 text-red-700",
+                };
+                const statusLabels: Record<string, string> = {
+                  draft: "Draft",
+                  pending_approval: "Pending Approval",
+                  approved: "Approved",
+                  rejected: "Rejected",
+                };
+                return (
+                  <div key={co.id} className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+                    {/* Top row */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-mono text-slate-400">CO #{co.number}</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[co.status] || "bg-slate-100 text-slate-600"}`}>
+                            {statusLabels[co.status] || co.status}
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-semibold text-slate-800 mt-1">{co.title}</h3>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{co.description}</p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {/* PDF download */}
+                        <a
+                          href={`/api/change-orders/${co.id}/pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
+                          title="Download PDF"
+                        >
+                          <FileDown size={16} />
+                        </a>
+                        {/* Delete (admin only, not approved) */}
+                        {userRole === "ADMIN" && co.status !== "approved" && (
+                          <button
+                            onClick={() => handleDeleteCO(co.id)}
+                            disabled={coDeletingId === co.id}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                            title="Delete"
+                          >
+                            {coDeletingId === co.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Impact chips */}
+                    <div className="flex items-center gap-3 text-xs">
+                      {co.reason && (
+                        <span className="text-slate-500">
+                          {({ scope_change: "Scope Change", unforeseen_conditions: "Unforeseen Conditions", client_request: "Client Request", regulatory: "Regulatory", other: "Other" } as Record<string, string>)[co.reason] || co.reason}
+                        </span>
+                      )}
+                      <span className={`font-semibold ${co.costImpact > 0 ? "text-red-600" : co.costImpact < 0 ? "text-emerald-600" : "text-slate-500"}`}>
+                        {co.costImpact >= 0 ? "+" : ""}${co.costImpact.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </span>
+                      {co.daysImpact !== 0 && (
+                        <span className={`font-semibold ${co.daysImpact > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                          {co.daysImpact > 0 ? "+" : ""}{co.daysImpact} day{Math.abs(co.daysImpact) !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      <span className="text-slate-400 ml-auto">
+                        {new Date(co.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} by {co.createdBy}
+                      </span>
+                    </div>
+
+                    {/* Rejection note */}
+                    {co.status === "rejected" && co.rejectionNote && (
+                      <div className="bg-red-50 border border-red-100 rounded p-2 text-xs text-red-700">
+                        <span className="font-semibold">Rejection reason:</span> {co.rejectionNote}
+                      </div>
+                    )}
+
+                    {/* Approval info */}
+                    {co.status === "approved" && co.approvedBy && (
+                      <div className="bg-emerald-50 border border-emerald-100 rounded p-2 text-xs text-emerald-700">
+                        Approved by {co.approvedBy}
+                        {co.approvedAt && ` on ${new Date(co.approvedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                      </div>
+                    )}
+
+                    {/* Admin approval actions */}
+                    {userRole === "ADMIN" && co.status === "pending_approval" && (
+                      <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                        {coRejectingId === co.id ? (
+                          <div className="flex-1 flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={coRejectionNote}
+                              onChange={(e) => setCoRejectionNote(e.target.value)}
+                              placeholder="Rejection reason (optional)"
+                              className="flex-1 px-2 py-1 text-xs border border-slate-200 rounded"
+                            />
+                            <button
+                              onClick={() => handleRejectCO(co.id)}
+                              disabled={coApprovingId === co.id}
+                              className="px-3 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition"
+                            >
+                              {coApprovingId === co.id ? <Loader2 size={12} className="animate-spin" /> : "Confirm Reject"}
+                            </button>
+                            <button
+                              onClick={() => { setCoRejectingId(null); setCoRejectionNote(""); }}
+                              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleApproveCO(co.id)}
+                              disabled={coApprovingId === co.id}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+                            >
+                              {coApprovingId === co.id ? <Loader2 size={12} className="animate-spin" /> : <><CheckCircle2 size={13} /> Approve</>}
+                            </button>
+                            <button
+                              onClick={() => setCoRejectingId(co.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition"
+                            >
+                              <X size={13} /> Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Create Change Order Modal ── */}
+          {coShowCreate && (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setCoShowCreate(false)}>
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+                  <h3 className="text-sm font-semibold text-slate-800">New Change Order</h3>
+                  <button onClick={() => setCoShowCreate(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                </div>
+                <div className="px-5 py-4 space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Title *</label>
+                    <input
+                      type="text"
+                      value={coTitle}
+                      onChange={(e) => setCoTitle(e.target.value)}
+                      placeholder="Brief title for the change"
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Description *</label>
+                    <textarea
+                      value={coDescription}
+                      onChange={(e) => setCoDescription(e.target.value)}
+                      placeholder="Detailed description of the change and its justification..."
+                      rows={4}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Reason</label>
+                    <select
+                      value={coReason}
+                      onChange={(e) => setCoReason(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">Select reason...</option>
+                      <option value="scope_change">Scope Change</option>
+                      <option value="unforeseen_conditions">Unforeseen Conditions</option>
+                      <option value="client_request">Client Request</option>
+                      <option value="regulatory">Regulatory Requirement</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Cost Impact ($)</label>
+                      <input
+                        type="number"
+                        value={coCostImpact}
+                        onChange={(e) => setCoCostImpact(e.target.value)}
+                        placeholder="0.00"
+                        step="0.01"
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-0.5">Positive = cost increase, negative = savings</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Timeline Impact (days)</label>
+                      <input
+                        type="number"
+                        value={coDaysImpact}
+                        onChange={(e) => setCoDaysImpact(e.target.value)}
+                        placeholder="0"
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-0.5">Positive = extends, negative = shortens</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-xl">
+                  <button
+                    onClick={() => setCoShowCreate(false)}
+                    className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateCO}
+                    disabled={coSaving || !coTitle.trim() || !coDescription.trim()}
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
+                  >
+                    {coSaving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    Submit for Approval
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Upload Document Modal */}
