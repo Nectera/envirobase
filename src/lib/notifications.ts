@@ -236,6 +236,32 @@ export function buildCertExpiryBody(
   `;
 }
 
+export function buildMedicalExpiryBody(
+  workerName: string,
+  itemName: string,
+  dueDate: string,
+  status: "upcoming" | "overdue",
+  daysUntilDue?: number,
+): string {
+  const statusText = status === "overdue"
+    ? "is overdue"
+    : `is due in ${daysUntilDue} days`;
+  const urgency = status === "overdue"
+    ? "This is overdue and must be scheduled immediately."
+    : daysUntilDue !== undefined && daysUntilDue <= 7
+    ? "This is due very soon — please schedule immediately."
+    : "Please schedule before the due date to maintain compliance.";
+  const urgencyColor = status === "overdue" || (daysUntilDue !== undefined && daysUntilDue <= 7)
+    ? "#ef4444" : "#f59e0b";
+
+  return `
+    <p style="margin:0 0 16px;color:#475569;font-size:14px;line-height:1.7;">
+      <strong>${escapeHtml(workerName)}</strong>'s <strong>${escapeHtml(itemName)}</strong> ${statusText} (${escapeHtml(dueDate)}).
+    </p>
+    <p style="margin:0 0 16px;color:${urgencyColor};font-size:13px;font-weight:600;">${urgency}</p>
+  `;
+}
+
 export function buildIncidentBody(
   projectName: string,
   incidentType: string,
