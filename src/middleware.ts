@@ -49,7 +49,7 @@ const SUPERVISOR_ALLOWED = [
 ];
 
 // Routes that don't need auth
-const PUBLIC_ROUTES = ["/login", "/signup", "/api/auth", "/api/organizations/signup", "/api/stripe/webhook", "/forgot-password", "/reset-password", "/privacy", "/terms"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/api/auth", "/api/organizations/signup", "/api/stripe/webhook", "/forgot-password", "/reset-password", "/privacy", "/terms", "/portal", "/api/public", "/feedback"];
 
 // Security headers applied to all responses
 function addSecurityHeaders(response: NextResponse): NextResponse {

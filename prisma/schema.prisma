@@ -243,6 +243,7 @@ model Project {
   reviewRequests     ReviewRequest[]
   budgetLines        ProjectBudgetLine[]
   methDeconReport    MethDeconReport?
+  customerPortals    CustomerPortal[]
 
   @@index([organizationId])
   @@map("projects")
@@ -1397,4 +1398,35 @@ model NoteComment {
 
   @@index([noteId])
   @@map("note_comments")
+}
+
+// ─── Customer Portal ────────────────────────────────────────────
+
+model CustomerPortal {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  token       String   @unique @default(uuid())
+  clientName  String?
+  clientEmail String?
+  active      Boolean  @default(true)
+  createdBy   String?  // user who generated the link
+  messages    PortalMessage[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("customer_portals")
+}
+
+model PortalMessage {
+  id        String   @id @default(uuid())
+  portalId  String
+  portal    CustomerPortal @relation(fields: [portalId], references: [id], onDelete: Cascade)
+  sender    String   // "client" or staff user name
+  isClient  Boolean  @default(false)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([portalId])
+  @@map("portal_messages")
 }

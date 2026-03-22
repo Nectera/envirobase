@@ -191,6 +191,27 @@ export default function ProjectTabs({
   const [reviewEmail, setReviewEmail] = useState(project.clientEmail || "");
   const [reviewPhone, setReviewPhone] = useState(project.clientPhone || "");
 
+  // Customer portal state
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalLink, setPortalLink] = useState<string | null>(null);
+  const [portalCopied, setPortalCopied] = useState(false);
+
+  async function handleGeneratePortalLink() {
+    setPortalLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}/portal`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        const link = `${window.location.origin}/portal/${data.token}`;
+        setPortalLink(link);
+        navigator.clipboard.writeText(link);
+        setPortalCopied(true);
+        setTimeout(() => setPortalCopied(false), 3000);
+      }
+    } catch {}
+    setPortalLoading(false);
+  }
+
   // Quick-add FAB
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickNoteOpen, setQuickNoteOpen] = useState(false);
@@ -720,6 +741,15 @@ export default function ProjectTabs({
               <button onClick={handleDeleteProject} disabled={deleting} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition">
                 {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Delete
               </button>
+              <button
+                onClick={handleGeneratePortalLink}
+                disabled={portalLoading}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#7BC143] bg-white border border-[#7BC143]/30 rounded-lg hover:bg-[#7BC143]/5 disabled:opacity-50 transition"
+                title="Generate a shareable portal link for the client"
+              >
+                {portalLoading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                {portalCopied ? "Copied!" : portalLink ? "Copy Link" : "Client Portal"}
+              </button>
             </div>
 
             {/* Mobile overflow menu button */}
@@ -764,6 +794,10 @@ export default function ProjectTabs({
                     <div className="border-t border-slate-100 my-1" />
                     <button onClick={() => { setMobileActionsOpen(false); handleDeleteProject(); }} disabled={deleting} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50">
                       <Trash2 size={14} /> Delete Project
+                    </button>
+                    <div className="border-t border-slate-100 my-1" />
+                    <button onClick={() => { setMobileActionsOpen(false); handleGeneratePortalLink(); }} disabled={portalLoading} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-[#7BC143] hover:bg-emerald-50 disabled:opacity-50">
+                      <ExternalLink size={14} /> {portalCopied ? "Link Copied!" : "Client Portal Link"}
                     </button>
                   </div>
                 </>
