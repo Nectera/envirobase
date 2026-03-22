@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId, workerId, clockInLat, clockInLng, clockInAddress } = body;
+    const { projectId, workerId, clockInLat, clockInLng, clockInAddress, clockInDistance } = body;
 
     if (!workerId) {
       return NextResponse.json({ error: "Missing required fields: workerId" }, { status: 400 });
@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
         clockInLat: clockInLat ?? null,
         clockInLng: clockInLng ?? null,
         clockInAddress: clockInAddress || null,
+        clockInDistance: clockInDistance ?? null,
       }),
     });
 

@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 // ─── Organization (Multi-Tenancy) ───────────────────────────────
@@ -496,9 +495,11 @@ model TimeEntry {
   clockInLat       Float?   // Latitude at clock-in
   clockInLng       Float?   // Longitude at clock-in
   clockInAddress   String?  // Reverse-geocoded address at clock-in
+  clockInDistance   Float?   // Miles from project site at clock-in
   clockOutLat      Float?   // Latitude at clock-out
   clockOutLng      Float?   // Longitude at clock-out
   clockOutAddress  String?  // Reverse-geocoded address at clock-out
+  clockOutDistance  Float?   // Miles from project site at clock-out
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

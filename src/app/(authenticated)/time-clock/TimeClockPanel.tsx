@@ -26,9 +26,11 @@ type TimeEntry = {
   clockInLat?: number | null;
   clockInLng?: number | null;
   clockInAddress?: string | null;
+  clockInDistance?: number | null;
   clockOutLat?: number | null;
   clockOutLng?: number | null;
   clockOutAddress?: string | null;
+  clockOutDistance?: number | null;
 };
 
 /** Request browser geolocation — resolves with coords or null on deny/timeout */
@@ -52,6 +54,42 @@ function distanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): 
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Reverse-geocode lat/lng → readable address via our API */
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/places/reverse-geocode?lat=${lat}&lng=${lng}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.address || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Geocode project address → lat/lng via our API, returns null if no address or failure */
+async function geocodeProjectAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const res = await fetch(`/api/places/geocode?address=${encodeURIComponent(address)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.lat && data.lng ? { lat: data.lat, lng: data.lng } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Calculate distance from worker GPS to project site, returns miles or null */
+async function calcDistanceFromProject(
+  workerLat: number,
+  workerLng: number,
+  projectAddress: string | undefined | null
+): Promise<number | null> {
+  if (!projectAddress) return null;
+  const projectCoords = await geocodeProjectAddress(projectAddress);
+  if (!projectCoords) return null;
+  return Math.round(distanceMiles(workerLat, workerLng, projectCoords.lat, projectCoords.lng) * 100) / 100;
 }
 
 export default function TimeClockPanel({
@@ -262,10 +300,24 @@ export default function TimeClockPanel({
 
     const clockRole = isOfficeRole && !clockingForOther ? "office" : selectedRole;
 
-    // Capture GPS location
+    // Capture GPS location + reverse geocode + distance from project
     setGpsStatus("fetching");
     const loc = await getGeoLocation();
     setGpsStatus(loc ? "granted" : "denied");
+
+    let clockInAddress: string | null = null;
+    let clockInDistance: number | null = null;
+
+    if (loc) {
+      // Fire reverse geocode and distance calc in parallel (non-blocking)
+      const project = projects.find((p) => p.id === selectedProject);
+      const [addr, dist] = await Promise.all([
+        reverseGeocode(loc.lat, loc.lng),
+        calcDistanceFromProject(loc.lat, loc.lng, (project as any)?.address),
+      ]);
+      clockInAddress = addr;
+      clockInDistance = dist;
+    }
 
     try {
       const res = await fetch("/api/time-clock", {
@@ -278,6 +330,8 @@ export default function TimeClockPanel({
           role: clockRole,
           clockInLat: loc?.lat ?? null,
           clockInLng: loc?.lng ?? null,
+          clockInAddress,
+          clockInDistance,
         }),
       });
 
@@ -309,6 +363,20 @@ export default function TimeClockPanel({
     const loc = await getGeoLocation();
     setGpsStatus(loc ? "granted" : "denied");
 
+    let clockOutAddress: string | null = null;
+    let clockOutDistance: number | null = null;
+
+    if (loc) {
+      // Find the entry to get its project address for distance calc
+      const entry = activeEntries.find((e) => e.id === entryId);
+      const [addr, dist] = await Promise.all([
+        reverseGeocode(loc.lat, loc.lng),
+        calcDistanceFromProject(loc.lat, loc.lng, entry?.project?.address),
+      ]);
+      clockOutAddress = addr;
+      clockOutDistance = dist;
+    }
+
     try {
       await fetch(`/api/time-clock/${entryId}`, {
         method: "PUT",
@@ -319,6 +387,8 @@ export default function TimeClockPanel({
           notes: entryNotes,
           clockOutLat: loc?.lat ?? null,
           clockOutLng: loc?.lng ?? null,
+          clockOutAddress,
+          clockOutDistance,
         }),
       });
       setEditingEntry(null);
@@ -400,33 +470,62 @@ export default function TimeClockPanel({
                 {entry.totalHours != null ? `${entry.totalHours.toFixed(1)}h` : "—"}
               </td>
               <td className="px-4 py-2">
-                <div className="flex items-center gap-1">
-                  {entry.clockInLat != null ? (
-                    <a
-                      href={`https://maps.google.com/?q=${entry.clockInLat},${entry.clockInLng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition"
-                      title={`Clock-in: ${entry.clockInLat?.toFixed(5)}, ${entry.clockInLng?.toFixed(5)}`}
-                    >
-                      <Navigation size={9} /> In
-                    </a>
-                  ) : (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded">—</span>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1">
+                    {entry.clockInLat != null ? (
+                      <a
+                        href={`https://maps.google.com/?q=${entry.clockInLat},${entry.clockInLng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 hover:opacity-80 transition ${
+                          entry.clockInDistance != null
+                            ? entry.clockInDistance <= 0.5
+                              ? "bg-emerald-50 text-emerald-600"
+                              : entry.clockInDistance <= 2
+                              ? "bg-amber-50 text-amber-600"
+                              : "bg-red-50 text-red-600"
+                            : "bg-emerald-50 text-emerald-600"
+                        }`}
+                        title={`Clock-in: ${entry.clockInLat?.toFixed(5)}, ${entry.clockInLng?.toFixed(5)}${entry.clockInDistance != null ? ` · ${entry.clockInDistance.toFixed(1)} mi from site` : ""}${entry.clockInAddress ? ` · ${entry.clockInAddress}` : ""}`}
+                      >
+                        <Navigation size={9} /> In
+                        {entry.clockInDistance != null && (
+                          <span className="ml-0.5">{entry.clockInDistance <= 0.5 ? "✓" : `${entry.clockInDistance.toFixed(1)}mi`}</span>
+                        )}
+                      </a>
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded">—</span>
+                    )}
+                    {entry.clockOutLat != null ? (
+                      <a
+                        href={`https://maps.google.com/?q=${entry.clockOutLat},${entry.clockOutLng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 hover:opacity-80 transition ${
+                          entry.clockOutDistance != null
+                            ? entry.clockOutDistance <= 0.5
+                              ? "bg-emerald-50 text-emerald-600"
+                              : entry.clockOutDistance <= 2
+                              ? "bg-amber-50 text-amber-600"
+                              : "bg-red-50 text-red-600"
+                            : "bg-blue-50 text-blue-600"
+                        }`}
+                        title={`Clock-out: ${entry.clockOutLat?.toFixed(5)}, ${entry.clockOutLng?.toFixed(5)}${entry.clockOutDistance != null ? ` · ${entry.clockOutDistance.toFixed(1)} mi from site` : ""}${entry.clockOutAddress ? ` · ${entry.clockOutAddress}` : ""}`}
+                      >
+                        <Navigation size={9} /> Out
+                        {entry.clockOutDistance != null && (
+                          <span className="ml-0.5">{entry.clockOutDistance <= 0.5 ? "✓" : `${entry.clockOutDistance.toFixed(1)}mi`}</span>
+                        )}
+                      </a>
+                    ) : entry.clockOut ? (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded">—</span>
+                    ) : null}
+                  </div>
+                  {entry.clockInAddress && (
+                    <span className="text-[9px] text-slate-400 truncate max-w-[180px]" title={entry.clockInAddress}>
+                      {entry.clockInAddress}
+                    </span>
                   )}
-                  {entry.clockOutLat != null ? (
-                    <a
-                      href={`https://maps.google.com/?q=${entry.clockOutLat},${entry.clockOutLng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded flex items-center gap-0.5 hover:bg-blue-100 transition"
-                      title={`Clock-out: ${entry.clockOutLat?.toFixed(5)}, ${entry.clockOutLng?.toFixed(5)}`}
-                    >
-                      <Navigation size={9} /> Out
-                    </a>
-                  ) : entry.clockOut ? (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded">—</span>
-                  ) : null}
                 </div>
               </td>
               <td className="px-4 py-2 text-slate-500 max-w-[200px] truncate">
@@ -736,12 +835,36 @@ export default function TimeClockPanel({
                     }`}>
                       {entry.role === "office" ? "OFFICE" : entry.role === "supervisor" ? "SUPERVISOR" : "TECHNICIAN"}
                     </span>
-                    {entry.clockInLat != null && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded flex items-center gap-0.5" title={`GPS: ${entry.clockInLat?.toFixed(4)}, ${entry.clockInLng?.toFixed(4)}`}>
-                        <MapPin size={10} /> GPS
-                      </span>
-                    )}
-                    {entry.clockInLat == null && (
+                    {entry.clockInLat != null ? (
+                      entry.clockInDistance != null ? (
+                        <a
+                          href={`https://maps.google.com/?q=${entry.clockInLat},${entry.clockInLng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 cursor-pointer ${
+                            entry.clockInDistance <= 0.5
+                              ? "bg-emerald-50 text-emerald-600"
+                              : entry.clockInDistance <= 2
+                              ? "bg-amber-50 text-amber-600"
+                              : "bg-red-50 text-red-600"
+                          }`}
+                          title={`${entry.clockInDistance.toFixed(1)} mi from jobsite · GPS: ${entry.clockInLat?.toFixed(4)}, ${entry.clockInLng?.toFixed(4)}`}
+                        >
+                          <MapPin size={10} />
+                          {entry.clockInDistance <= 0.5 ? "On-Site" : `${entry.clockInDistance.toFixed(1)} mi`}
+                        </a>
+                      ) : (
+                        <a
+                          href={`https://maps.google.com/?q=${entry.clockInLat},${entry.clockInLng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded flex items-center gap-0.5 cursor-pointer"
+                          title={`GPS: ${entry.clockInLat?.toFixed(4)}, ${entry.clockInLng?.toFixed(4)}`}
+                        >
+                          <MapPin size={10} /> GPS
+                        </a>
+                      )
+                    ) : (
                       <span className="text-[10px] px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded flex items-center gap-0.5" title="No GPS captured at clock-in">
                         <MapPin size={10} /> No GPS
                       </span>

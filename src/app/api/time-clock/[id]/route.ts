@@ -87,6 +87,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.clockOutLat !== undefined) updateData.clockOutLat = body.clockOutLat;
     if (body.clockOutLng !== undefined) updateData.clockOutLng = body.clockOutLng;
     if (body.clockOutAddress) updateData.clockOutAddress = body.clockOutAddress;
+    if (body.clockOutDistance !== undefined) updateData.clockOutDistance = body.clockOutDistance;
 
 const updated = await prisma.timeEntry.update({
       where: orgWhere(orgId, { id: params.id }),
