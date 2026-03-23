@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import {
   Plus, Loader2, X, Trash2, Save, ChevronDown, ChevronRight,
   Send, CheckCircle2, XCircle, Search, Building2, Phone, Mail,
-  FileText, Zap,
+  FileText, Zap, FileDown,
 } from "lucide-react";
 
 type LineItem = {
@@ -125,6 +125,20 @@ export default function InsuranceEstimatesTab({ projectId, projectType }: { proj
 
   // Scope sheet
   const [loadingScope, setLoadingScope] = useState(false);
+
+  // Export
+  const [exportMenuEst, setExportMenuEst] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    if (!exportMenuEst) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-export-menu]")) setExportMenuEst(null);
+    };
+    document.addEventListener("click", handler, true);
+    return () => document.removeEventListener("click", handler, true);
+  }, [exportMenuEst]);
 
   // ── Carrier state ──
   const [carriers, setCarriers] = useState<Carrier[]>([]);
@@ -274,6 +288,31 @@ export default function InsuranceEstimatesTab({ projectId, projectType }: { proj
     if (!confirm("Delete this estimate?")) return;
     const res = await fetch(`/api/project-estimates/${id}`, { method: "DELETE" });
     if (res.ok) setEstimates((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  async function handleExportEstimate(estimateId: string, format: "csv" | "xact") {
+    setExporting(true);
+    setExportMenuEst(null);
+    try {
+      const res = await fetch(`/api/project-estimates/${estimateId}/export?format=${format}`);
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("content-disposition");
+      const filenameMatch = disposition?.match(/filename="(.+)"/);
+      a.download = filenameMatch?.[1] || `estimate_export.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Failed to export estimate. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   function selectXactItem(item: XactItem) {
@@ -520,7 +559,36 @@ export default function InsuranceEstimatesTab({ projectId, projectType }: { proj
                       </>
                     )}
                     {isAdmin && est.status !== "approved" && (
-                      <button onClick={() => handleDeleteEstimate(est.id)} className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-red-500 hover:bg-red-50 rounded transition ml-auto"><Trash2 size={12} /> Delete</button>
+                      <button onClick={() => handleDeleteEstimate(est.id)} className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-red-500 hover:bg-red-50 rounded transition"><Trash2 size={12} /> Delete</button>
+                    )}
+                    {est.lineItems.length > 0 && (
+                      <div className="relative ml-auto" data-export-menu>
+                        <button
+                          onClick={() => setExportMenuEst(exportMenuEst === est.id ? null : est.id)}
+                          disabled={exporting}
+                          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-white border border-slate-200 rounded hover:bg-emerald-50 hover:border-emerald-300 transition"
+                        >
+                          {exporting ? <Loader2 size={12} className="animate-spin" /> : <FileDown size={12} />} Export
+                        </button>
+                        {exportMenuEst === est.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-30 py-1 min-w-[180px]">
+                            <button
+                              onClick={() => handleExportEstimate(est.id, "xact")}
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 transition"
+                            >
+                              <div className="font-medium text-slate-700">Xactimate CSV</div>
+                              <div className="text-[10px] text-slate-400">Formatted for Xactimate entry</div>
+                            </button>
+                            <button
+                              onClick={() => handleExportEstimate(est.id, "csv")}
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 transition border-t border-slate-100"
+                            >
+                              <div className="font-medium text-slate-700">Full CSV</div>
+                              <div className="text-[10px] text-slate-400">With project details &amp; subtotals</div>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
