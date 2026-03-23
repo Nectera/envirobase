@@ -353,28 +353,53 @@ export default function ProjectTabs({
   const [reportsSub, setReportsSub] = useState<"daily" | "safety" | "closeout">("daily");
 
   const isSupervisor = userRole === "SUPERVISOR";
+  const isAdminOrPM = userRole === "ADMIN" || userRole === "PROJECT_MANAGER";
+  const [activeGroup, setActiveGroup] = useState("overview");
 
-  const tabs = isSupervisor
+  type TabKey = typeof tab;
+  type TabItem = { key: TabKey; label: string };
+  type TabGroup = { group: string; label: string; tabs: TabItem[] };
+
+  // Grouped tab structure
+  const tabGroups: TabGroup[] = isSupervisor
     ? [
-        { key: "dashboard" as const, label: "Dashboard" },
-        { key: "reports" as const, label: `Reports (${reportsCount})` },
-        ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
-        { key: "inventory" as const, label: "Inventory" },
-        { key: "notes" as const, label: "Notes" },
+        { group: "overview", label: "Overview", tabs: [
+          { key: "dashboard" as const, label: "Dashboard" },
+          { key: "reports" as const, label: `Reports (${reportsCount})` },
+          ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
+          { key: "notes" as const, label: "Notes" },
+        ]},
+        { group: "field", label: "Field", tabs: [
+          { key: "inventory" as const, label: "Inventory" },
+        ]},
       ]
     : [
-        { key: "dashboard" as const, label: "Dashboard" },
-        { key: "tasks" as const, label: "Tasks" },
-        { key: "reports" as const, label: `Reports (${reportsCount})` },
-        ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
-        { key: "documents" as const, label: `Documents (${projectDocuments.length})` },
-        { key: "activity" as const, label: `Activity (${(activities || []).length + (linkedActivities || []).length})` },
-        { key: "inventory" as const, label: "Inventory" },
-        { key: "notes" as const, label: "Notes" },
-        ...(userRole === "ADMIN" ? [{ key: "budget" as const, label: "Budget" }] : []),
-        ...((userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR") ? [{ key: "change_orders" as const, label: "Change Orders" }] : []),
-        ...((userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR" || userRole === "OFFICE") ? [{ key: "insurance" as const, label: "Insurance" }] : []),
-      ];
+        { group: "overview", label: "Overview", tabs: [
+          { key: "dashboard" as const, label: "Dashboard" },
+          { key: "tasks" as const, label: "Tasks" },
+          { key: "activity" as const, label: `Activity (${(activities || []).length + (linkedActivities || []).length})` },
+        ]},
+        { group: "documents", label: "Documents", tabs: [
+          { key: "documents" as const, label: `Files (${projectDocuments.length})` },
+          { key: "reports" as const, label: `Reports (${reportsCount})` },
+          ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
+          { key: "notes" as const, label: "Notes" },
+        ]},
+        { group: "financials", label: "Financials", tabs: [
+          ...(userRole === "ADMIN" ? [{ key: "budget" as const, label: "Budget" }] : []),
+          ...((isAdminOrPM || userRole === "SUPERVISOR" || userRole === "OFFICE") ? [{ key: "insurance" as const, label: "Estimates" }] : []),
+          ...((isAdminOrPM || userRole === "SUPERVISOR") ? [{ key: "change_orders" as const, label: "Change Orders" }] : []),
+        ]},
+        { group: "inventory", label: "Inventory", tabs: [
+          { key: "inventory" as const, label: "Inventory" },
+        ]},
+      ].filter((g) => g.tabs.length > 0);
+
+  // Flat tabs for mobile dropdown
+  const tabs = tabGroups.flatMap((g) => g.tabs) as { key: typeof tab; label: string }[];
+
+  // Determine which group the current tab belongs to
+  const currentGroup = tabGroups.find((g) => g.tabs.some((t) => t.key === tab))?.group || "overview";
 
   // Close quick-add on outside click
   useEffect(() => {
@@ -931,32 +956,64 @@ export default function ProjectTabs({
         </div>
       </div>
 
-      {/* Mobile Tab Selector — dropdown */}
+      {/* Mobile Tab Selector — grouped dropdown */}
       <div className="md:hidden mb-4">
         <select
           value={tab}
           onChange={(e) => setTab(e.target.value as any)}
           className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-full bg-white focus:ring-[#7BC143] focus:border-[#7BC143]"
         >
-          {tabs.map((t) => (
-            <option key={t.key} value={t.key}>{t.label}</option>
+          {tabGroups.map((g) => (
+            <optgroup key={g.group} label={g.label}>
+              {g.tabs.map((t) => (
+                <option key={t.key} value={t.key}>{t.label}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
 
-      {/* Desktop Tab Bar */}
-      <div className="hidden md:flex gap-0 border-b border-slate-200 mb-4">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap ${
-              tab === t.key ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* Desktop Tab Bar — Grouped */}
+      <div className="hidden md:block mb-4">
+        {/* Group headers */}
+        <div className="flex gap-0 border-b border-slate-200">
+          {tabGroups.map((g) => (
+            <button
+              key={g.group}
+              onClick={() => {
+                setActiveGroup(g.group);
+                if (!g.tabs.some((t) => t.key === tab)) {
+                  setTab(g.tabs[0].key);
+                }
+              }}
+              className={`px-5 py-2 text-xs font-semibold uppercase tracking-wider transition border-b-2 ${
+                currentGroup === g.group
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+        {/* Sub-tabs for active group */}
+        {tabGroups.find((g) => g.group === currentGroup)?.tabs && (
+          <div className="flex gap-0 bg-slate-50 border-b border-slate-100 px-1">
+            {tabGroups.find((g) => g.group === currentGroup)!.tabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`px-4 py-1.5 text-xs font-medium transition rounded-t ${
+                  tab === t.key
+                    ? "bg-white text-indigo-600 border border-slate-200 border-b-white -mb-px"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {tab === "dashboard" && (
