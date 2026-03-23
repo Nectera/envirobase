@@ -69,6 +69,10 @@ export async function PUT(req: NextRequest) {
       "incidentReported",
       "fieldReportSubmitted",
       "inventoryReviewCompleted",
+      "portalStatusChange",
+      "portalDocumentUpload",
+      "portalEstimateUpdate",
+      "portalMessage",
     ];
 
     const updateData: any = {};

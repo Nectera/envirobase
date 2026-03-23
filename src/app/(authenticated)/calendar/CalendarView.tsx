@@ -54,14 +54,22 @@ export default function CalendarView({
   const goToday = () => setCurrentDate(new Date());
   const goPrev = () => {
     const d = new Date(currentDate);
-    if (viewMode === "month") d.setMonth(d.getMonth() - 1);
-    else d.setDate(d.getDate() - 7);
+    if (viewMode === "month") {
+      d.setDate(1); // Prevent rollover (e.g. Jan 31 → "Feb 31" → Mar 3)
+      d.setMonth(d.getMonth() - 1);
+    } else {
+      d.setDate(d.getDate() - 7);
+    }
     setCurrentDate(d);
   };
   const goNext = () => {
     const d = new Date(currentDate);
-    if (viewMode === "month") d.setMonth(d.getMonth() + 1);
-    else d.setDate(d.getDate() + 7);
+    if (viewMode === "month") {
+      d.setDate(1);
+      d.setMonth(d.getMonth() + 1);
+    } else {
+      d.setDate(d.getDate() + 7);
+    }
     setCurrentDate(d);
   };
 

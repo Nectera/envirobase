@@ -3,6 +3,7 @@ import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { updateProjectSchema, validateBody } from "@/lib/validations";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
+import { notifyClientStatusChange } from "@/lib/portalNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       where: { id: params.id },
       data,
     });
+
+    // Notify portal clients on status change
+    if (body.status && body.status !== (currentProject as any).status && orgId) {
+      notifyClientStatusChange(
+        params.id,
+        orgId,
+        project.name,
+        (currentProject as any).status || "unknown",
+        body.status,
+      ).catch(() => {}); // Fire-and-forget
+    }
 
     // Auto-archive linked leads when project is completed
     if (

@@ -35,8 +35,8 @@ export default async function SchedulePage() {
 
     // Load entries for this worker (wide window)
     const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString().split("T")[0];
+    const startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, 1)).toISOString().split("T")[0];
+    const endDate = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 3, 0)).toISOString().split("T")[0];
 
     const entries = await prisma.scheduleEntry.findMany({
       where: { workerId: worker.id, dateRange: { start: startDate, end: endDate } },

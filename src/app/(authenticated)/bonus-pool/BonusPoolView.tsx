@@ -169,15 +169,17 @@ export default function BonusPoolView({
   };
 
   const navigateMonth = (dir: number) => {
-    const d = new Date(month + "-01");
-    d.setMonth(d.getMonth() + dir);
+    const [y, m] = month.split("-").map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + dir, 1));
     setMonth(d.toISOString().slice(0, 7));
   };
 
-  const monthLabel = new Date(month + "-01").toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = (() => {
+    const [y, m] = month.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
+      month: "long", year: "numeric", timeZone: "UTC",
+    });
+  })();
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);

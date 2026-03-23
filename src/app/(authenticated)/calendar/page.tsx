@@ -12,8 +12,8 @@ export default async function CalendarPage() {
 
   // Fetch a wide date range (3 months back, 3 months forward)
   const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().split("T")[0];
-  const endDate = new Date(now.getFullYear(), now.getMonth() + 4, 0).toISOString().split("T")[0];
+  const startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 2, 1)).toISOString().split("T")[0];
+  const endDate = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 4, 0)).toISOString().split("T")[0];
 
   // Find the user's worker profile (for "My Calendar" filtering)
   const userWorker = userId

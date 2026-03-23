@@ -1097,6 +1097,11 @@ model NotificationPreference {
   fieldReportSubmitted  Boolean  @default(true)
   // Content Inventory
   inventoryReviewCompleted Boolean @default(true)
+  // Customer Portal
+  portalStatusChange    Boolean  @default(true)
+  portalDocumentUpload  Boolean  @default(true)
+  portalEstimateUpdate  Boolean  @default(true)
+  portalMessage         Boolean  @default(true)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

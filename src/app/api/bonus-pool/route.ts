@@ -68,10 +68,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Calculate hours saved from projects completed in this month
-    const monthStart = `${month}-01`;
-    const nextMonth = new Date(monthStart);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const monthEnd = nextMonth.toISOString().slice(0, 10);
+    const [mY, mM] = month.split("-").map(Number);
+    const monthStartDate = new Date(Date.UTC(mY, mM - 1, 1));
+    const monthEndDate = new Date(Date.UTC(mY, mM, 1));
 
     // Find completed projects (status = "completed") updated in this month range
     const completedProjects = await prisma.project.findMany({
@@ -79,8 +78,8 @@ export async function GET(req: NextRequest) {
         ...orgWhere(orgId),
         status: "completed",
         updatedAt: {
-          gte: new Date(monthStart),
-          lt: new Date(monthEnd),
+          gte: monthStartDate,
+          lt: monthEndDate,
         },
       },
       select: { id: true, name: true, projectNumber: true },
@@ -224,16 +223,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Calculate pool from completed projects
-    const monthStart = `${month}-01`;
-    const nextMonth = new Date(monthStart);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const monthEnd = nextMonth.toISOString().slice(0, 10);
+    const [pY, pM] = month.split("-").map(Number);
+    const postMonthStart = new Date(Date.UTC(pY, pM - 1, 1));
+    const postMonthEnd = new Date(Date.UTC(pY, pM, 1));
 
     const completedProjects = await prisma.project.findMany({
       where: {
         ...orgWhere(orgId),
         status: "completed",
-        updatedAt: { gte: new Date(monthStart), lt: new Date(monthEnd) },
+        updatedAt: { gte: postMonthStart, lt: postMonthEnd },
       },
       select: { id: true },
     });

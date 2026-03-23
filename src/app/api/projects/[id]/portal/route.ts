@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
+import { notifyClientPortalCreated } from "@/lib/portalNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,22 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
         createdBy: (session.user as any)?.name || (session.user as any)?.email || "unknown",
       },
     });
+
+    // Send portal access email to client
+    if (project.clientEmail && orgId) {
+      // Get project name for the email
+      const fullProject = await prisma.project.findUnique({
+        where: { id: params.id },
+        select: { name: true },
+      });
+      notifyClientPortalCreated(
+        params.id,
+        orgId,
+        fullProject?.name || "Your Project",
+        project.clientEmail,
+        portal.token,
+      ).catch(() => {}); // Fire-and-forget
+    }
 
     return NextResponse.json(portal, { status: 201 });
   } catch (error: any) {

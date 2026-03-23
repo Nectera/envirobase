@@ -3,6 +3,7 @@ import { requireOrg, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { supabase, DOCUMENTS_BUCKET } from "@/lib/supabase";
+import { notifyClientDocumentUploaded } from "@/lib/portalNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         data: { status: "received", storagePath: data.path },
       }),
     });
+
+    // Notify portal clients about the new document
+    const project = await prisma.project.findUnique({
+      where: { id: params.id },
+      select: { name: true },
+    });
+    if (project && orgId) {
+      notifyClientDocumentUploaded(
+        params.id,
+        orgId,
+        project.name,
+        file.name,
+        docType,
+      ).catch(() => {}); // Fire-and-forget
+    }
 
     return NextResponse.json({
       id: doc.id,

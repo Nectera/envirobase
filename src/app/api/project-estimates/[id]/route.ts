@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrg, orgData } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
+import { notifyClientEstimateUpdate } from "@/lib/portalNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           }),
         });
       } catch {}
+      // Notify portal clients
+      const submitProject = await prisma.project.findUnique({ where: { id: estimate.projectId }, select: { name: true, organizationId: true } });
+      if (submitProject?.organizationId) {
+        notifyClientEstimateUpdate(estimate.projectId, submitProject.organizationId, submitProject.name, estimate.title || "Estimate", "submitted", total).catch(() => {});
+      }
       return NextResponse.json(updated);
     }
 
@@ -64,6 +70,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           }),
         });
       } catch {}
+      // Notify portal clients
+      const approveProject = await prisma.project.findUnique({ where: { id: estimate.projectId }, select: { name: true, organizationId: true } });
+      if (approveProject?.organizationId) {
+        notifyClientEstimateUpdate(estimate.projectId, approveProject.organizationId, approveProject.name, estimate.title || "Estimate", "approved", updated.approvedAmount || undefined).catch(() => {});
+      }
       return NextResponse.json(updated);
     }
 
@@ -88,6 +99,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           }),
         });
       } catch {}
+      // Notify portal clients
+      const denyProject = await prisma.project.findUnique({ where: { id: estimate.projectId }, select: { name: true, organizationId: true } });
+      if (denyProject?.organizationId) {
+        notifyClientEstimateUpdate(estimate.projectId, denyProject.organizationId, denyProject.name, estimate.title || "Estimate", "denied").catch(() => {});
+      }
       return NextResponse.json(updated);
     }
 

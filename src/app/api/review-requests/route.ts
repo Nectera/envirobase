@@ -164,9 +164,9 @@ export async function GET(req: NextRequest) {
     const where: any = orgWhere(orgId);
     if (projectId) where.projectId = projectId;
     if (month) {
-      const start = new Date(`${month}-01T00:00:00Z`);
-      const end = new Date(start);
-      end.setMonth(end.getMonth() + 1);
+      const [rY, rM] = month.split("-").map(Number);
+      const start = new Date(Date.UTC(rY, rM - 1, 1));
+      const end = new Date(Date.UTC(rY, rM, 1));
       where.sentAt = { gte: start, lt: end };
     }
 

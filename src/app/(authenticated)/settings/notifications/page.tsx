@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Calendar, CheckSquare, Shield, FileText, Loader2, Save, ArrowLeft, Package } from "lucide-react";
+import { Bell, Calendar, CheckSquare, Shield, FileText, Loader2, Save, ArrowLeft, Package, Globe } from "lucide-react";
 import Link from "next/link";
 
 interface NotificationPreferences {
@@ -14,6 +14,10 @@ interface NotificationPreferences {
   incidentReported: boolean;
   fieldReportSubmitted: boolean;
   inventoryReviewCompleted: boolean;
+  portalStatusChange: boolean;
+  portalDocumentUpload: boolean;
+  portalEstimateUpdate: boolean;
+  portalMessage: boolean;
 }
 
 const defaultPrefs: NotificationPreferences = {
@@ -26,6 +30,10 @@ const defaultPrefs: NotificationPreferences = {
   incidentReported: true,
   fieldReportSubmitted: true,
   inventoryReviewCompleted: true,
+  portalStatusChange: true,
+  portalDocumentUpload: true,
+  portalEstimateUpdate: true,
+  portalMessage: true,
 };
 
 interface ToggleItem {
@@ -84,6 +92,17 @@ const sections: Array<{
       { key: "inventoryReviewCompleted", label: "Inventory Review Completed", description: "Notify me when a customer completes their content inventory review" },
     ],
   },
+  {
+    title: "Customer Portal",
+    icon: Globe,
+    iconColor: "text-indigo-500",
+    items: [
+      { key: "portalStatusChange", label: "Status Change", description: "Email clients when their project status changes" },
+      { key: "portalDocumentUpload", label: "Document Upload", description: "Email clients when a document is uploaded to their project" },
+      { key: "portalEstimateUpdate", label: "Estimate Update", description: "Email clients when an estimate is submitted, approved, or denied" },
+      { key: "portalMessage", label: "Message Notification", description: "Email clients when a team member sends them a portal message" },
+    ],
+  },
 ];
 
 export default function NotificationSettingsPage() {
@@ -108,6 +127,10 @@ export default function NotificationSettingsPage() {
             incidentReported: data.incidentReported ?? true,
             fieldReportSubmitted: data.fieldReportSubmitted ?? true,
             inventoryReviewCompleted: data.inventoryReviewCompleted ?? true,
+            portalStatusChange: data.portalStatusChange ?? true,
+            portalDocumentUpload: data.portalDocumentUpload ?? true,
+            portalEstimateUpdate: data.portalEstimateUpdate ?? true,
+            portalMessage: data.portalMessage ?? true,
           });
         }
       })
