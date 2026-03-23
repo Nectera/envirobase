@@ -4,7 +4,20 @@ import { useState, useEffect, useRef } from "react";
 import {
   Loader2, CheckCircle2, Clock, FileText, MessageSquare, Send,
   MapPin, AlertTriangle, ChevronDown, ChevronUp, Mail, ChevronRight,
+  Download, ExternalLink,
 } from "lucide-react";
+
+interface PortalDocument {
+  id: string;
+  name: string | null;
+  fileName: string | null;
+  fileUrl: string | null;
+  fileSize: number | null;
+  docType: string | null;
+  displayType: string;
+  date: string | null;
+  createdAt: string;
+}
 
 interface PortalData {
   portal: { id: string; clientName: string | null; clientEmail: string | null };
@@ -25,6 +38,7 @@ interface PortalData {
     clearanceDate: string | null;
     progressPercent: number | null;
   };
+  documents: PortalDocument[];
   fieldReports: FieldReport[];
   activities: ActivityItem[];
   messages: Message[];
@@ -82,6 +96,13 @@ function formatDateTime(d: string) {
   });
 }
 
+function formatFileSize(bytes: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 const BRAND_COLOR = process.env.NEXT_PUBLIC_BRAND_COLOR || "#7BC143";
 const APP_LABEL = process.env.NEXT_PUBLIC_COMPANY_SHORT || "EnviroBase";
 
@@ -89,7 +110,7 @@ export default function PortalPage({ params }: { params: { token: string } }) {
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"timeline" | "reports" | "messages">("timeline");
+  const [tab, setTab] = useState<"timeline" | "documents" | "reports" | "messages">("timeline");
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [expandedReport, setExpandedReport] = useState<string | null>(null);
@@ -165,7 +186,7 @@ export default function PortalPage({ params }: { params: { token: string } }) {
     );
   }
 
-  const { project, fieldReports, activities, messages } = data;
+  const { project, documents, fieldReports, activities, messages } = data;
   const statusConfig = STATUS_CONFIG[project.status] || STATUS_CONFIG.planning;
   const unreadMessages = messages.filter((m) => !m.isClient).length;
 
@@ -241,6 +262,7 @@ export default function PortalPage({ params }: { params: { token: string } }) {
         <div className="flex gap-1 bg-white rounded-xl border border-slate-100 p-1 mb-5 shadow-sm">
           {([
             { key: "timeline" as const, label: "Timeline", icon: Clock, count: 0 },
+            ...(documents.length > 0 ? [{ key: "documents" as const, label: "Documents", icon: Download, count: documents.length }] : []),
             { key: "reports" as const, label: "Field Reports", icon: FileText, count: fieldReports.length },
             { key: "messages" as const, label: "Messages", icon: MessageSquare, count: messages.length },
           ]).map(({ key, label, icon: Icon, count }) => (
@@ -299,6 +321,47 @@ export default function PortalPage({ params }: { params: { token: string } }) {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Documents Tab */}
+        {tab === "documents" && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+            <div className="px-5 py-3 border-b border-slate-100">
+              <h2 className="text-sm font-semibold text-slate-800">Documents</h2>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {documents.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={doc.fileUrl || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50 transition group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <FileText size={16} className="text-slate-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                        doc.displayType === "Contract"
+                          ? "bg-indigo-100 text-indigo-600"
+                          : "bg-emerald-100 text-emerald-600"
+                      }`}>
+                        {doc.displayType}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-slate-700 truncate">{doc.fileName || doc.name || "Document"}</p>
+                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                      {doc.date && <span>{formatDate(doc.date)}</span>}
+                      {doc.fileSize && <span>· {formatFileSize(doc.fileSize)}</span>}
+                    </div>
+                  </div>
+                  <ExternalLink size={14} className="text-slate-300 group-hover:text-slate-500 flex-shrink-0 transition" />
+                </a>
+              ))}
+            </div>
           </div>
         )}
 

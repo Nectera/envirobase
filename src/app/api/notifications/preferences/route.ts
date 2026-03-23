@@ -73,6 +73,7 @@ export async function PUT(req: NextRequest) {
       "portalDocumentUpload",
       "portalEstimateUpdate",
       "portalMessage",
+      "noteMention",
     ];
 
     const updateData: any = {};

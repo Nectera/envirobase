@@ -492,7 +492,7 @@ export default function LeadsView({ leads, fieldEstimators = [] }: { leads: Lead
             <div className="text-center py-16">
               <Archive size={32} className="mx-auto text-slate-300 mb-3" />
               <p className="text-sm text-slate-500">{t("leads.noArchivedLeads")}</p>
-              <p className="text-xs text-slate-400 mt-1">Leads are archived when their linked project is marked as completed.</p>
+              <p className="text-xs text-slate-400 mt-1">Leads are archived when their project's final invoice is marked as paid.</p>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">

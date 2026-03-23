@@ -1200,12 +1200,14 @@ export const en: Record<string, string> = {
   "sidebar.platformAdmin": "Platform Admin",
 
   // Crm (Extended)
+  "crm.weekly": "Weekly",
   "crm.monthly": "Monthly",
   "crm.quarterly": "Quarterly",
   "crm.ytd": "YTD",
   "crm.showing": "Showing",
   "crm.leadsInPeriod": "leads in period",
   "crm.leadInPeriod": "lead in period",
+  "crm.wonThisWeek": "Won This Week",
   "crm.wonThisQuarter": "Won This Quarter",
   "crm.wonYTD": "Won YTD",
   "crm.leads": "leads",

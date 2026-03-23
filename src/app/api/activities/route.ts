@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
+import { sendNotificationToUser, buildNoteMentionBody } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -103,20 +104,27 @@ export async function POST(req: NextRequest) {
         select: { id: true, userId: true, name: true },
       });
 
-      const notifications = workers
-        .filter((w: any) => w.userId) // Only notify workers with linked user accounts
-        .map((w: any) => ({
-          type: "mention",
-          title: `${fromName} mentioned you in a ${body.type || "note"}`,
-          message: content.length > 120 ? content.slice(0, 120) + "..." : content,
-          link,
-          userId: w.userId!,
-          fromUserId: userId,
-          fromName,
-        }));
+      const workersWithUser = workers.filter((w: any) => w.userId);
+
+      const notifications = workersWithUser.map((w: any) => ({
+        type: "mention",
+        title: `${fromName} mentioned you in a ${body.type || "note"}`,
+        message: content.length > 120 ? content.slice(0, 120) + "..." : content,
+        link,
+        userId: w.userId!,
+        fromUserId: userId,
+        fromName,
+      }));
 
       if (notifications.length > 0) {
         await prisma.notification.createMany({ data: notifications });
+      }
+
+      // Fire-and-forget email notifications for each mentioned worker with a user account
+      for (const w of workersWithUser) {
+        const emailSubject = `${fromName} mentioned you in a ${body.type || "note"}`;
+        const emailBody = buildNoteMentionBody(fromName, null, content, "note", link);
+        sendNotificationToUser(w.userId!, "noteMention", emailSubject, emailBody).catch(() => {});
       }
     }
 

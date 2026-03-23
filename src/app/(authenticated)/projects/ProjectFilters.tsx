@@ -14,17 +14,23 @@ type ProjectWithTasks = Project & { tasks: ProjectTask[]; contentInventory?: { i
 export default function ProjectFilters({ projects }: { projects: ProjectWithTasks[] }) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("all");
+  const [showCompleted, setShowCompleted] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const PROJ_PAGE_SIZE = 25;
   const [projPage, setProjPage] = useState(1);
 
-  // Separate active from archived (completed) projects
-  const activeProjects = projects.filter((p) => p.status !== "completed");
-  const archivedProjects = projects.filter((p) => p.status === "completed");
+  // 3-tier: Active (not completed, not archived) → Completed (completed, not archived) → Archived (isArchived)
+  const activeProjects = projects.filter((p) => p.status !== "completed" && !p.isArchived);
+  const completedProjects = projects.filter((p) => p.status === "completed" && !p.isArchived);
+  const archivedProjects = projects.filter((p) => p.isArchived);
 
   const filtered = filter === "all"
     ? activeProjects
     : activeProjects.filter((p) => hasProjectType(p.type, filter));
+
+  const filteredCompleted = filter === "all"
+    ? completedProjects
+    : completedProjects.filter((p) => hasProjectType(p.type, filter));
 
   const filteredArchived = filter === "all"
     ? archivedProjects
@@ -188,9 +194,71 @@ export default function ProjectFilters({ projects }: { projects: ProjectWithTask
         <Pagination currentPage={projPage} totalPages={projTotalPages} totalItems={filtered.length} pageSize={PROJ_PAGE_SIZE} onPageChange={setProjPage} />
       </div>
 
-      {/* Archived (Completed) Projects */}
-      {filteredArchived.length > 0 && (
+      {/* Completed Projects — green-tinted, collapsible */}
+      {filteredCompleted.length > 0 && (
         <div className="mt-6">
+          <button
+            onClick={() => setShowCompleted(!showCompleted)}
+            className="flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-800 transition mb-2"
+          >
+            {showCompleted ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">{filteredCompleted.length}</span>
+            Completed Projects
+          </button>
+
+          {showCompleted && (
+            <div className="bg-emerald-50/60 rounded-2xl border border-emerald-200/60 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm min-w-[700px]">
+                <thead>
+                  <tr className="border-b-2 border-emerald-200/60">
+                    <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">{t("common.name")}</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">{t("common.type")}</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">{t("common.status")}</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">Client</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">Timeline</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">Permit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCompleted.map((p) => (
+                    <tr key={p.id} className="border-b border-emerald-100 hover:bg-emerald-100/40 transition">
+                      <td className="px-4 py-3">
+                        <Link href={`/projects/${p.id}`} className="hover:text-[#7BC143]">
+                          <div className="font-medium text-[13px] text-slate-700">{p.name}</div>
+                          <div className="text-[11px] text-slate-400">{p.projectNumber} • {p.address}</div>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {getProjectTypes(p.type).map((t) => (
+                            <span key={t} className={`text-[11px] font-medium px-2 py-0.5 rounded ${getTypeBadgeColor(t)}`}>
+                              {TYPE_LABELS[t] || t}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
+                          completed
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600">{p.client}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600">
+                        {formatDate(p.startDate)} — {formatDate((p as any).endDate || p.estEndDate)}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600">{p.permitNumber || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Archived Projects — muted, collapsible */}
+      {filteredArchived.length > 0 && (
+        <div className="mt-4">
           <button
             onClick={() => setShowArchived(!showArchived)}
             className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700 transition mb-2"
@@ -233,7 +301,7 @@ export default function ProjectFilters({ projects }: { projects: ProjectWithTask
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${getStatusColor(p.status)}`}>
-                          completed
+                          {p.status.replace("_", " ")}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-500">{p.client}</td>

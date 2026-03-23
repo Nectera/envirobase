@@ -1104,6 +1104,9 @@ model NotificationPreference {
   portalDocumentUpload  Boolean  @default(true)
   portalEstimateUpdate  Boolean  @default(true)
   portalMessage         Boolean  @default(true)
+  // Notes & Mentions
+  noteMention           Boolean  @default(true)
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

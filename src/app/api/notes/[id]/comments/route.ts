@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendNotificationToUser, buildNoteMentionBody } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     });
 
+    const fromName = user.name || user.email;
+    const noteLink = note.entityType && note.entityId ? `/${note.entityType}s/${note.entityId}` : null;
+
     // Notify note creator about the new comment (if it's not their own comment)
     if (note.createdById !== user.id) {
       try {
@@ -65,18 +69,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             type: "mention",
             title: "New comment on your note",
             message: note.title
-              ? `${user.name || user.email} commented on "${note.title}"`
-              : `${user.name || user.email} commented on your note`,
-            link: note.entityType && note.entityId ? `/${note.entityType}s/${note.entityId}` : null,
+              ? `${fromName} commented on "${note.title}"`
+              : `${fromName} commented on your note`,
+            link: noteLink,
             userId: note.createdById,
             fromUserId: user.id,
-            fromName: user.name || user.email,
+            fromName,
             organizationId: note.organizationId || null,
           },
         });
       } catch (e) {
         console.error("Failed to create comment notification:", e);
       }
+
+      // Fire-and-forget email to note creator
+      const creatorSubject = note.title
+        ? `${fromName} commented on "${note.title}"`
+        : `${fromName} commented on your note`;
+      const creatorBody = buildNoteMentionBody(fromName, note.title, content, "comment", noteLink);
+      sendNotificationToUser(note.createdById, "noteMention", creatorSubject, creatorBody).catch(() => {});
     }
 
     // Notify mentioned users in the comment
@@ -97,17 +108,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             data: {
               type: "mention",
               title: isAll ? "Team comment posted" : "You were mentioned in a comment",
-              message: `${user.name || user.email} ${isAll ? "commented to everyone" : "mentioned you"} on a note`,
-              link: note.entityType && note.entityId ? `/${note.entityType}s/${note.entityId}` : null,
+              message: `${fromName} ${isAll ? "commented to everyone" : "mentioned you"} on a note`,
+              link: noteLink,
               userId: mentionedUserId,
               fromUserId: user.id,
-              fromName: user.name || user.email,
+              fromName,
               organizationId: note.organizationId || null,
             },
           });
         } catch (e) {
           console.error("Failed to create mention notification:", e);
         }
+
+        // Fire-and-forget email notification
+        const mentionSubject = note.title
+          ? `${fromName} mentioned you in a comment on "${note.title}"`
+          : `${fromName} mentioned you in a comment`;
+        const mentionBody = buildNoteMentionBody(fromName, note.title, content, "comment", noteLink);
+        sendNotificationToUser(mentionedUserId, "noteMention", mentionSubject, mentionBody).catch(() => {});
       }
     }
 

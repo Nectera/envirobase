@@ -97,39 +97,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ).catch(() => {}); // Fire-and-forget
     }
 
-    // Auto-archive linked leads when project is completed
+    // Auto-create task for METH projects when completed
     if (
       body.status === "completed" &&
       currentProject &&
       (currentProject as any).status !== "completed"
     ) {
-      const linkedLeads = await prisma.lead.findMany({
-        where: { projectId: params.id, isArchived: false },
-        select: { id: true },
-      });
-
-      if (linkedLeads.length > 0) {
-        const leadIds = linkedLeads.map((l: any) => l.id);
-        await prisma.lead.updateMany({
-          where: { id: { in: leadIds } },
-          data: { isArchived: true },
-        });
-
-        // Log activity on each archived lead
-        for (const leadId of leadIds) {
-          await prisma.activity.create({
-            data: {
-              parentType: "lead",
-              parentId: leadId,
-              leadId,
-              type: "status_changed",
-              content: `Lead archived — linked project marked as completed.`,
-              user: "system",
-            },
-          });
-        }
-      }
-
       // Auto-create task for METH projects to complete decon report
       if (currentProject.type === "METH") {
         // Check if task already exists

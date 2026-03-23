@@ -80,6 +80,25 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       take: 50,
     });
 
+    // Fetch documents — contracts and clearance/sampling reports
+    const contractDocs = await prisma.document.findMany({
+      where: { projectId, docType: "contract" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, fileName: true, fileUrl: true, fileSize: true, docType: true, date: true, createdAt: true },
+    });
+
+    // Check if the project has a clearance report or initial sampling doc
+    const samplingDocs = await prisma.document.findMany({
+      where: { projectId, docType: "initial_sampling" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, fileName: true, fileUrl: true, fileSize: true, docType: true, date: true, createdAt: true },
+    });
+
+    const portalDocuments = [
+      ...contractDocs.map((d: any) => ({ ...d, displayType: "Contract" })),
+      ...samplingDocs.map((d: any) => ({ ...d, displayType: "Sampling Report" })),
+    ];
+
     // Calculate progress
     const startDate = portal.project.startDate;
     const estEndDate = portal.project.estEndDate;
@@ -104,6 +123,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
         ...portal.project,
         progressPercent,
       },
+      documents: portalDocuments,
       fieldReports: reports,
       activities: activities.map((a: any) => ({
         id: a.id,

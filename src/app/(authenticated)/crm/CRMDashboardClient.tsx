@@ -5,7 +5,7 @@ import Link from "next/link";
 import { TrendingUp, DollarSign, CheckCircle, BarChart3, Calendar, Clock, CreditCard, Target, Building2 } from "lucide-react";
 import { useTranslation } from "@/components/LanguageProvider";
 
-type TimePeriod = "month" | "quarter" | "ytd";
+type TimePeriod = "weekly" | "month" | "quarter" | "ytd";
 
 type Lead = {
   id: string;
@@ -105,8 +105,19 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+function getWeekBounds(sn: ServerNow): { start: Date; end: Date } {
+  const today = new Date(sn.year, sn.month, sn.day);
+  const dayOfWeek = today.getDay(); // 0 = Sunday
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(sn.year, sn.month, sn.day + mondayOffset);
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  return { start: monday, end: sunday };
+}
+
 function getPeriodStart(period: TimePeriod, sn: ServerNow): Date {
   switch (period) {
+    case "weekly":
+      return getWeekBounds(sn).start;
     case "month":
       return new Date(sn.year, sn.month, 1);
     case "quarter": {
@@ -120,6 +131,11 @@ function getPeriodStart(period: TimePeriod, sn: ServerNow): Date {
 
 function getPeriodLabel(period: TimePeriod, sn: ServerNow): string {
   switch (period) {
+    case "weekly": {
+      const { start, end } = getWeekBounds(sn);
+      const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return `${fmt(start)} – ${fmt(end)}`;
+    }
     case "month":
       return `${MONTH_NAMES[sn.month]} ${sn.year}`;
     case "quarter": {
@@ -244,9 +260,10 @@ export default function CRMDashboardClient({
   }, [invoices]);
 
   // KPI label based on period
-  const wonLabel = period === "month" ? t("crm.wonThisMonth") : period === "quarter" ? t("crm.wonThisQuarter") : t("crm.wonYTD");
+  const wonLabel = period === "weekly" ? t("crm.wonThisWeek") : period === "month" ? t("crm.wonThisMonth") : period === "quarter" ? t("crm.wonThisQuarter") : t("crm.wonYTD");
 
   const periods: { value: TimePeriod; label: string }[] = [
+    { value: "weekly", label: t("crm.weekly") },
     { value: "month", label: t("crm.monthly") },
     { value: "quarter", label: t("crm.quarterly") },
     { value: "ytd", label: t("crm.ytd") },

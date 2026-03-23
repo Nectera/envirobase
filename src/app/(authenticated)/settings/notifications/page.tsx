@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Calendar, CheckSquare, Shield, FileText, Loader2, Save, ArrowLeft, Package, Globe } from "lucide-react";
+import { Bell, Calendar, CheckSquare, Shield, FileText, Loader2, Save, ArrowLeft, Package, Globe, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
 interface NotificationPreferences {
@@ -18,6 +18,7 @@ interface NotificationPreferences {
   portalDocumentUpload: boolean;
   portalEstimateUpdate: boolean;
   portalMessage: boolean;
+  noteMention: boolean;
 }
 
 const defaultPrefs: NotificationPreferences = {
@@ -34,6 +35,7 @@ const defaultPrefs: NotificationPreferences = {
   portalDocumentUpload: true,
   portalEstimateUpdate: true,
   portalMessage: true,
+  noteMention: true,
 };
 
 interface ToggleItem {
@@ -103,6 +105,14 @@ const sections: Array<{
       { key: "portalMessage", label: "Message Notification", description: "Email clients when a team member sends them a portal message" },
     ],
   },
+  {
+    title: "Notes & Mentions",
+    icon: MessageSquare,
+    iconColor: "text-cyan-500",
+    items: [
+      { key: "noteMention", label: "Note Mentions", description: "Email me when someone mentions me in a note or comment" },
+    ],
+  },
 ];
 
 export default function NotificationSettingsPage() {
@@ -131,6 +141,7 @@ export default function NotificationSettingsPage() {
             portalDocumentUpload: data.portalDocumentUpload ?? true,
             portalEstimateUpdate: data.portalEstimateUpdate ?? true,
             portalMessage: data.portalMessage ?? true,
+            noteMention: data.noteMention ?? true,
           });
         }
       })

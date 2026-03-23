@@ -13,6 +13,7 @@ interface SearchResult {
   title: string;
   subtitle?: string;
   status?: string;
+  isArchived?: boolean;
   href: string;
 }
 
@@ -183,7 +184,15 @@ export default function GlobalSearch() {
                       <Icon size={14} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{result.title}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-slate-800 truncate">{result.title}</p>
+                        {result.isArchived && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 flex-shrink-0 uppercase tracking-wide">Archived</span>
+                        )}
+                        {!result.isArchived && result.status === "completed" && (result.type === "project") && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-600 flex-shrink-0 uppercase tracking-wide">Completed</span>
+                        )}
+                      </div>
                       {result.subtitle && (
                         <p className="text-[11px] text-slate-400 truncate">{result.subtitle}</p>
                       )}

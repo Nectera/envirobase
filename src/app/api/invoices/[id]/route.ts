@@ -87,6 +87,39 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             entityId: leadId,
           },
         });
+
+        // When final invoice is paid → archive the project and linked leads
+        if (body.status === "paid") {
+          // Find the project linked to this lead
+          const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { projectId: true } });
+          if (lead?.projectId) {
+            // Archive the project
+            await prisma.project.update({
+              where: { id: lead.projectId },
+              data: { isArchived: true },
+            });
+
+            // Archive all leads linked to this project
+            const linkedLeads = await prisma.lead.findMany({
+              where: { projectId: lead.projectId },
+              select: { id: true, name: true },
+            });
+            for (const ll of linkedLeads) {
+              await prisma.lead.update({
+                where: { id: ll.id },
+                data: { isArchived: true },
+              });
+              await prisma.activity.create({
+                data: {
+                  type: "lead_archived",
+                  description: `Lead "${ll.name}" archived — final invoice paid`,
+                  entityType: "lead",
+                  entityId: ll.id,
+                },
+              });
+            }
+          }
+        }
       }
     }
 

@@ -13,7 +13,8 @@ type NotificationType =
   | "certExpiring"
   | "incidentReported"
   | "fieldReportSubmitted"
-  | "inventoryReviewCompleted";
+  | "inventoryReviewCompleted"
+  | "noteMention";
 
 /**
  * Build branded notification email HTML.
@@ -300,5 +301,29 @@ export function buildFieldReportBody(
         <p style="margin:0;color:#64748b;font-size:12px;">Supervisor: <strong style="color:#1e293b;">${escapeHtml(supervisorName || "N/A")}</strong></p>
       </td></tr>
     </table>
+  `;
+}
+
+export function buildNoteMentionBody(
+  fromName: string,
+  noteTitle: string | null,
+  noteContent: string,
+  context: "note" | "comment",
+  link?: string | null,
+): string {
+  const preview = noteContent.length > 200 ? noteContent.slice(0, 200) + "..." : noteContent;
+  const action = context === "comment" ? "mentioned you in a note comment" : "mentioned you in a note";
+  const appUrl = process.env.NEXTAUTH_URL || "";
+  const fullLink = link && appUrl ? `${appUrl}${link}` : link || "";
+  return `
+    <p style="margin:0 0 16px;color:#475569;font-size:14px;line-height:1.7;">
+      <strong>${escapeHtml(fromName)}</strong> ${action}${noteTitle ? `: <strong>${escapeHtml(noteTitle)}</strong>` : ""}.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;margin:0 0 16px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0;color:#1e293b;font-size:14px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(preview)}</p>
+      </td></tr>
+    </table>
+    ${fullLink ? `<a href="${fullLink}" style="display:inline-block;padding:10px 24px;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">View Note</a>` : ""}
   `;
 }
