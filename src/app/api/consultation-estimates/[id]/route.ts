@@ -210,9 +210,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
               compliance: null,
               estimatedDays: estDays,
               estimatedLaborHours: estLaborHours,
-              // Carry Matterport from lead
-              matterportUrl: (lead as any).matterportUrl || null,
-              matterportModelId: (lead as any).matterportModelId || null,
             }),
           });
 

@@ -69,9 +69,6 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
   const [showEditModal, setShowEditModal] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, any>>({});
-  const [matterportUrl, setMatterportUrl] = useState(lead.matterportUrl || "");
-  const [matterportSaving, setMatterportSaving] = useState(false);
-
   const openEditModal = () => {
     setEditForm({
       firstName: lead.firstName || "",
@@ -157,32 +154,6 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
     }
   };
 
-  const handleMatterportSave = async () => {
-    setMatterportSaving(true);
-    try {
-      // Extract model ID from URL if it's a full Matterport URL
-      let modelId = lead.matterportModelId || "";
-      const urlVal = matterportUrl.trim();
-      if (urlVal) {
-        const match = urlVal.match(/(?:my\.matterport\.com\/show\/\?m=|matterport\.com\/\w+\/[\w-]+\/spaces\/([\w-]+))/);
-        if (match) {
-          modelId = match[1] || new URL(urlVal).searchParams.get("m") || "";
-        } else if (!urlVal.includes("http")) {
-          modelId = urlVal; // Treat as raw model ID
-        }
-      }
-      await fetch(`/api/leads/${lead.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matterportUrl: urlVal, matterportModelId: modelId }),
-      });
-      router.refresh();
-    } catch {
-      alert("Failed to save Matterport URL");
-    } finally {
-      setMatterportSaving(false);
-    }
-  };
 
   const handleApproveEstimate = async (estimateId: string) => {
     setApprovingEstimateId(estimateId);
@@ -647,41 +618,6 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
         </div>
       )}
 
-      {/* ─── 3D Scan (Matterport) ─── */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 mb-4">
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-          <ExternalLink size={12} className="text-indigo-500" /> 3D Scan
-        </h3>
-        <div className="flex items-center gap-2 mb-2">
-          <input
-            value={matterportUrl}
-            onChange={(e) => setMatterportUrl(e.target.value)}
-            placeholder="Paste Matterport URL or Model ID..."
-            className="flex-1 border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
-          />
-          <button
-            onClick={handleMatterportSave}
-            disabled={matterportSaving || matterportUrl === (lead.matterportUrl || "")}
-            className="px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
-          >
-            {matterportSaving ? "Saving..." : "Save"}
-          </button>
-        </div>
-        {lead.matterportUrl && (
-          <div className="rounded-lg overflow-hidden border border-slate-200" style={{ height: 300 }}>
-            <iframe
-              src={lead.matterportModelId
-                ? `https://my.matterport.com/show/?m=${lead.matterportModelId}&play=1`
-                : lead.matterportUrl}
-              width="100%"
-              height="100%"
-              frameBorder="0"
-              allowFullScreen
-              allow="xr-spatial-tracking"
-            />
-          </div>
-        )}
-      </div>
 
       {/* ─── Testing Referral Banner ─── */}
       {lead.referredForTesting && (

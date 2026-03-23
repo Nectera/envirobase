@@ -105,9 +105,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.adjusterEmail !== undefined) data.adjusterEmail = body.adjusterEmail;
     if (body.policyNumber !== undefined) data.policyNumber = body.policyNumber;
     if (body.deductible !== undefined) data.deductible = body.deductible;
-    // Matterport
-    if (body.matterportUrl !== undefined) data.matterportUrl = body.matterportUrl;
-    if (body.matterportModelId !== undefined) data.matterportModelId = body.matterportModelId;
     // Site visit fields
     if (body.siteVisitDate !== undefined) data.siteVisitDate = body.siteVisitDate;
     if (body.siteVisitTime !== undefined) data.siteVisitTime = body.siteVisitTime;
@@ -211,9 +208,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           compliance: null,
           estimatedDays: estDays,
           estimatedLaborHours: estLaborHours,
-          // Carry Matterport from lead
-          matterportUrl: (currentLead as any).matterportUrl || null,
-          matterportModelId: (currentLead as any).matterportModelId || null,
         }),
       });
 

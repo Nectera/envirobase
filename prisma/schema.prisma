@@ -222,10 +222,6 @@ model Project {
   clearanceInvoiceUrl  String?  // Uploaded invoice file URL
   clearanceInvoiceName String?  // Original filename
 
-  // Matterport
-  matterportUrl      String?
-  matterportModelId  String?
-
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -685,9 +681,6 @@ model Lead {
   dateOfLoss       String?
   policyNumber     String?
   deductible       Float?
-  // Matterport
-  matterportUrl      String?
-  matterportModelId  String?
   // Site Visit
   siteVisitDate    String?
   siteVisitTime    String?
