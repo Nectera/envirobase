@@ -104,9 +104,10 @@ function MentionInput({
     const textBeforeCursor = text.slice(0, cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf("@");
 
-    if (atIndex !== -1 && (atIndex === 0 || textBeforeCursor[atIndex - 1] === " ")) {
+    if (atIndex !== -1 && (atIndex === 0 || /[\s]/.test(textBeforeCursor[atIndex - 1]))) {
       const query = textBeforeCursor.slice(atIndex + 1);
-      if (!query.includes(" ")) {
+      const wordCount = query.trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount <= 2 && !query.endsWith("  ")) {
         setMentionQuery(query);
         setMentionStart(atIndex);
         setShowDropdown(true);

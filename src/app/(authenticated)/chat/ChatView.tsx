@@ -511,15 +511,22 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
     const val = e.target.value;
     setMessageInput(val);
 
-    // Detect @mention
+    // Detect @mention (supports multi-word names like "Cody Gordon")
     const cursorPos = e.target.selectionStart || 0;
     const textBefore = val.slice(0, cursorPos);
-    const atMatch = textBefore.match(/@(\w*)$/);
+    const atMatch = textBefore.match(/@(\w+(?:\s\w+)?)?\s*$/);
+    const atIndex = textBefore.lastIndexOf("@");
 
-    if (atMatch) {
-      setShowMentions(true);
-      setMentionSearch(atMatch[1].toLowerCase());
-      setMentionIndex(0);
+    if (atIndex !== -1 && (atIndex === 0 || /[\s]/.test(textBefore[atIndex - 1]))) {
+      const query = textBefore.slice(atIndex + 1);
+      const wordCount = query.trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount <= 2 && !query.endsWith("  ")) {
+        setShowMentions(true);
+        setMentionSearch(query.toLowerCase().trim());
+        setMentionIndex(0);
+      } else {
+        setShowMentions(false);
+      }
     } else {
       setShowMentions(false);
     }
