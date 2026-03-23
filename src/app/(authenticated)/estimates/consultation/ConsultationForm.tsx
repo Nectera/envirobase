@@ -223,6 +223,17 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
   const [showAllMaterials, setShowAllMaterials] = useState(false);
   const isEditMode = !!editId;
 
+  // Track manually edited material/COGS indices so auto-populate doesn't overwrite them
+  const manualMaterialEdits = useRef<Set<number>>(new Set());
+  const manualCogsEdits = useRef<Set<number>>(new Set());
+
+  // Auto-save state
+  const [draftId, setDraftId] = useState<string | null>(editId || null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMounted = useRef(true);
+
   // Merge provided COGS rates with defaults (memoized with JSON key to avoid infinite re-renders)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const rates = useMemo(() => ({ ...DEFAULT_COGS_RATES, ...propCogsRates }), [JSON.stringify(propCogsRates)]);
@@ -490,7 +501,10 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
     const materialsCostForRef = formData.materials.reduce((s, m) => s + m.cost, 0);
 
     // First pass: calculate all COGS except Referral Fee
-    const newCogs = formData.cogs.map((cog) => {
+    const newCogs = formData.cogs.map((cog, index) => {
+      // Skip if user manually edited this COGS item
+      if (manualCogsEdits.current.has(index)) return cog;
+
       const cogsItem = DEFAULT_COGS.find((item) => item.item === cog.item);
       if (!cogsItem || cog.item === "Referral Fee") return cog;
 
@@ -599,7 +613,13 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
     // Calculate material subtotal before fuel
     let materialSubtotalBeforeFuel = 0;
 
-    const newMaterials = formData.materials.map((mat) => {
+    const newMaterials = formData.materials.map((mat, index) => {
+      // Skip if user manually edited this material
+      if (manualMaterialEdits.current.has(index)) {
+        materialSubtotalBeforeFuel += mat.cost;
+        return mat;
+      }
+
       const matDefault = DEFAULT_MATERIALS.find((m) => m.name === mat.name);
       if (!matDefault) return mat;
 
@@ -771,6 +791,8 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
   const handleCogsChange = useCallback(
     (index: number, field: "qty" | "cost", value: number) => {
+      // Track that this COGS item was manually edited
+      manualCogsEdits.current.add(index);
       setFormData((prev) => {
         const newCogs = [...prev.cogs];
         newCogs[index] = { ...newCogs[index], [field]: value };
@@ -782,9 +804,19 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
   const handleMaterialChange = useCallback(
     (index: number, field: "qty" | "cost", value: number) => {
+      // Track that this material was manually edited
+      manualMaterialEdits.current.add(index);
       setFormData((prev) => {
         const newMaterials = [...prev.materials];
-        newMaterials[index] = { ...newMaterials[index], [field]: value };
+        const mat = newMaterials[index];
+        if (field === "qty") {
+          // Recalculate cost when quantity changes
+          const matDefault = DEFAULT_MATERIALS.find((m) => m.name === mat.name);
+          const unitPrice = matDefault?.defaultPrice || 0;
+          newMaterials[index] = { ...mat, qty: value, cost: value * unitPrice };
+        } else {
+          newMaterials[index] = { ...mat, [field]: value };
+        }
         return { ...prev, materials: newMaterials };
       });
     },
@@ -793,12 +825,15 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    // Cancel any pending auto-save
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     try {
       const payload = {
         ...formData,
         leadId: selectedLead?.id || lead?.id || null,
         companyId: selectedCompanyId || null,
         contactId: selectedContactId || null,
+        status: "pending", // Final submit changes status from draft to pending
         supervisorHours: formData.laborSupervisor.regularHours,
         supervisorOtHours: formData.laborSupervisor.otHours,
         technicianHours: formData.laborTechnician.regularHours,
@@ -818,10 +853,12 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         data: { customFields },
       };
 
-      const url = isEditMode
-        ? `/api/consultation-estimates/${editId}`
+      // If we have an auto-saved draft, update it; otherwise use edit/create logic
+      const saveId = draftId || (isEditMode ? editId : null);
+      const url = saveId
+        ? `/api/consultation-estimates/${saveId}`
         : "/api/consultation-estimates";
-      const method = isEditMode ? "PUT" : "POST";
+      const method = saveId ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
@@ -834,8 +871,11 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         throw new Error(errData.error || "Failed to save estimate");
       }
 
-      if (isEditMode) {
-        router.push(`/estimates/consultation/${editId}`);
+      const savedData = await response.json();
+      const resultId = savedData.id || saveId;
+
+      if (resultId) {
+        router.push(`/estimates/consultation/${resultId}`);
       } else {
         router.push("/estimates");
       }
@@ -847,11 +887,134 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
     }
   };
 
+  // Build the API payload from current formData + totals (used by auto-save)
+  const buildPayload = useCallback(() => {
+    return {
+      leadId: selectedLead?.id || lead?.id || null,
+      companyId: selectedCompanyId || null,
+      contactId: selectedContactId || null,
+      status: "draft",
+      customerName: formData.customerName,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      zip: formData.zip,
+      milesFromShop: formData.milesFromShop,
+      projectDate: formData.projectDate,
+      siteVisitRequirements: formData.siteVisitRequirements,
+      daysNeeded: formData.daysNeeded,
+      crewSize: formData.crewSize,
+      scopeOfWork: formData.scopeOfWork,
+      paymentType: formData.paymentType,
+      lossType: formData.typeOfLoss,
+      septicSystem: formData.septicSystem,
+      vacateProperty: formData.vacateNeeded,
+      driveTimeHours: formData.driveTimeHours,
+      wasteDescription: `${formData.wasteYards} cubic yards`,
+      permitNeeded: formData.permitRequired,
+      airClearances: formData.airClearances,
+      projectDesign: formData.projectDesign,
+      deconLocation: formData.deconLoadout,
+      namsCount: formData.namsCount,
+      ductCleaning: formData.ductCleaning,
+      asbestosDumpster: formData.asbestosDumpster,
+      directLoadOut: formData.dumpsterSwaps,
+      openDumpster: formData.openDumpster,
+      dumpsterPlacement: formData.dumpsterPlacement,
+      portableBathroom: formData.portableBathroom,
+      flooringLayers: formData.floringLayers,
+      drywallLayers: formData.dryWallLayers,
+      hvacDucting: formData.hvacRemoval,
+      spillQuantity: formData.acmDisturbed,
+      contentsRemoval: formData.contentsRemove,
+      customerResponsible: formData.customerInformed,
+      difficultyRating: formData.difficultyRating,
+      fieldNotes: formData.fieldNotes,
+      supervisorHours: formData.laborSupervisor.regularHours,
+      supervisorOtHours: formData.laborSupervisor.otHours,
+      technicianHours: formData.laborTechnician.regularHours,
+      technicianOtHours: formData.laborTechnician.otHours,
+      opsPerHourRate: formData.opsPerHourRate,
+      opsCost: totals.ops,
+      cogs: formData.cogs,
+      materials: formData.materials,
+      laborCost: totals.labor,
+      cogsCost: totals.cogs,
+      materialCost: totals.materials,
+      totalCost: totals.grandTotal,
+      markupPercent: formData.customerPriceOverride !== null ? totals.effectiveMarkup : formData.markupPercent,
+      customerPriceOverride: formData.customerPriceOverride,
+      customerPrice: totals.customerPrice,
+      serviceDescription: formData.serviceDescription,
+      data: { customFields },
+    };
+  }, [formData, totals, selectedLead, lead, selectedCompanyId, selectedContactId, customFields]);
+
+  // Auto-save: fire-and-forget save to API
+  const performAutoSave = useCallback(async () => {
+    if (!isMounted.current) return;
+    const payload = buildPayload();
+    setAutoSaving(true);
+    try {
+      if (draftId) {
+        await fetch(`/api/consultation-estimates/${draftId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        const res = await fetch("/api/consultation-estimates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted.current) setDraftId(data.id);
+        }
+      }
+      if (isMounted.current) setLastSaved(new Date());
+    } catch (e) {
+      logger.error("Auto-save failed:", { error: String(e) });
+    } finally {
+      if (isMounted.current) setAutoSaving(false);
+    }
+  }, [buildPayload, draftId]);
+
+  // Debounced auto-save: triggers 2s after last formData change
+  useEffect(() => {
+    if (currentStep < 2 && !formData.customerName && !formData.address) return;
+
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      performAutoSave();
+    }, 2000);
+
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [formData, currentStep, performAutoSave]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, []);
+
   const materialsToShow = showAllMaterials
     ? formData.materials
     : formData.materials.filter((mat) => mat.qty > 0);
 
   const STEP_LABELS = ["Site Info", "Field Consultation", "Labor", "Operating Costs", "COGS", "Materials", "Markup & Pricing"];
+
+  // Save immediately on step navigation
+  const navigateToStep = useCallback((step: number) => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    performAutoSave();
+    setCurrentStep(step);
+  }, [performAutoSave]);
 
   const StepNav = ({ showBack, showNext, onBack, onNext, backLabel, nextLabel }: {
     showBack?: boolean;
@@ -876,7 +1039,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         {STEP_LABELS.map((label, idx) => (
           <button
             key={idx}
-            onClick={() => setCurrentStep(idx + 1)}
+            onClick={() => navigateToStep(idx + 1)}
             title={label}
             className={`w-8 h-8 rounded-full text-xs font-semibold transition-colors ${
               currentStep === idx + 1
@@ -908,7 +1071,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         {/* Step 1: Site Info */}
         {currentStep === 1 && (
           <div className="space-y-6">
-            <StepNav showNext onNext={() => setCurrentStep(2)} />
+            <StepNav showNext onNext={() => navigateToStep(2)} />
             <h2 className="text-2xl font-bold">Step 1: Site Information</h2>
 
             {/* Link to Lead / Company / Contact */}
@@ -1126,7 +1289,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
               </p>
             </div>
 
-            <StepNav showNext onNext={() => setCurrentStep(2)} />
+            <StepNav showNext onNext={() => navigateToStep(2)} />
           </div>
         )}
 
@@ -1274,7 +1437,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
           return (
             <div className="space-y-6">
-              <StepNav showBack showNext onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />
+              <StepNav showBack showNext onBack={() => navigateToStep(1)} onNext={() => navigateToStep(3)} />
               <h2 className="text-2xl font-bold">Step 2: Field Consultation</h2>
 
               {/* Render configurable fields by group */}
@@ -1392,7 +1555,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                 </div>
               </div>
 
-              <StepNav showBack showNext onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />
+              <StepNav showBack showNext onBack={() => navigateToStep(1)} onNext={() => navigateToStep(3)} />
             </div>
           );
         })()}
@@ -1400,7 +1563,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         {/* Step 3: Labor */}
         {currentStep === 3 && (
           <div className="space-y-6">
-            <StepNav showBack showNext onBack={() => setCurrentStep(2)} onNext={() => setCurrentStep(4)} />
+            <StepNav showBack showNext onBack={() => navigateToStep(2)} onNext={() => navigateToStep(4)} />
             <h2 className="text-2xl font-bold">Step 3: Labor</h2>
 
 
@@ -1545,14 +1708,14 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
               </div>
             </div>
 
-            <StepNav showBack showNext onBack={() => setCurrentStep(2)} onNext={() => setCurrentStep(4)} />
+            <StepNav showBack showNext onBack={() => navigateToStep(2)} onNext={() => navigateToStep(4)} />
           </div>
         )}
 
         {/* Step 4: Operating Costs */}
         {currentStep === 4 && (
           <div className="space-y-6">
-            <StepNav showBack showNext onBack={() => setCurrentStep(3)} onNext={() => setCurrentStep(5)} />
+            <StepNav showBack showNext onBack={() => navigateToStep(3)} onNext={() => navigateToStep(5)} />
             <h2 className="text-2xl font-bold">Step 4: Operating Costs</h2>
 
             <div className="bg-blue-50 border border-blue-200 p-4 rounded">
@@ -1582,14 +1745,14 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
               </div>
             </div>
 
-            <StepNav showBack showNext onBack={() => setCurrentStep(3)} onNext={() => setCurrentStep(5)} />
+            <StepNav showBack showNext onBack={() => navigateToStep(3)} onNext={() => navigateToStep(5)} />
           </div>
         )}
 
         {/* Step 5: COGS */}
         {currentStep === 5 && (
           <div className="space-y-6">
-            <StepNav showBack showNext onBack={() => setCurrentStep(4)} onNext={() => setCurrentStep(6)} />
+            <StepNav showBack showNext onBack={() => navigateToStep(4)} onNext={() => navigateToStep(6)} />
             <h2 className="text-2xl font-bold">Step 5: Cost of Goods Sold (COGS)</h2>
 
             <div className="bg-blue-50 border border-blue-200 p-4 rounded">
@@ -1666,14 +1829,14 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
               </table>
             </div>
 
-            <StepNav showBack showNext onBack={() => setCurrentStep(4)} onNext={() => setCurrentStep(6)} />
+            <StepNav showBack showNext onBack={() => navigateToStep(4)} onNext={() => navigateToStep(6)} />
           </div>
         )}
 
         {/* Step 6: Materials */}
         {currentStep === 6 && (
           <div className="space-y-6">
-            <StepNav showBack showNext onBack={() => setCurrentStep(5)} onNext={() => setCurrentStep(7)} />
+            <StepNav showBack showNext onBack={() => navigateToStep(5)} onNext={() => navigateToStep(7)} />
             <h2 className="text-2xl font-bold">Step 6: Materials</h2>
 
             <div className="bg-blue-50 border border-blue-200 p-4 rounded">
@@ -1772,14 +1935,14 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
               </table>
             </div>
 
-            <StepNav showBack showNext onBack={() => setCurrentStep(5)} onNext={() => setCurrentStep(7)} />
+            <StepNav showBack showNext onBack={() => navigateToStep(5)} onNext={() => navigateToStep(7)} />
           </div>
         )}
 
         {/* Step 7: Markup & Customer Price */}
         {currentStep === 7 && (
           <div className="space-y-6">
-            <StepNav showBack onBack={() => setCurrentStep(6)} />
+            <StepNav showBack onBack={() => navigateToStep(6)} />
 
             <h2 className="text-2xl font-bold">Step 7: Markup & Customer Price</h2>
 
@@ -1930,7 +2093,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
             {/* Bottom nav */}
             <div className="flex items-center justify-between gap-2">
               <button
-                onClick={() => setCurrentStep(6)}
+                onClick={() => navigateToStep(6)}
                 className="px-4 py-2 md:min-h-[44px] bg-gray-400 text-white rounded hover:bg-gray-500"
               >
                 Back
@@ -1939,7 +2102,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                 {STEP_LABELS.map((label, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setCurrentStep(idx + 1)}
+                    onClick={() => navigateToStep(idx + 1)}
                     title={label}
                     className={`w-8 h-8 rounded-full text-xs font-semibold transition-colors ${
                       currentStep === idx + 1
@@ -2012,6 +2175,21 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
             <p>Days: {formData.daysNeeded}</p>
             <p>Miles: {formData.milesFromShop}</p>
           </div>
+
+          {/* Auto-save indicator */}
+          <div className="mt-4 text-xs text-gray-400">
+            {autoSaving ? (
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                Saving...
+              </span>
+            ) : lastSaved ? (
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 bg-green-400 rounded-full" />
+                Saved at {lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -2020,6 +2198,13 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         <div className="flex-1">
           <p className="text-xs text-gray-600">Total</p>
           <p className="font-bold">{formatCurrency(totals.grandTotal)}</p>
+        </div>
+        <div className="flex-1 text-center">
+          {autoSaving ? (
+            <p className="text-xs text-blue-500">Saving...</p>
+          ) : lastSaved ? (
+            <p className="text-xs text-gray-400">Saved {lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+          ) : null}
         </div>
         <div className="flex-1 text-right">
           <p className="text-xs text-gray-600">Step {currentStep}/7</p>
