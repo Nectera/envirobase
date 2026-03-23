@@ -315,6 +315,31 @@ export default function InsuranceEstimatesTab({ projectId, projectType }: { proj
     }
   }
 
+  async function handleExportPDF(estimateId: string) {
+    setExporting(true);
+    setExportMenuEst(null);
+    try {
+      const res = await fetch(`/api/project-estimates/${estimateId}/pdf`);
+      if (!res.ok) throw new Error("PDF export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("content-disposition");
+      const filenameMatch = disposition?.match(/filename="(.+)"/);
+      a.download = filenameMatch?.[1] || `estimate.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF export error:", err);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function selectXactItem(item: XactItem) {
     setLineCode(item.code);
     setLineDesc(item.description);
@@ -573,8 +598,15 @@ export default function InsuranceEstimatesTab({ projectId, projectType }: { proj
                         {exportMenuEst === est.id && (
                           <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-30 py-1 min-w-[180px]">
                             <button
+                              onClick={() => handleExportPDF(est.id)}
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 transition"
+                            >
+                              <div className="font-medium text-slate-700">Estimate PDF</div>
+                              <div className="text-[10px] text-slate-400">Branded PDF for carriers &amp; clients</div>
+                            </button>
+                            <button
                               onClick={() => handleExportEstimate(est.id, "xact")}
-                              className="w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 transition"
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 transition border-t border-slate-100"
                             >
                               <div className="font-medium text-slate-700">Xactimate CSV</div>
                               <div className="text-[10px] text-slate-400">Formatted for Xactimate entry</div>
