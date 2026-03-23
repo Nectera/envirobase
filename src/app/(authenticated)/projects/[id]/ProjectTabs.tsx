@@ -12,6 +12,7 @@ import TaskDetailModal from "@/components/TaskDetailModal";
 import ContentInventoryTab from "@/components/ContentInventoryTab";
 import NotesTab from "@/components/NotesTab";
 import ProjectBudgetTab from "./ProjectBudgetTab";
+import InsuranceEstimatesTab from "./InsuranceEstimatesTab";
 import MethDeconReportSection from "./MethDeconReportSection";
 import type { ChecklistSection } from "@/lib/regulations";
 
@@ -148,7 +149,7 @@ export default function ProjectTabs({
   officeManagerId?: string | null;
   linkedConsultationEstimate?: any;
 }) {
-  const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "decon_report" | "documents" | "activity" | "inventory" | "notes" | "budget" | "change_orders">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "decon_report" | "documents" | "activity" | "inventory" | "notes" | "budget" | "change_orders" | "insurance">("dashboard");
   const router = useRouter();
   const { data: sessionData } = useSession();
   const userRole = (sessionData?.user as any)?.role;
@@ -372,6 +373,7 @@ export default function ProjectTabs({
         { key: "notes" as const, label: "Notes" },
         ...(userRole === "ADMIN" ? [{ key: "budget" as const, label: "Budget" }] : []),
         ...((userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR") ? [{ key: "change_orders" as const, label: "Change Orders" }] : []),
+        ...((userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR" || userRole === "OFFICE") ? [{ key: "insurance" as const, label: "Insurance" }] : []),
       ];
 
   // Close quick-add on outside click
@@ -1860,6 +1862,11 @@ export default function ProjectTabs({
             </div>
           )}
         </div>
+      )}
+
+      {/* ════════════════════ Insurance & Estimates Tab ════════════════════ */}
+      {tab === "insurance" && (
+        <InsuranceEstimatesTab projectId={project.id} projectType={project.type} />
       )}
 
       {/* Upload Document Modal */}

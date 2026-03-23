@@ -86,6 +86,9 @@ model Organization {
   notes                  Note[]
   methDeconReports       MethDeconReport[]
   changeOrders           ChangeOrder[]
+  xactLineItems          XactLineItem[]
+  projectEstimates       ProjectEstimate[]
+  carrierInfos           CarrierInfo[]
 
   @@map("organizations")
 }
@@ -246,6 +249,8 @@ model Project {
   methDeconReport    MethDeconReport?
   customerPortals    CustomerPortal[]
   changeOrders       ChangeOrder[]
+  projectEstimates   ProjectEstimate[]
+  carrierInfos       CarrierInfo[]
 
   @@index([organizationId])
   @@map("projects")
@@ -1458,4 +1463,119 @@ model ChangeOrder {
   @@index([projectId])
   @@index([organizationId])
   @@map("change_orders")
+}
+
+// ─── Xactimate Integration ────────────────────────────────────
+
+model XactLineItem {
+  id           String   @id @default(uuid())
+  code         String   // Xactimate selector code e.g. "ACM RBAG"
+  category     String   // e.g. "ACM", "CLN", "DRY", "DEM"
+  description  String   // Full description
+  unit         String   // SF, LF, EA, HR, etc.
+  defaultRate  Float?   // Default price per unit (optional)
+  projectTypes String[] // e.g. ["ASBESTOS","METH","LEAD"]
+  notes        String?
+  favorite     Boolean  @default(false)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  estimateLineItems EstimateLineItem[]
+
+  @@index([category])
+  @@index([code])
+  @@index([organizationId])
+  @@map("xact_line_items")
+}
+
+model ProjectEstimate {
+  id             String    @id @default(uuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number         Int       // Sequential per project (1 = original, 2+ = supplements)
+  type           String    @default("original") // original, supplement
+  title          String?   // e.g. "Original Estimate", "Supplement #1 - Additional ACM"
+  status         String    @default("draft") // draft, submitted, approved, denied, revision_requested
+  totalAmount    Float     @default(0)
+  approvedAmount Float?
+  notes          String?
+  submittedAt    DateTime?
+  approvedAt     DateTime?
+  deniedAt       DateTime?
+  denialReason   String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  lineItems EstimateLineItem[]
+
+  @@index([projectId])
+  @@index([organizationId])
+  @@map("project_estimates")
+}
+
+model EstimateLineItem {
+  id           String   @id @default(uuid())
+  estimateId   String
+  estimate     ProjectEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  xactItemId   String?
+  xactItem     XactLineItem? @relation(fields: [xactItemId], references: [id])
+  xactCode     String   // Xact selector code (stored directly for custom items too)
+  description  String
+  category     String?  // Xact category grouping
+  unit         String
+  quantity     Float
+  unitPrice    Float
+  total        Float    // quantity * unitPrice (denormalized)
+  sortOrder    Int      @default(0)
+  notes        String?
+  room         String?  // Room/area label for grouping
+  createdAt    DateTime @default(now())
+
+  @@index([estimateId])
+  @@map("estimate_line_items")
+}
+
+model CarrierInfo {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  carrierName     String   // State Farm, Allstate, etc.
+  adjusterName    String?
+  adjusterEmail   String?
+  adjusterPhone   String?
+  claimNumber     String?
+  policyNumber    String?
+  dateOfLoss      String?  // YYYY-MM-DD
+  deductible      Float?
+  notes           String?
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  communications CarrierCommunication[]
+
+  @@index([projectId])
+  @@index([organizationId])
+  @@map("carrier_info")
+}
+
+model CarrierCommunication {
+  id          String   @id @default(uuid())
+  carrierId   String
+  carrier     CarrierInfo @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  type        String   // email, phone, meeting, letter, note
+  direction   String   // inbound, outbound
+  subject     String
+  body        String?
+  contactName String?
+  date        String?  // YYYY-MM-DD
+  createdAt   DateTime @default(now())
+
+  @@index([carrierId])
+  @@map("carrier_communications")
 }
