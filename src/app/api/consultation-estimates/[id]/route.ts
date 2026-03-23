@@ -148,7 +148,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             parentId: leadId,
             leadId,
             type: "estimate_approved",
-            content: `Consultation estimate was marked as "${newStatus}".`,
+            content: `Estimate was marked as "${newStatus}".`,
             user: "system",
           },
         });
@@ -210,8 +210,32 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
               compliance: null,
               estimatedDays: estDays,
               estimatedLaborHours: estLaborHours,
+              // Carry Matterport from lead
+              matterportUrl: (lead as any).matterportUrl || null,
+              matterportModelId: (lead as any).matterportModelId || null,
             }),
           });
+
+          // Carry insurance carrier info from lead to project
+          if ((lead as any).isInsuranceJob && (lead as any).insuranceCarrier) {
+            try {
+              await prisma.carrierInfo.create({
+                data: orgData(orgId, {
+                  projectId: project.id,
+                  carrierName: (lead as any).insuranceCarrier,
+                  adjusterName: (lead as any).adjusterName || null,
+                  adjusterEmail: (lead as any).adjusterEmail || null,
+                  adjusterPhone: (lead as any).adjusterPhone || null,
+                  claimNumber: (lead as any).claimNumber || null,
+                  policyNumber: (lead as any).policyNumber || null,
+                  dateOfLoss: (lead as any).dateOfLoss || null,
+                  deductible: (lead as any).deductible || null,
+                }),
+              });
+            } catch (carrierErr) {
+              console.error("Error creating carrier info from lead:", carrierErr);
+            }
+          }
 
           // Update lead to Won status
           const updatedLead = await prisma.lead.update({

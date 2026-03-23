@@ -69,6 +69,8 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
   const [showEditModal, setShowEditModal] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, any>>({});
+  const [matterportUrl, setMatterportUrl] = useState(lead.matterportUrl || "");
+  const [matterportSaving, setMatterportSaving] = useState(false);
 
   const openEditModal = () => {
     setEditForm({
@@ -92,6 +94,8 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
       adjusterPhone: lead.adjusterPhone || "",
       adjusterEmail: lead.adjusterEmail || "",
       dateOfLoss: lead.dateOfLoss || "",
+      policyNumber: lead.policyNumber || "",
+      deductible: lead.deductible || "",
       siteVisitDate: lead.siteVisitDate || "",
       siteVisitNotes: lead.siteVisitNotes || "",
       referralSource: lead.referralSource || "",
@@ -110,6 +114,7 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
         ...editForm,
         estimatedValue: editForm.estimatedValue ? Number(editForm.estimatedValue) : 0,
         dateOfLoss: editForm.dateOfLoss || null,
+        deductible: editForm.deductible ? Number(editForm.deductible) : null,
         siteVisitDate: editForm.siteVisitDate || null,
         siteVisitNotes: editForm.siteVisitNotes || null,
       };
@@ -149,6 +154,33 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleMatterportSave = async () => {
+    setMatterportSaving(true);
+    try {
+      // Extract model ID from URL if it's a full Matterport URL
+      let modelId = lead.matterportModelId || "";
+      const urlVal = matterportUrl.trim();
+      if (urlVal) {
+        const match = urlVal.match(/(?:my\.matterport\.com\/show\/\?m=|matterport\.com\/\w+\/[\w-]+\/spaces\/([\w-]+))/);
+        if (match) {
+          modelId = match[1] || new URL(urlVal).searchParams.get("m") || "";
+        } else if (!urlVal.includes("http")) {
+          modelId = urlVal; // Treat as raw model ID
+        }
+      }
+      await fetch(`/api/leads/${lead.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matterportUrl: urlVal, matterportModelId: modelId }),
+      });
+      router.refresh();
+    } catch {
+      alert("Failed to save Matterport URL");
+    } finally {
+      setMatterportSaving(false);
     }
   };
 
@@ -605,9 +637,51 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
             {lead.dateOfLoss && (
               <div><span className="text-[10px] text-slate-400 block">Date of Loss</span><span className="text-slate-700">{formatDate(lead.dateOfLoss)}</span></div>
             )}
+            {lead.policyNumber && (
+              <div><span className="text-[10px] text-slate-400 block">Policy #</span><span className="text-slate-700">{lead.policyNumber}</span></div>
+            )}
+            {lead.deductible && (
+              <div><span className="text-[10px] text-slate-400 block">Deductible</span><span className="text-slate-700">{formatCurrency(lead.deductible)}</span></div>
+            )}
           </div>
         </div>
       )}
+
+      {/* ─── 3D Scan (Matterport) ─── */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4 mb-4">
+        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <ExternalLink size={12} className="text-indigo-500" /> 3D Scan
+        </h3>
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            value={matterportUrl}
+            onChange={(e) => setMatterportUrl(e.target.value)}
+            placeholder="Paste Matterport URL or Model ID..."
+            className="flex-1 border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+          />
+          <button
+            onClick={handleMatterportSave}
+            disabled={matterportSaving || matterportUrl === (lead.matterportUrl || "")}
+            className="px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
+          >
+            {matterportSaving ? "Saving..." : "Save"}
+          </button>
+        </div>
+        {lead.matterportUrl && (
+          <div className="rounded-lg overflow-hidden border border-slate-200" style={{ height: 300 }}>
+            <iframe
+              src={lead.matterportModelId
+                ? `https://my.matterport.com/show/?m=${lead.matterportModelId}&play=1`
+                : lead.matterportUrl}
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              allowFullScreen
+              allow="xr-spatial-tracking"
+            />
+          </div>
+        )}
+      </div>
 
       {/* ─── Testing Referral Banner ─── */}
       {lead.referredForTesting && (
@@ -765,7 +839,7 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
               </h3>
               <Link href={`/estimates/consultation?leadId=${lead.id}`}
                 className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-                <FileText size={10} /> + Consultation
+                <FileText size={10} /> + Estimate
               </Link>
             </div>
 
@@ -778,7 +852,7 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
                     <div key={est.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg">
                       <Link href={`/estimates/consultation/${est.id}`} className="flex-1 hover:opacity-80 min-w-0">
                         <div className="text-sm font-medium text-slate-800 truncate">
-                          Consultation{est.customerPrice ? ` — ${formatCurrency(est.customerPrice)}` : est.totalCost ? ` — ${formatCurrency(est.totalCost)}` : ""}
+                          Estimate{est.customerPrice ? ` — ${formatCurrency(est.customerPrice)}` : est.totalCost ? ` — ${formatCurrency(est.totalCost)}` : ""}
                         </div>
                         <div className="text-[10px] text-slate-400 flex items-center gap-2">
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
@@ -1257,6 +1331,20 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
                       <label className="block text-xs font-medium text-slate-600 mb-1">Date of Loss</label>
                       <input type="date" value={editForm.dateOfLoss} onChange={(e) => updateEdit("dateOfLoss", e.target.value)}
                         className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Policy #</label>
+                        <input type="text" value={editForm.policyNumber} onChange={(e) => updateEdit("policyNumber", e.target.value)}
+                          placeholder="Policy number"
+                          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Deductible</label>
+                        <input type="number" value={editForm.deductible} onChange={(e) => updateEdit("deductible", e.target.value)}
+                          placeholder="$0"
+                          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                      </div>
                     </div>
                   </div>
                 )}

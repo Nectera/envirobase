@@ -102,6 +102,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.adjusterPhone !== undefined) data.adjusterPhone = body.adjusterPhone;
     if (body.adjusterContact !== undefined) data.adjusterPhone = body.adjusterContact;
     if (body.dateOfLoss !== undefined) data.dateOfLoss = body.dateOfLoss;
+    if (body.adjusterEmail !== undefined) data.adjusterEmail = body.adjusterEmail;
+    if (body.policyNumber !== undefined) data.policyNumber = body.policyNumber;
+    if (body.deductible !== undefined) data.deductible = body.deductible;
+    // Matterport
+    if (body.matterportUrl !== undefined) data.matterportUrl = body.matterportUrl;
+    if (body.matterportModelId !== undefined) data.matterportModelId = body.matterportModelId;
     // Site visit fields
     if (body.siteVisitDate !== undefined) data.siteVisitDate = body.siteVisitDate;
     if (body.siteVisitTime !== undefined) data.siteVisitTime = body.siteVisitTime;
@@ -205,6 +211,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           compliance: null,
           estimatedDays: estDays,
           estimatedLaborHours: estLaborHours,
+          // Carry Matterport from lead
+          matterportUrl: (currentLead as any).matterportUrl || null,
+          matterportModelId: (currentLead as any).matterportModelId || null,
         }),
       });
 
@@ -212,6 +221,27 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
       // Store the project ID on the lead for reference
       data.projectId = project.id;
+
+      // Carry insurance carrier info from lead to project
+      if ((currentLead as any).isInsuranceJob && (currentLead as any).insuranceCarrier) {
+        try {
+          await prisma.carrierInfo.create({
+            data: orgData(orgId, {
+              projectId: project.id,
+              carrierName: (currentLead as any).insuranceCarrier,
+              adjusterName: (currentLead as any).adjusterName || null,
+              adjusterEmail: (currentLead as any).adjusterEmail || null,
+              adjusterPhone: (currentLead as any).adjusterPhone || null,
+              claimNumber: (currentLead as any).claimNumber || null,
+              policyNumber: (currentLead as any).policyNumber || null,
+              dateOfLoss: (currentLead as any).dateOfLoss || null,
+              deductible: (currentLead as any).deductible || null,
+            }),
+          });
+        } catch (carrierErr) {
+          logger.error("Error creating carrier info from lead:", { error: String(carrierErr) });
+        }
+      }
 
       // Create default tasks for the project (merge from all types, deduplicate)
       const defaultTasks = getDefaultTasksMulti(projectType);
