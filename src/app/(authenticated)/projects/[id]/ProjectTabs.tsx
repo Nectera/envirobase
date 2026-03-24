@@ -2922,6 +2922,10 @@ function DashboardTab({
   const [creatingPermitMod, setCreatingPermitMod] = useState(false);
   const [editingEndDate, setEditingEndDate] = useState(false);
   const [newEndDate, setNewEndDate] = useState(project.estEndDate || "");
+  const [editingScheduleStart, setEditingScheduleStart] = useState(false);
+  const [editingScheduleEnd, setEditingScheduleEnd] = useState(false);
+  const [scheduleStart, setScheduleStart] = useState(project.startDate || "");
+  const [scheduleEnd, setScheduleEnd] = useState(project.estEndDate || "");
   const [incidentModal, setIncidentModal] = useState(false);
   const [incidentSaving, setIncidentSaving] = useState(false);
   const [incidentType, setIncidentType] = useState("work_stoppage");
@@ -3018,6 +3022,23 @@ function DashboardTab({
       body: JSON.stringify({ estEndDate: newEndDate }),
     });
     setEditingEndDate(false);
+    setSaving(false);
+    router.refresh();
+  }
+
+  async function handleSaveScheduleDate(field: "startDate" | "estEndDate", value: string) {
+    setSaving(true);
+    await fetch(`/api/projects/${project.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value || null }),
+    });
+    if (field === "startDate") {
+      setEditingScheduleStart(false);
+    } else {
+      setEditingScheduleEnd(false);
+      setNewEndDate(value); // keep alert-bar state in sync
+    }
     setSaving(false);
     router.refresh();
   }
@@ -3219,8 +3240,8 @@ function DashboardTab({
         </div>
       )}
 
-      {/* === Permit & Schedule Info Bar === */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* === Permit, Schedule & Crew Info Bar === */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Permit Info */}
         <div className={`rounded-lg border p-4 ${isPermitExpired ? "bg-red-50/50 border-red-200" : "bg-white border-slate-200"}`}>
           <div className="flex items-center gap-2 mb-2">
@@ -3238,7 +3259,49 @@ function DashboardTab({
           )}
         </div>
 
-        {/* Crew & Schedule */}
+        {/* Schedule */}
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <CalendarDays size={14} className="text-indigo-500" />
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Schedule</span>
+          </div>
+          <div className="space-y-1.5 text-xs">
+            {/* Start Date */}
+            <div className="flex justify-between items-center group">
+              <span className="text-slate-500">Start</span>
+              {editingScheduleStart ? (
+                <div className="flex items-center gap-1">
+                  <input type="date" value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} className="px-1.5 py-0.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500" />
+                  <button onClick={() => handleSaveScheduleDate("startDate", scheduleStart)} disabled={saving} className="text-emerald-600 hover:text-emerald-700 transition"><Save size={12} /></button>
+                  <button onClick={() => { setEditingScheduleStart(false); setScheduleStart(project.startDate || ""); }} className="text-slate-400 hover:text-red-500 transition"><X size={12} /></button>
+                </div>
+              ) : (
+                <span className="font-medium text-slate-800 inline-flex items-center gap-1 cursor-pointer hover:text-indigo-600" onClick={() => setEditingScheduleStart(true)}>
+                  {project.startDate ? new Date(project.startDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                  <Pencil size={10} className="text-slate-300 opacity-0 group-hover:opacity-100 transition" />
+                </span>
+              )}
+            </div>
+            {/* End Date */}
+            <div className="flex justify-between items-center group">
+              <span className="text-slate-500">End</span>
+              {editingScheduleEnd ? (
+                <div className="flex items-center gap-1">
+                  <input type="date" value={scheduleEnd} onChange={(e) => setScheduleEnd(e.target.value)} className="px-1.5 py-0.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500" />
+                  <button onClick={() => handleSaveScheduleDate("estEndDate", scheduleEnd)} disabled={saving} className="text-emerald-600 hover:text-emerald-700 transition"><Save size={12} /></button>
+                  <button onClick={() => { setEditingScheduleEnd(false); setScheduleEnd(project.estEndDate || ""); }} className="text-slate-400 hover:text-red-500 transition"><X size={12} /></button>
+                </div>
+              ) : (
+                <span className="font-medium text-slate-800 inline-flex items-center gap-1 cursor-pointer hover:text-indigo-600" onClick={() => setEditingScheduleEnd(true)}>
+                  {project.estEndDate ? new Date(project.estEndDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                  <Pencil size={10} className="text-slate-300 opacity-0 group-hover:opacity-100 transition" />
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Crew */}
         <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-center gap-2 mb-2">
             <User size={14} className="text-indigo-500" />
