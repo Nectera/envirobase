@@ -2634,60 +2634,67 @@ function DocumentsTab({ documents, projectId }: { documents: DocEntry[]; project
 
   async function handleSave() {
     setSaving(true);
-    if (uploadFile) {
-      // Direct-to-Supabase upload via signed URL (bypasses Vercel body size limit)
-      const ext = uploadFile.name.split(".").pop() || "bin";
-      const storagePath = `${projectId}/${docType}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    try {
+      if (uploadFile) {
+        // Direct-to-Supabase upload via signed URL (bypasses Vercel body size limit)
+        const ext = uploadFile.name.split(".").pop() || "bin";
+        const storagePath = `${projectId}/${docType}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-      const urlRes = await fetch("/api/storage/signed-upload-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentType: uploadFile.type, path: storagePath }),
-      });
-      const { signedUrl, publicUrl } = await urlRes.json();
+        const urlRes = await fetch("/api/storage/signed-upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contentType: uploadFile.type, path: storagePath }),
+        });
+        if (!urlRes.ok) throw new Error("Failed to get upload URL");
+        const { signedUrl, publicUrl } = await urlRes.json();
 
-      await fetch(signedUrl, {
-        method: "PUT",
-        headers: { "Content-Type": uploadFile.type },
-        body: uploadFile,
-      });
+        const uploadRes = await fetch(signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": uploadFile.type },
+          body: uploadFile,
+        });
+        if (!uploadRes.ok) throw new Error("File upload failed");
 
-      // Create document record with file metadata
-      await fetch(`/api/projects/${projectId}/documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          docType,
-          title: title || uploadFile.name,
-          referenceNumber,
-          date,
-          notes,
-          status: "received",
-          fileName: uploadFile.name,
-          fileUrl: publicUrl,
-          fileSize: uploadFile.size,
-          mimeType: uploadFile.type,
-          storagePath,
-        }),
-      });
-    } else {
-      // Metadata-only document
-      await fetch(`/api/projects/${projectId}/documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ docType, title, referenceNumber, date, notes, status }),
-      });
+        // Create document record with file metadata
+        await fetch(`/api/projects/${projectId}/documents`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            docType,
+            title: title || uploadFile.name,
+            referenceNumber,
+            date,
+            notes,
+            status: "received",
+            fileName: uploadFile.name,
+            fileUrl: publicUrl,
+            fileSize: uploadFile.size,
+            mimeType: uploadFile.type,
+            storagePath,
+          }),
+        });
+      } else {
+        // Metadata-only document
+        await fetch(`/api/projects/${projectId}/documents`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ docType, title, referenceNumber, date, notes, status }),
+        });
+      }
+      setShowForm(false);
+      setTitle("");
+      setReferenceNumber("");
+      setDate("");
+      setNotes("");
+      setDocType("state_permit");
+      setStatus("pending");
+      setUploadFile(null);
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || "Upload failed — please try again.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setShowForm(false);
-    setTitle("");
-    setReferenceNumber("");
-    setDate("");
-    setNotes("");
-    setDocType("state_permit");
-    setStatus("pending");
-    setUploadFile(null);
-    router.refresh();
   }
 
   return (

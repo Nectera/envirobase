@@ -260,14 +260,16 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ contentType: docFile.type, path: storagePath }),
         });
-        const { signedUrl, publicUrl, token } = await urlRes.json();
+        if (!urlRes.ok) throw new Error("Failed to get upload URL");
+        const { signedUrl, publicUrl } = await urlRes.json();
 
         // Upload directly to Supabase Storage
-        await fetch(signedUrl, {
+        const uploadRes = await fetch(signedUrl, {
           method: "PUT",
           headers: { "Content-Type": docFile.type },
           body: docFile,
         });
+        if (!uploadRes.ok) throw new Error("File upload failed");
 
         // Create document record with file metadata
         await fetch(`/api/leads/${lead.id}/documents`, {
@@ -308,6 +310,8 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
       setDocNotes("");
       setDocFile(null);
       router.refresh();
+    } catch (err: any) {
+      alert(err.message || "Upload failed — please try again.");
     } finally {
       setDocSaving(false);
     }
