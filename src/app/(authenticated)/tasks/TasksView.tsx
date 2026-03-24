@@ -815,7 +815,7 @@ export default function TasksView({
               </p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
@@ -835,17 +835,17 @@ export default function TasksView({
                         {t("common.name")}
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left">
+                    <th className="hidden md:table-cell px-4 py-3 text-left">
                       <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                         Assignee
                       </span>
                     </th>
-                    <th className="px-4 py-3 text-left">
+                    <th className="hidden md:table-cell px-4 py-3 text-left">
                       <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                         {t("common.status")}
                       </span>
                     </th>
-                    <th className="px-4 py-3 text-left">
+                    <th className="hidden md:table-cell px-4 py-3 text-left">
                       <button
                         onClick={() => {
                           if (sortField === "priority") {
@@ -920,10 +920,10 @@ export default function TasksView({
                         }`}>
                           {task.title}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-600">
+                        <td className="hidden md:table-cell px-4 py-3 text-sm text-slate-600">
                           {task.worker?.name || "-"}
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="hidden md:table-cell px-4 py-3 text-sm">
                           <span
                             className={`px-2 py-1 rounded-full text-[11px] font-medium border ${getStatusBadge(
                               task.status
@@ -932,7 +932,7 @@ export default function TasksView({
                             {STATUS_LABELS[task.status] || task.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="hidden md:table-cell px-4 py-3 text-sm">
                           <span
                             className={`px-2 py-1 rounded-full text-[9px] font-semibold ${getPriorityBadge(
                               task.priority
