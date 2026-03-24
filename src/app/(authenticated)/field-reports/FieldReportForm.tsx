@@ -820,12 +820,12 @@ export default function FieldReportForm({
       </Section>
 
       {/* Submit */}
-      <div className="flex items-center gap-3 pt-2 pb-8 sticky bottom-0 bg-white border-t border-slate-200 -mx-6 px-6 py-4">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 pt-2 pb-8 sticky bottom-0 z-10 bg-white border-t border-slate-200 -mx-6 px-4 md:px-6 py-4">
         <button
           type="button"
           onClick={() => save("draft")}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50"
+          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50"
         >
           <Save size={16} />
           Save Draft
@@ -834,15 +834,16 @@ export default function FieldReportForm({
           type="button"
           onClick={() => save("submitted")}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50"
+          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50"
         >
           <Send size={16} />
-          Submit Report
+          <span className="hidden md:inline">Submit Report</span>
+          <span className="md:hidden">Submit</span>
         </button>
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-5 py-2.5 text-slate-600 hover:text-slate-800 text-sm font-medium"
+          className="hidden md:block px-5 py-2.5 text-slate-600 hover:text-slate-800 text-sm font-medium"
         >
           Cancel
         </button>

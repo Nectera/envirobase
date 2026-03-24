@@ -1161,7 +1161,42 @@ export default function ProjectTabs({
                     <p className="text-sm text-slate-500">No field reports yet</p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                  <>
+                  {/* Mobile card layout */}
+                  <div className="md:hidden space-y-2">
+                    {fieldReports.map((report) => {
+                      const hasSafetyEvent = report.incident || report.nearMiss || report.stopWork;
+                      return (
+                        <Link key={report.id} href={`/field-reports/${report.id}`}
+                          className="block bg-white rounded-lg border border-slate-200 p-3 hover:bg-slate-50 active:bg-slate-100 transition">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-slate-900">
+                              {new Date(report.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              {hasSafetyEvent && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-medium rounded-full">
+                                  <AlertTriangle size={10} /> Flagged
+                                </span>
+                              )}
+                              <span className={`inline-block px-2 py-0.5 text-[10px] font-medium rounded-full capitalize ${statusColors[report.status] || "bg-slate-100"}`}>
+                                {report.status}
+                              </span>
+                              <ChevronRight size={14} className="text-slate-400" />
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-500 truncate">
+                            {report.supervisorName && <span className="text-slate-600 font-medium">{report.supervisorName}</span>}
+                            {report.supervisorName && report.workCompletedToday && <span className="mx-1">·</span>}
+                            {report.workCompletedToday || ""}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop table */}
+                  <div className="hidden md:block bg-white rounded-lg border border-slate-200 overflow-hidden">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 border-b border-slate-200">
                         <tr>
@@ -1177,7 +1212,7 @@ export default function ProjectTabs({
                         {fieldReports.map((report) => {
                           const hasSafetyEvent = report.incident || report.nearMiss || report.stopWork;
                           return (
-                            <tr key={report.id} className="hover:bg-slate-50 transition">
+                            <tr key={report.id} className="hover:bg-slate-50 cursor-pointer transition" onClick={() => router.push(`/field-reports/${report.id}`)}>
                               <td className="px-4 py-2 font-medium text-slate-900 whitespace-nowrap">
                                 {new Date(report.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                               </td>
@@ -1199,12 +1234,10 @@ export default function ProjectTabs({
                               </td>
                               <td className="px-4 py-2">
                                 <div className="flex items-center gap-2 justify-end">
-                                  <a href={`/api/field-reports/${report.id}/pdf`} className="text-slate-400 hover:text-indigo-600" title="Download PDF">
+                                  <a href={`/api/field-reports/${report.id}/pdf`} onClick={(e) => e.stopPropagation()} className="text-slate-400 hover:text-indigo-600" title="Download PDF">
                                     <FileDown size={15} />
                                   </a>
-                                  <Link href={`/field-reports/${report.id}`} className="text-slate-400 hover:text-indigo-600">
-                                    <ChevronRight size={16} />
-                                  </Link>
+                                  <ChevronRight size={16} className="text-slate-400" />
                                 </div>
                               </td>
                             </tr>
@@ -1213,6 +1246,7 @@ export default function ProjectTabs({
                       </tbody>
                     </table>
                   </div>
+                  </>
                 )}
               </div>
 
