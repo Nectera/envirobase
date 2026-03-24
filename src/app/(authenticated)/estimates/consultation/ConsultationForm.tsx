@@ -1477,9 +1477,10 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                     <label className="block text-sm font-medium mb-2">Days Needed</label>
                     <input
                       type="number"
-                      min="1"
-                      value={formData.daysNeeded}
-                      onChange={(e) => handleInputChange("daysNeeded", parseInt(e.target.value) || 1)}
+                      min="0"
+                      placeholder="0"
+                      value={formData.daysNeeded || ""}
+                      onChange={(e) => handleInputChange("daysNeeded", parseInt(e.target.value) || 0)}
                       className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
                     />
                   </div>
@@ -1487,9 +1488,10 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                     <label className="block text-sm font-medium mb-2">Crew Size</label>
                     <input
                       type="number"
-                      min="1"
-                      value={formData.crewSize}
-                      onChange={(e) => handleInputChange("crewSize", parseInt(e.target.value) || 1)}
+                      min="0"
+                      placeholder="0"
+                      value={formData.crewSize || ""}
+                      onChange={(e) => handleInputChange("crewSize", parseInt(e.target.value) || 0)}
                       className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
                     />
                   </div>
@@ -1499,7 +1501,8 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                       type="number"
                       min="0"
                       step="0.5"
-                      value={formData.driveTimeHours}
+                      placeholder="0"
+                      value={formData.driveTimeHours || ""}
                       onChange={(e) => handleInputChange("driveTimeHours", parseFloat(e.target.value) || 0)}
                       className="w-full px-3 py-2 md:min-h-[44px] border rounded bg-white"
                     />
