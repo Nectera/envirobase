@@ -2606,6 +2606,7 @@ function DocumentsTab({ documents, projectId }: { documents: DocEntry[]; project
   const [date, setDate] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("pending");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const router = useRouter();
 
   const DOC_TYPE_OPTIONS = [
@@ -2633,11 +2634,20 @@ function DocumentsTab({ documents, projectId }: { documents: DocEntry[]; project
 
   async function handleSave() {
     setSaving(true);
-    await fetch(`/api/projects/${projectId}/documents`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ docType, title, referenceNumber, date, notes, status }),
-    });
+    if (uploadFile) {
+      // Upload file via FormData endpoint
+      const fd = new FormData();
+      fd.append("file", uploadFile);
+      fd.append("docType", docType);
+      await fetch(`/api/projects/${projectId}/documents/upload`, { method: "POST", body: fd });
+    } else {
+      // Metadata-only document
+      await fetch(`/api/projects/${projectId}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docType, title, referenceNumber, date, notes, status }),
+      });
+    }
     setSaving(false);
     setShowForm(false);
     setTitle("");
@@ -2646,6 +2656,7 @@ function DocumentsTab({ documents, projectId }: { documents: DocEntry[]; project
     setNotes("");
     setDocType("state_permit");
     setStatus("pending");
+    setUploadFile(null);
     router.refresh();
   }
 
@@ -2729,6 +2740,34 @@ function DocumentsTab({ documents, projectId }: { documents: DocEntry[]; project
               />
             </div>
           </div>
+          {/* File upload */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Attach File (optional)</label>
+            <label className={`flex items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition py-3 ${
+              uploadFile ? "border-emerald-300 bg-emerald-50" : "border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30"
+            }`}>
+              <input type="file" className="hidden"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.tif,.tiff,.xlsx,.csv"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setUploadFile(f);
+                  if (f && !title) setTitle(f.name.replace(/\.[^/.]+$/, ""));
+                }} />
+              {uploadFile ? (
+                <div className="flex items-center gap-2 text-xs text-emerald-700">
+                  <FileCheck size={14} />
+                  <span className="font-medium">{uploadFile.name}</span>
+                  <span className="text-slate-400">({(uploadFile.size / 1024).toFixed(0)} KB)</span>
+                  <button type="button" onClick={(e) => { e.preventDefault(); setUploadFile(null); }} className="text-slate-400 hover:text-red-500 ml-1"><X size={12} /></button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <Upload size={14} />
+                  <span>Click to attach a file</span>
+                </div>
+              )}
+            </label>
+          </div>
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleSave}
@@ -2769,13 +2808,26 @@ function DocumentsTab({ documents, projectId }: { documents: DocEntry[]; project
             </thead>
             <tbody className="divide-y divide-slate-100">
               {documents.map((doc) => (
-                <tr key={doc.id} className="hover:bg-slate-50">
+                <tr
+                  key={doc.id}
+                  className={`hover:bg-slate-50 ${doc.fileUrl ? "cursor-pointer" : ""}`}
+                  onClick={() => doc.fileUrl && window.open(doc.fileUrl, "_blank")}
+                >
                   <td className="px-4 py-2">
                     <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-indigo-50 text-indigo-700">
                       {typeLabels[doc.docType] || doc.docType}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-slate-700">{doc.title || "—"}</td>
+                  <td className="px-4 py-2">
+                    {doc.fileUrl ? (
+                      <span className="text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1">
+                        {doc.title || doc.fileName || "—"}
+                        <ExternalLink size={12} />
+                      </span>
+                    ) : (
+                      <span className="text-slate-700">{doc.title || "—"}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-2 text-slate-600 font-mono text-xs">{doc.referenceNumber || "—"}</td>
                   <td className="px-4 py-2 text-slate-600">{doc.date ? formatDate(new Date(doc.date)) : "—"}</td>
                   <td className="px-4 py-2">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
+import { supabase, DOCUMENTS_BUCKET } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,18 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const docId = searchParams.get("docId");
     if (!docId) {
       return NextResponse.json({ error: "docId required" }, { status: 400 });
+    }
+
+    // Find the document first to check for storage file
+    const doc = await prisma.leadDocument.findUnique({ where: orgWhere(orgId, { id: docId }) });
+    if (!doc) {
+      return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    }
+
+    // Remove file from Supabase Storage if a storagePath was saved
+    const storagePath = (doc as any).data?.storagePath;
+    if (storagePath) {
+      await supabase.storage.from(DOCUMENTS_BUCKET).remove([storagePath]);
     }
 
     await prisma.leadDocument.delete({ where: orgWhere(orgId, { id: docId }) });

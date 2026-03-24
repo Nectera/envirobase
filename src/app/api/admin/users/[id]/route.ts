@@ -63,6 +63,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
 
+    // Sync email to linked Worker record if email changed
+    if (updateData.email) {
+      await prisma.worker.updateMany({
+        where: { userId: id },
+        data: { email: updateData.email },
+      }).catch(() => {}); // Non-critical, don't fail the request
+    }
+
     logger.audit("User updated by admin", {
       updatedBy: currentUserId,
       targetUserId: id,

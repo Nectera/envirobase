@@ -85,6 +85,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }).catch(() => {}); // Non-critical, don't fail the request
     }
 
+    // Sync email to linked User account if email changed
+    if (body.email !== undefined && worker.userId) {
+      await prisma.user.update({
+        where: { id: worker.userId },
+        data: { email: body.email },
+      }).catch(() => {}); // Non-critical, don't fail the request
+    }
+
     return NextResponse.json(worker);
   } catch (error: any) {
     return NextResponse.json(

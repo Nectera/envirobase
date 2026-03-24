@@ -248,19 +248,31 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
     setDocSaving(true);
     try {
       const docTypeInfo = DOC_TYPES.find((d) => d.value === docUploadModal);
-      await fetch(`/api/leads/${lead.id}/documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          docType: docUploadModal,
-          title: docTitle || docTypeInfo?.label || "Document",
-          referenceNumber: docRef,
-          notes: docNotes,
-          fileName: docFile?.name || null,
-          fileSize: docFile?.size || null,
-          status: "received",
-        }),
-      });
+      if (docFile) {
+        // Upload file via FormData endpoint
+        const fd = new FormData();
+        fd.append("file", docFile);
+        fd.append("docType", docUploadModal);
+        fd.append("title", docTitle || docTypeInfo?.label || "Document");
+        if (docRef) fd.append("referenceNumber", docRef);
+        if (docNotes) fd.append("notes", docNotes);
+        await fetch(`/api/leads/${lead.id}/documents/upload`, { method: "POST", body: fd });
+      } else {
+        // Metadata-only document
+        await fetch(`/api/leads/${lead.id}/documents`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            docType: docUploadModal,
+            title: docTitle || docTypeInfo?.label || "Document",
+            referenceNumber: docRef,
+            notes: docNotes,
+            fileName: null,
+            fileSize: null,
+            status: "received",
+          }),
+        });
+      }
       setDocUploadModal(null);
       setDocTitle("");
       setDocRef("");
@@ -732,7 +744,15 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
                           <FileText size={11} className="text-indigo-500" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-xs font-medium text-slate-800 truncate">{doc.title || typeInfo?.label || "Document"}</div>
+                          {doc.fileUrl ? (
+                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 truncate inline-flex items-center gap-1">
+                              {doc.title || typeInfo?.label || "Document"}
+                              <ExternalLink size={10} />
+                            </a>
+                          ) : (
+                            <div className="text-xs font-medium text-slate-800 truncate">{doc.title || typeInfo?.label || "Document"}</div>
+                          )}
                           <div className="text-[10px] text-slate-400">
                             {typeInfo?.label || doc.docType}
                             {doc.fileName && ` — ${doc.fileName}`}
