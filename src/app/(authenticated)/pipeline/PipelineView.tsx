@@ -686,6 +686,14 @@ export default function PipelineView({ opportunities, offices = [] }: PipelineVi
                       >
                         {t("pipeline.viewLead")}
                       </Link>
+                      {opp.projectId && (
+                        <Link
+                          href={`/projects/${opp.projectId}`}
+                          className="text-[10px] font-medium text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-full transition"
+                        >
+                            {t("pipeline.viewProject")}
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}

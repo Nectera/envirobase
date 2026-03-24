@@ -1277,6 +1277,7 @@ export const es: Record<string, string> = {
   "pipeline.markPaid": "Marcar Pagado",
   "pipeline.viewInvoice": "Ver Factura",
   "pipeline.viewLead": "Ver Prospecto",
+  "pipeline.viewProject": "Ver Proyecto",
   "pipeline.noOpportunities": "Sin oportunidades",
   "pipeline.scheduleProject": "Programar Proyecto",
   "pipeline.scheduleDescription": "Establezca las fechas del proyecto. Esto creará tareas para que el Coordinador programe el proyecto, obtenga contratos firmados y permisos.",

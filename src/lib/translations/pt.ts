@@ -373,6 +373,7 @@ export const pt: Record<string, string> = {
   "pipeline.markPaid": "Marcar Pago",
   "pipeline.viewInvoice": "Ver Fatura",
   "pipeline.viewLead": "Ver Lead",
+  "pipeline.viewProject": "Ver Projeto",
   "pipeline.noOpportunities": "Sem oportunidades",
   "pipeline.scheduleProject": "Agendar Projeto",
   "pipeline.scheduleDescription": "Defina as datas do projeto. Isso criará tarefas para o Coordenador agendar o projeto, obter contratos assinados e licenças.",

@@ -1277,6 +1277,7 @@ export const en: Record<string, string> = {
   "pipeline.markPaid": "Mark Paid",
   "pipeline.viewInvoice": "View Invoice",
   "pipeline.viewLead": "View Lead",
+  "pipeline.viewProject": "View Project",
   "pipeline.noOpportunities": "No opportunities",
   "pipeline.scheduleProject": "Schedule Project",
   "pipeline.scheduleDescription": "Set the project schedule dates. This will create tasks for the Project Coordinator to schedule the project, get contracts signed, and obtain permitting.",
