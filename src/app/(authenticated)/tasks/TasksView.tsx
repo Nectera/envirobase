@@ -20,6 +20,7 @@ import {
   Circle,
   AlertTriangle,
   ClipboardList,
+  ExternalLink,
 } from "lucide-react";
 import Pagination from "@/components/Pagination";
 
@@ -1110,49 +1111,74 @@ export default function TasksView({
                 </div>
               </div>
 
-              {/* Linked Entity Type + ID row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Linked Entity */}
+              {editingTask && editingTask.linkedEntityType && editingTask.linkedEntityId ? (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Linked Entity Type
-                  </label>
-                  <select
-                    disabled={userRole === "TECHNICIAN"}
-                    value={formData.linkedEntityType}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        linkedEntityType: e.target.value,
-                        linkedEntityId: "",
-                      })
-                    }
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white disabled:bg-slate-50 disabled:text-slate-500"
-                  >
-                    <option value="">None</option>
-                    <option value="lead">Lead</option>
-                    <option value="project">Project</option>
-                    <option value="estimate">Estimate</option>
-                  </select>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Linked To</label>
+                  {(() => {
+                    const label = getLinkedEntityLabel(editingTask);
+                    const href = getLinkedEntityHref(editingTask);
+                    const colorClass = editingTask.linkedEntityType === "lead"
+                      ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200"
+                      : editingTask.linkedEntityType === "project"
+                      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200";
+                    return href ? (
+                      <Link href={href}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition ${colorClass}`}>
+                        <ExternalLink size={14} />
+                        Go to {label}
+                      </Link>
+                    ) : label ? (
+                      <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border ${colorClass}`}>
+                        {label}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Entity ID
-                  </label>
-                  <input
-                    type="text"
-                    disabled={userRole === "TECHNICIAN" || !formData.linkedEntityType}
-                    placeholder="Entity ID"
-                    value={formData.linkedEntityId}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        linkedEntityId: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg disabled:bg-slate-50 disabled:text-slate-500"
-                  />
+              ) : userRole !== "TECHNICIAN" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Linked Entity Type
+                    </label>
+                    <select
+                      value={formData.linkedEntityType}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          linkedEntityType: e.target.value,
+                          linkedEntityId: "",
+                        })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white"
+                    >
+                      <option value="">None</option>
+                      <option value="lead">Lead</option>
+                      <option value="project">Project</option>
+                      <option value="estimate">Estimate</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Entity ID
+                    </label>
+                    <input
+                      type="text"
+                      disabled={!formData.linkedEntityType}
+                      placeholder="Entity ID"
+                      value={formData.linkedEntityId}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          linkedEntityId: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg disabled:bg-slate-50 disabled:text-slate-500"
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
 
             {/* Modal Footer */}
