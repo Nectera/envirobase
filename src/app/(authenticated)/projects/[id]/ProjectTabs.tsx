@@ -2635,11 +2635,41 @@ function DocumentsTab({ documents, projectId }: { documents: DocEntry[]; project
   async function handleSave() {
     setSaving(true);
     if (uploadFile) {
-      // Upload file via FormData endpoint
-      const fd = new FormData();
-      fd.append("file", uploadFile);
-      fd.append("docType", docType);
-      await fetch(`/api/projects/${projectId}/documents/upload`, { method: "POST", body: fd });
+      // Direct-to-Supabase upload via signed URL (bypasses Vercel body size limit)
+      const ext = uploadFile.name.split(".").pop() || "bin";
+      const storagePath = `${projectId}/${docType}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+
+      const urlRes = await fetch("/api/storage/signed-upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType: uploadFile.type, path: storagePath }),
+      });
+      const { signedUrl, publicUrl } = await urlRes.json();
+
+      await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": uploadFile.type },
+        body: uploadFile,
+      });
+
+      // Create document record with file metadata
+      await fetch(`/api/projects/${projectId}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          docType,
+          title: title || uploadFile.name,
+          referenceNumber,
+          date,
+          notes,
+          status: "received",
+          fileName: uploadFile.name,
+          fileUrl: publicUrl,
+          fileSize: uploadFile.size,
+          mimeType: uploadFile.type,
+          storagePath,
+        }),
+      });
     } else {
       // Metadata-only document
       await fetch(`/api/projects/${projectId}/documents`, {
@@ -3500,12 +3530,39 @@ function ProjectDesignSlot({ projectId, projectDocuments }: { projectId: string;
   async function handleUpload(file: File) {
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("docType", "project_design");
-      const res = await fetch(`/api/projects/${projectId}/documents/upload`, {
+      // Direct-to-Supabase upload via signed URL (bypasses Vercel body size limit)
+      const ext = file.name.split(".").pop() || "bin";
+      const storagePath = `${projectId}/project_design/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+
+      const urlRes = await fetch("/api/storage/signed-upload-url", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType: file.type, path: storagePath }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { signedUrl, publicUrl } = await urlRes.json();
+
+      const uploadRes = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+
+      // Create document record
+      const res = await fetch(`/api/projects/${projectId}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          docType: "project_design",
+          title: file.name,
+          fileName: file.name,
+          fileUrl: publicUrl,
+          fileSize: file.size,
+          mimeType: file.type,
+          storagePath,
+          status: "received",
+        }),
       });
       if (res.ok) {
         router.refresh();

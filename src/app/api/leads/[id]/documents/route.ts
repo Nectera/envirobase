@@ -43,6 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (body.startDate) extraData.startDate = body.startDate;
     if (body.endDate) extraData.endDate = body.endDate;
     if (body.date) extraData.date = body.date;
+    if (body.storagePath) extraData.storagePath = body.storagePath;
     extraData.createdBy = body.createdBy || userId;
 
     const doc = await prisma.leadDocument.create({
@@ -51,7 +52,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         docType: body.docType || "other",
         name: body.title || body.docType || "Document",
         fileName: body.fileName || null,
+        fileUrl: body.fileUrl || null,
         fileSize: body.fileSize || null,
+        mimeType: body.mimeType || null,
         data: Object.keys(extraData).length > 0 ? extraData : null,
       }),
     });

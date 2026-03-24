@@ -248,15 +248,44 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
     setDocSaving(true);
     try {
       const docTypeInfo = DOC_TYPES.find((d) => d.value === docUploadModal);
+      const titleVal = docTitle || docTypeInfo?.label || "Document";
+
       if (docFile) {
-        // Upload file via FormData endpoint
-        const fd = new FormData();
-        fd.append("file", docFile);
-        fd.append("docType", docUploadModal);
-        fd.append("title", docTitle || docTypeInfo?.label || "Document");
-        if (docRef) fd.append("referenceNumber", docRef);
-        if (docNotes) fd.append("notes", docNotes);
-        await fetch(`/api/leads/${lead.id}/documents/upload`, { method: "POST", body: fd });
+        // Direct-to-Supabase upload via signed URL (bypasses Vercel body size limit)
+        const ext = docFile.name.split(".").pop() || "bin";
+        const storagePath = `leads/${lead.id}/${docUploadModal}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+
+        const urlRes = await fetch("/api/storage/signed-upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contentType: docFile.type, path: storagePath }),
+        });
+        const { signedUrl, publicUrl, token } = await urlRes.json();
+
+        // Upload directly to Supabase Storage
+        await fetch(signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": docFile.type },
+          body: docFile,
+        });
+
+        // Create document record with file metadata
+        await fetch(`/api/leads/${lead.id}/documents`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            docType: docUploadModal,
+            title: titleVal,
+            referenceNumber: docRef,
+            notes: docNotes,
+            fileName: docFile.name,
+            fileSize: docFile.size,
+            mimeType: docFile.type,
+            fileUrl: publicUrl,
+            storagePath,
+            status: "received",
+          }),
+        });
       } else {
         // Metadata-only document
         await fetch(`/api/leads/${lead.id}/documents`, {
@@ -264,7 +293,7 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             docType: docUploadModal,
-            title: docTitle || docTypeInfo?.label || "Document",
+            title: titleVal,
             referenceNumber: docRef,
             notes: docNotes,
             fileName: null,

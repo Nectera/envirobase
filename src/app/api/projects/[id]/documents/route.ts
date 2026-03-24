@@ -44,6 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (body.referenceNumber) extraData.referenceNumber = body.referenceNumber;
     if (body.notes) extraData.notes = body.notes;
     if (body.status) extraData.status = body.status;
+    if (body.storagePath) extraData.storagePath = body.storagePath;
 
     const doc = await prisma.document.create({
       data: orgData(orgId, {
