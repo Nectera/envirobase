@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { sendHtmlEmail, escapeHtml } from "./email";
 import { logger } from "./logger";
 import { COMPANY_SHORT, COMPANY_NAME, COMPANY_LOCATION, BRAND_COLOR, APP_NAME } from "./branding";
+import { sendPushToUser, type PushCategory } from "./pushNotifications";
 
 // Notification type → NotificationPreference field name mapping
 type NotificationType =
@@ -15,6 +16,15 @@ type NotificationType =
   | "fieldReportSubmitted"
   | "inventoryReviewCompleted"
   | "noteMention";
+
+// Map notification types to push categories for automatic push dispatch
+const NOTIF_TO_PUSH_CATEGORY: Partial<Record<NotificationType, PushCategory>> = {
+  taskAssigned: "taskAssigned",
+  taskDueSoon: "taskDueSoon",
+  certExpiring: "alert",
+  incidentReported: "alert",
+  noteMention: "alert",
+};
 
 /**
  * Build branded notification email HTML.
@@ -105,6 +115,17 @@ export async function sendNotificationToUser(
     } else {
       logger.error(`Notification failed: ${type} to ${user.email}`, { error: result.error });
     }
+
+    // Also send push notification if applicable (fire-and-forget)
+    const pushCategory = NOTIF_TO_PUSH_CATEGORY[type];
+    if (pushCategory) {
+      sendPushToUser(userId, pushCategory, {
+        title: subject,
+        body: subject,
+        url: "/",
+      }).catch(() => {});
+    }
+
     return result.success;
   } catch (error: any) {
     logger.error("sendNotificationToUser error", { error: error.message, userId, type });

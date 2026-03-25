@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Calendar, CheckSquare, Shield, FileText, Loader2, Save, ArrowLeft, Package, Globe, MessageSquare } from "lucide-react";
+import { Bell, Calendar, CheckSquare, Shield, FileText, Loader2, Save, ArrowLeft, Package, Globe, MessageSquare, Smartphone } from "lucide-react";
 import Link from "next/link";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface NotificationPreferences {
   scheduleAssigned: boolean;
@@ -19,6 +20,12 @@ interface NotificationPreferences {
   portalEstimateUpdate: boolean;
   portalMessage: boolean;
   noteMention: boolean;
+  // Push
+  pushEnabled: boolean;
+  pushChat: boolean;
+  pushTaskAssigned: boolean;
+  pushTaskDueSoon: boolean;
+  pushAlerts: boolean;
 }
 
 const defaultPrefs: NotificationPreferences = {
@@ -36,6 +43,11 @@ const defaultPrefs: NotificationPreferences = {
   portalEstimateUpdate: true,
   portalMessage: true,
   noteMention: true,
+  pushEnabled: false,
+  pushChat: true,
+  pushTaskAssigned: true,
+  pushTaskDueSoon: true,
+  pushAlerts: true,
 };
 
 interface ToggleItem {
@@ -121,6 +133,7 @@ export default function NotificationSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const push = usePushNotifications();
 
   useEffect(() => {
     fetch("/api/notifications/preferences")
@@ -142,6 +155,11 @@ export default function NotificationSettingsPage() {
             portalEstimateUpdate: data.portalEstimateUpdate ?? true,
             portalMessage: data.portalMessage ?? true,
             noteMention: data.noteMention ?? true,
+            pushEnabled: data.pushEnabled ?? false,
+            pushChat: data.pushChat ?? true,
+            pushTaskAssigned: data.pushTaskAssigned ?? true,
+            pushTaskDueSoon: data.pushTaskDueSoon ?? true,
+            pushAlerts: data.pushAlerts ?? true,
           });
         }
       })
@@ -197,7 +215,7 @@ export default function NotificationSettingsPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900">Notification Settings</h1>
-            <p className="text-sm text-slate-500">Choose which email notifications you receive</p>
+            <p className="text-sm text-slate-500">Manage email and push notifications</p>
           </div>
         </div>
       </div>
@@ -208,7 +226,86 @@ export default function NotificationSettingsPage() {
         </div>
       )}
 
-      {/* Sections */}
+      {/* Push Notifications Section */}
+      {push.isSupported && (
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden mb-6">
+          <div className="px-5 py-4 border-b border-slate-50 flex items-center gap-2.5">
+            <Smartphone size={16} className="text-indigo-500" />
+            <h2 className="text-sm font-semibold text-slate-700">Push Notifications</h2>
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            {/* Subscribe / Enable button */}
+            {!push.isSubscribed ? (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-800">Enable Push Notifications</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {push.isDenied
+                      ? "Push notifications are blocked. Enable them in your browser settings."
+                      : "Get real-time alerts for chat messages, task assignments, and system alerts."}
+                  </p>
+                </div>
+                <button
+                  onClick={push.subscribe}
+                  disabled={push.isDenied || push.isLoading}
+                  className="px-4 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition whitespace-nowrap"
+                >
+                  {push.isLoading ? "Enabling..." : push.isDenied ? "Blocked" : "Enable"}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                  <div>
+                    <p className="text-sm font-medium text-emerald-700">Push notifications are active</p>
+                    <p className="text-xs text-slate-500 mt-0.5">You will receive push alerts on this device.</p>
+                  </div>
+                  <button
+                    onClick={push.unsubscribe}
+                    disabled={push.isLoading}
+                    className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition"
+                  >
+                    Disable
+                  </button>
+                </div>
+                {/* Push category toggles */}
+                <div className="space-y-0.5 divide-y divide-slate-50">
+                  {([
+                    { key: "pushChat" as const, label: "Chat Messages", desc: "New messages in your channels" },
+                    { key: "pushTaskAssigned" as const, label: "Task Assignments", desc: "When tasks are assigned to you" },
+                    { key: "pushTaskDueSoon" as const, label: "Task Reminders", desc: "Tasks approaching their due date" },
+                    { key: "pushAlerts" as const, label: "System Alerts", desc: "Incidents, compliance, and safety alerts" },
+                  ]).map((item) => (
+                    <div key={item.key} className="flex items-center justify-between gap-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{item.label}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={prefs[item.key]}
+                        onClick={() => handleToggle(item.key)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                          prefs[item.key] ? "bg-indigo-500" : "bg-slate-200"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            prefs[item.key] ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Email Notification Sections */}
       <div className="space-y-6">
         {sections.map((section) => {
           const Icon = section.icon;

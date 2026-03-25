@@ -93,7 +93,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Notify mentioned users in the comment
     if (mentions?.length) {
       const mentionedIds: string[] = Array.isArray(mentions) ? mentions : JSON.parse(mentions);
-      const isAll = mentionedIds.includes("__all__");
+      const isAll = mentionedIds.includes("__all__") || mentionedIds.includes("all");
 
       const targetIds = isAll
         ? (await prisma.user.findMany({

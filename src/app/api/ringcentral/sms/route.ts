@@ -90,26 +90,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const auth = await getValidToken();
-    if (!auth) {
+    const rcAuth = await getValidToken();
+    if (!rcAuth) {
       logger.warn("RingCentral authentication expired", {
         userId: session.user.email,
       });
       return NextResponse.json({ error: "RingCentral authentication expired" }, { status: 401 });
     }
 
-    if (!auth.phoneNumber) {
+    if (!rcAuth.phoneNumber) {
       return NextResponse.json({ error: "No SMS-capable phone number configured" }, { status: 400 });
     }
 
     // Send SMS
     const smsBody = {
-      from: { phoneNumber: auth.phoneNumber },
+      from: { phoneNumber: rcAuth.phoneNumber },
       to: [{ phoneNumber: to }],
       text,
     };
 
     const smsResult = await rcApiCall("POST", "/account/~/extension/~/sms", smsBody);
+
+    // Store in SmsMessage table
+    const smsRecord = await prisma.smsMessage.create({
+      data: {
+        direction: "outbound",
+        fromNumber: rcAuth.phoneNumber,
+        toNumber: to,
+        body: text,
+        rcMessageId: smsResult.id ? String(smsResult.id) : null,
+        status: "sent",
+        parentType: parentType || null,
+        parentId: parentId || null,
+        senderName: (session.user as any)?.name || session.user.email || "Unknown",
+      },
+    });
 
     // Log to activity feed
     if (parentType && parentId) {
@@ -118,9 +133,8 @@ export async function POST(request: NextRequest) {
           parentType,
           parentId,
           type: "sms",
-          title: `SMS to ${contactName || to}`,
-          description: `SMS sent to ${to}${contactName ? ` (${contactName})` : ""}: ${text}`,
-          createdBy: "system",
+          content: `SMS sent to ${to}${contactName ? ` (${contactName})` : ""}: ${text}`,
+          user: (session.user as any)?.name || session.user.email || "system",
         },
       });
     }
@@ -136,6 +150,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       messageId: smsResult.id,
+      smsId: smsRecord.id,
     });
   } catch (error: any) {
     logger.error("SMS send error", {

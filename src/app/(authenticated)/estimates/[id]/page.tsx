@@ -20,6 +20,7 @@ export default async function EstimateDetailPage({
 
   const rawActivities = await prisma.activity.findMany({
     where: { parentType: "estimate", parentId: id },
+    orderBy: { createdAt: "desc" },
     take: 50,
   });
   const activities = rawActivities.map((a: any) => ({ ...a, description: a.content || a.description || "" }));

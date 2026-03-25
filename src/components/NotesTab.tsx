@@ -137,12 +137,27 @@ function MentionInput({
     onChange(text, mentioned);
   };
 
-  const selectMention = (user: TeamUser) => {
+  const selectMention = (selectedUser: TeamUser) => {
     const before = value.slice(0, mentionStart);
     const after = value.slice((inputRef.current?.selectionStart || value.length));
-    const newText = `${before}@${user.name} ${after}`;
+    const newText = `${before}@${selectedUser.name} ${after}`;
     setShowDropdown(false);
-    onChange(newText, []);
+    // Re-extract all mentions from the updated text (don't pass empty array)
+    const mentionPattern = /@(\w+(?:\s\w+)?)/g;
+    const mentioned: string[] = [];
+    let m;
+    while ((m = mentionPattern.exec(newText)) !== null) {
+      const name = m[1].toLowerCase();
+      if (name === "all") {
+        if (!mentioned.includes("__all__")) mentioned.push("__all__");
+        continue;
+      }
+      const found = users.find(
+        (u) => u.name.toLowerCase() === name || u.name.toLowerCase().startsWith(name)
+      );
+      if (found && !mentioned.includes(found.id)) mentioned.push(found.id);
+    }
+    onChange(newText, mentioned);
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 

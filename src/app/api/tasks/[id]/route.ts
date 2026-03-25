@@ -5,6 +5,7 @@ import { updateTaskSchema, validateBody } from "@/lib/validations";
 import { runTaskCompletionAutomations } from "@/lib/taskAutomation";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendNotificationToWorker, sendNotificationToRole, buildTaskNotificationBody } from "@/lib/notifications";
+import { sendPushToUser } from "@/lib/pushNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       if (body.assignedTo && body.assignedTo !== currentTask.assignedTo) {
         const notifBody = buildTaskNotificationBody(task.title, "assigned", task.description || undefined);
         sendNotificationToWorker(body.assignedTo, "taskAssigned", `New Task: ${task.title}`, notifBody);
+        // Also send push notification (fire-and-forget)
+        prisma.worker.findUnique({ where: { id: body.assignedTo }, select: { userId: true } })
+          .then((w: any) => w?.userId && sendPushToUser(w.userId, "taskAssigned", {
+            title: "New Task Assigned",
+            body: task.title + (task.dueDate ? ` — Due ${task.dueDate}` : ""),
+            url: "/tasks",
+            tag: `task-${task.id}`,
+          })).catch(() => {});
       }
     } catch { /* notification failure should not block response */ }
 

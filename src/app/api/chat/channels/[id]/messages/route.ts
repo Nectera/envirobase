@@ -3,6 +3,7 @@ import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendNotificationToUser } from "@/lib/notifications";
+import { sendPushToUser } from "@/lib/pushNotifications";
 import { escapeHtml } from "@/lib/email";
 import { isConnected, qbUploadReceipt } from "@/lib/quickbooks";
 import { logger } from "@/lib/logger";
@@ -111,6 +112,30 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       create: { channelId: params.id, userId, lastReadMessageId: message.id, lastReadAt: new Date() },
     });
 
+    // Send push notifications to all channel members except sender (fire-and-forget)
+    prisma.chatMember.findMany({
+      where: { channelId: params.id },
+      select: { userId: true },
+    }).then((members: any[]) => {
+      const channelNamePromise = prisma.chatChannel.findUnique({
+        where: { id: params.id },
+        select: { name: true },
+      });
+      channelNamePromise.then((ch: any) => {
+        const chName = ch?.name || "Chat";
+        const preview = (content || "").slice(0, 100);
+        for (const member of members) {
+          if (member.userId === userId) continue;
+          sendPushToUser(member.userId, "chat", {
+            title: `${userName} in ${chName}`,
+            body: fileUrl ? `${userName} sent a file${preview ? `: ${preview}` : ""}` : preview,
+            url: `/chat`,
+            tag: `chat-${params.id}`,
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }).catch(() => {});
+
     // Send @mention notifications
     if (mentions && Array.isArray(mentions) && mentions.length > 0) {
       const channel = await prisma.chatChannel.findUnique({
@@ -120,16 +145,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const channelName = channel?.name || "a channel";
       const preview = (content || "").slice(0, 100);
 
-      // Resolve @all to all channel member IDs
+      // Resolve @all / __all__ to all channel member IDs
       let resolvedMentions = mentions as string[];
-      if (resolvedMentions.includes("all")) {
+      if (resolvedMentions.includes("all") || resolvedMentions.includes("__all__")) {
         const members = await prisma.chatMember.findMany({
           where: { channelId: params.id },
           select: { userId: true },
         });
         const memberIds = members.map((m: any) => m.userId);
         resolvedMentions = Array.from(new Set([
-          ...resolvedMentions.filter((id: string) => id !== "all"),
+          ...resolvedMentions.filter((id: string) => id !== "all" && id !== "__all__"),
           ...memberIds,
         ]));
       }
@@ -145,12 +170,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
               <p style="margin:0;color:#1e293b;font-size:14px;">${escapeHtml(preview)}${content.length > 100 ? "..." : ""}</p>
             </div>
           `;
+          // Bug 1 fix: use noteMention (not taskAssigned) so it checks the right preference
           sendNotificationToUser(
             mentionedUserId,
-            "taskAssigned", // reuse existing notification type
+            "noteMention",
             `${userName} mentioned you in ${channelName}`,
             notifBody,
           );
+          // Bug 2 fix: also create an in-app Notification record for the bell icon
+          prisma.notification.create({
+            data: {
+              type: "mention",
+              title: `${userName} mentioned you in ${channelName}`,
+              message: preview.length > 80 ? preview.slice(0, 80) + "..." : preview,
+              link: `/chat`,
+              userId: mentionedUserId,
+              fromName: userName,
+            },
+          }).catch(() => {});
         } catch { /* notification failure should not block message send */ }
       }
     }

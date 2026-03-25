@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createTaskSchema, validateBody } from "@/lib/validations";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { sendNotificationToWorker, buildTaskNotificationBody } from "@/lib/notifications";
+import { sendPushToUser } from "@/lib/pushNotifications";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +76,14 @@ export async function POST(req: NextRequest) {
         const notifBody = buildTaskNotificationBody(task.title, "assigned", task.description || undefined);
         sendNotificationToWorker(task.assignedTo, "taskAssigned", `New Task: ${task.title}`, notifBody);
       } catch { /* notification failure should not block response */ }
+      // Also send push notification (fire-and-forget)
+      prisma.worker.findUnique({ where: { id: task.assignedTo }, select: { userId: true } })
+        .then((w: any) => w?.userId && sendPushToUser(w.userId, "taskAssigned", {
+          title: "New Task Assigned",
+          body: task.title + (task.dueDate ? ` — Due ${task.dueDate}` : ""),
+          url: "/tasks",
+          tag: `task-${task.id}`,
+        })).catch(() => {});
     }
 
     return NextResponse.json(task, { status: 201 });

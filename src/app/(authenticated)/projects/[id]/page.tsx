@@ -126,6 +126,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Fetch project activities
   const rawActivities = await prisma.activity.findMany({
     where: { parentType: "project", parentId: project.id },
+    orderBy: { createdAt: "desc" },
     take: 30,
   });
   const activities = rawActivities.map((a: any) => ({ ...a, description: a.content || a.description || "" }));
@@ -137,6 +138,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   if (leadIds.length > 0) {
     const leadActivities = await prisma.activity.findMany({
       where: { parentId: { in: leadIds } },
+      orderBy: { createdAt: "desc" },
       take: 20,
     });
     linkedActivities = leadActivities.map((a: any) => {

@@ -17,6 +17,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
     const rawActivities = await prisma.activity.findMany({
       where: { parentType: "lead", parentId: id },
+      orderBy: { createdAt: "desc" },
       take: 50,
     });
     const activities = rawActivities.map((a: any) => ({
@@ -32,6 +33,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     if (linkedIds.length > 0) {
       const allLinked = await prisma.activity.findMany({
         where: { parentId: { in: linkedIds } },
+        orderBy: { createdAt: "desc" },
         take: 30,
       });
       linkedActivities = allLinked.map((a: any) => ({

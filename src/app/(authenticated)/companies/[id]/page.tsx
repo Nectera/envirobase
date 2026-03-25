@@ -30,6 +30,7 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
 
   const rawActivities = await prisma.activity.findMany({
     where: { parentType: "company", parentId: id },
+    orderBy: { createdAt: "desc" },
     take: 20,
   });
   const activities = rawActivities.map((a: any) => ({ ...a, description: a.content || a.description || "" }));
@@ -44,6 +45,7 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
       where: {
         parentId: { in: linkedIds },
       },
+      orderBy: { createdAt: "desc" },
       take: 30,
     });
     // Tag each with source info

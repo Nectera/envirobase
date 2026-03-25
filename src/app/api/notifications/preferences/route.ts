@@ -74,6 +74,11 @@ export async function PUT(req: NextRequest) {
       "portalEstimateUpdate",
       "portalMessage",
       "noteMention",
+      "pushEnabled",
+      "pushChat",
+      "pushTaskAssigned",
+      "pushTaskDueSoon",
+      "pushAlerts",
     ];
 
     const updateData: any = {};

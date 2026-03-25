@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     // Create notifications for mentioned users
     if (mentions?.length) {
       const mentionedIds: string[] = Array.isArray(mentions) ? mentions : JSON.parse(mentions);
-      const isAll = mentionedIds.includes("__all__");
+      const isAll = mentionedIds.includes("__all__") || mentionedIds.includes("all");
 
       // If @all, notify every user in the org except the sender
       const targetIds = isAll

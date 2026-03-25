@@ -89,6 +89,7 @@ model Organization {
   xactLineItems          XactLineItem[]
   projectEstimates       ProjectEstimate[]
   carrierInfos           CarrierInfo[]
+  smsMessages            SmsMessage[]
 
   @@map("organizations")
 }
@@ -911,6 +912,28 @@ model Activity {
   @@map("activities")
 }
 
+// ─── SMS Messages ────────────────────────────────────────────────
+
+model SmsMessage {
+  id           String   @id @default(uuid())
+  direction    String   // inbound, outbound
+  fromNumber   String
+  toNumber     String
+  body         String
+  rcMessageId  String?  // RingCentral message ID
+  status       String   @default("sent") // sent, delivered, failed, received
+  parentType   String?  // lead, contact, company
+  parentId     String?
+  senderName   String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([parentType, parentId])
+  @@index([organizationId])
+  @@map("sms_messages")
+}
+
 // ─── Tasks & Automation ──────────────────────────────────────────
 
 model Task {
@@ -1116,6 +1139,12 @@ model NotificationPreference {
   portalMessage         Boolean  @default(true)
   // Notes & Mentions
   noteMention           Boolean  @default(true)
+  // Push Notifications
+  pushEnabled           Boolean  @default(false)
+  pushChat              Boolean  @default(true)
+  pushTaskAssigned      Boolean  @default(true)
+  pushTaskDueSoon       Boolean  @default(true)
+  pushAlerts            Boolean  @default(true)
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -1607,4 +1636,19 @@ model CarrierCommunication {
 
   @@index([carrierId])
   @@map("carrier_communications")
+}
+
+// ─── Push Subscriptions ──────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
