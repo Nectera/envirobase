@@ -1477,6 +1477,13 @@ model ChangeOrder {
   approvedBy    String?
   approvedAt    String?
   rejectionNote String?
+  estimateData  Json?    // Full 7-step consultation estimate data
+  laborCost     Float?
+  cogsCost      Float?
+  materialCost  Float?
+  opsCost       Float?
+  totalCost     Float?
+  customerPrice Float?
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
   createdAt     DateTime @default(now())

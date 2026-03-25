@@ -14,6 +14,7 @@ import NotesTab from "@/components/NotesTab";
 import ProjectBudgetTab from "./ProjectBudgetTab";
 import InsuranceEstimatesTab from "./InsuranceEstimatesTab";
 import MethDeconReportSection from "./MethDeconReportSection";
+import ChangeOrderForm from "@/components/ChangeOrderForm";
 import type { ChecklistSection } from "@/lib/regulations";
 
 type Task = { id: string; name: string; status: string; date: Date | null; sortOrder: number };
@@ -211,17 +212,18 @@ export default function ProjectTabs({
     approvedBy: string | null;
     approvedAt: string | null;
     rejectionNote: string | null;
+    estimateData: any | null;
+    laborCost: number | null;
+    cogsCost: number | null;
+    materialCost: number | null;
+    opsCost: number | null;
+    totalCost: number | null;
+    customerPrice: number | null;
     createdAt: string;
   };
   const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>([]);
   const [coLoading, setCoLoading] = useState(false);
   const [coShowCreate, setCoShowCreate] = useState(false);
-  const [coSaving, setCoSaving] = useState(false);
-  const [coTitle, setCoTitle] = useState("");
-  const [coDescription, setCoDescription] = useState("");
-  const [coReason, setCoReason] = useState("");
-  const [coCostImpact, setCoCostImpact] = useState("");
-  const [coDaysImpact, setCoDaysImpact] = useState("");
   const [coApprovingId, setCoApprovingId] = useState<string | null>(null);
   const [coRejectingId, setCoRejectingId] = useState<string | null>(null);
   const [coRejectionNote, setCoRejectionNote] = useState("");
@@ -254,35 +256,9 @@ export default function ProjectTabs({
       .finally(() => setCoLoading(false));
   }, [tab, project.id]);
 
-  async function handleCreateCO() {
-    if (!coTitle.trim() || !coDescription.trim()) return;
-    setCoSaving(true);
-    try {
-      const res = await fetch("/api/change-orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: project.id,
-          title: coTitle,
-          description: coDescription,
-          reason: coReason || undefined,
-          costImpact: coCostImpact || 0,
-          daysImpact: coDaysImpact || 0,
-        }),
-      });
-      if (res.ok) {
-        const newCo = await res.json();
-        setChangeOrders((prev) => [...prev, newCo]);
-        setCoShowCreate(false);
-        setCoTitle("");
-        setCoDescription("");
-        setCoReason("");
-        setCoCostImpact("");
-        setCoDaysImpact("");
-        router.refresh();
-      }
-    } catch {}
-    finally { setCoSaving(false); }
+  function handleCOCreated(newCo: ChangeOrder) {
+    setChangeOrders((prev) => [...prev, newCo]);
+    router.refresh();
   }
 
   async function handleApproveCO(id: string) {
@@ -1804,6 +1780,27 @@ export default function ProjectTabs({
                       </span>
                     </div>
 
+                    {/* Cost breakdown (if estimate data exists) */}
+                    {co.totalCost != null && co.totalCost > 0 && (
+                      <div className="bg-slate-50 border border-slate-200 rounded p-2.5 text-xs space-y-1">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {co.laborCost != null && co.laborCost > 0 && (
+                            <span className="text-slate-500">Labor: <span className="font-medium text-slate-700">${co.laborCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></span>
+                          )}
+                          {co.opsCost != null && co.opsCost > 0 && (
+                            <span className="text-slate-500">Ops: <span className="font-medium text-slate-700">${co.opsCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></span>
+                          )}
+                          {co.cogsCost != null && co.cogsCost > 0 && (
+                            <span className="text-slate-500">COGS: <span className="font-medium text-slate-700">${co.cogsCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></span>
+                          )}
+                          {co.materialCost != null && co.materialCost > 0 && (
+                            <span className="text-slate-500">Materials: <span className="font-medium text-slate-700">${co.materialCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></span>
+                          )}
+                          <span className="text-slate-500 ml-auto">Total Cost: <span className="font-semibold text-slate-800">${co.totalCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Rejection note */}
                     {co.status === "rejected" && co.rejectionNote && (
                       <div className="bg-red-50 border border-red-100 rounded p-2 text-xs text-red-700">
@@ -1870,94 +1867,14 @@ export default function ProjectTabs({
             </div>
           )}
 
-          {/* ── Create Change Order Modal ── */}
+          {/* ── Create Change Order Form (Full 7-Step) ── */}
           {coShowCreate && (
-            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setCoShowCreate(false)}>
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-                  <h3 className="text-sm font-semibold text-slate-800">New Change Order</h3>
-                  <button onClick={() => setCoShowCreate(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
-                </div>
-                <div className="px-5 py-4 space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Title *</label>
-                    <input
-                      type="text"
-                      value={coTitle}
-                      onChange={(e) => setCoTitle(e.target.value)}
-                      placeholder="Brief title for the change"
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Description *</label>
-                    <textarea
-                      value={coDescription}
-                      onChange={(e) => setCoDescription(e.target.value)}
-                      placeholder="Detailed description of the change and its justification..."
-                      rows={4}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Reason</label>
-                    <select
-                      value={coReason}
-                      onChange={(e) => setCoReason(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="">Select reason...</option>
-                      <option value="scope_change">Scope Change</option>
-                      <option value="unforeseen_conditions">Unforeseen Conditions</option>
-                      <option value="client_request">Client Request</option>
-                      <option value="regulatory">Regulatory Requirement</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Cost Impact ($)</label>
-                      <input
-                        type="number"
-                        value={coCostImpact}
-                        onChange={(e) => setCoCostImpact(e.target.value)}
-                        placeholder="0.00"
-                        step="0.01"
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <p className="text-[10px] text-slate-400 mt-0.5">Positive = cost increase, negative = savings</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Timeline Impact (days)</label>
-                      <input
-                        type="number"
-                        value={coDaysImpact}
-                        onChange={(e) => setCoDaysImpact(e.target.value)}
-                        placeholder="0"
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <p className="text-[10px] text-slate-400 mt-0.5">Positive = extends, negative = shortens</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-xl">
-                  <button
-                    onClick={() => setCoShowCreate(false)}
-                    className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateCO}
-                    disabled={coSaving || !coTitle.trim() || !coDescription.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
-                  >
-                    {coSaving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                    Submit for Approval
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ChangeOrderForm
+              projectId={project.id}
+              projectName={project.name}
+              onClose={() => setCoShowCreate(false)}
+              onCreated={handleCOCreated}
+            />
           )}
         </div>
       )}

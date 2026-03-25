@@ -102,6 +102,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.reason !== undefined) updateData.reason = body.reason || null;
     if (body.costImpact !== undefined) updateData.costImpact = parseFloat(body.costImpact) || 0;
     if (body.daysImpact !== undefined) updateData.daysImpact = parseInt(body.daysImpact) || 0;
+    if (body.estimateData !== undefined) updateData.estimateData = body.estimateData;
+    if (body.laborCost !== undefined) updateData.laborCost = parseFloat(body.laborCost) || null;
+    if (body.cogsCost !== undefined) updateData.cogsCost = parseFloat(body.cogsCost) || null;
+    if (body.materialCost !== undefined) updateData.materialCost = parseFloat(body.materialCost) || null;
+    if (body.opsCost !== undefined) updateData.opsCost = parseFloat(body.opsCost) || null;
+    if (body.totalCost !== undefined) updateData.totalCost = parseFloat(body.totalCost) || null;
+    if (body.customerPrice !== undefined) updateData.customerPrice = parseFloat(body.customerPrice) || null;
 
     const updated = await prisma.changeOrder.update({
       where: { id: params.id },

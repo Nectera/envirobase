@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId, title, description, reason, costImpact, daysImpact } = body;
+    const { projectId, title, description, reason, costImpact, daysImpact, estimateData, laborCost, cogsCost, materialCost, opsCost, totalCost, customerPrice } = body;
 
     if (!projectId || !title?.trim() || !description?.trim()) {
       return NextResponse.json({ error: "projectId, title, and description required" }, { status: 400 });
@@ -71,6 +71,13 @@ export async function POST(req: NextRequest) {
         daysImpact: parseInt(daysImpact) || 0,
         status: "pending_approval",
         createdBy: userName,
+        estimateData: estimateData || null,
+        laborCost: laborCost != null ? parseFloat(laborCost) : null,
+        cogsCost: cogsCost != null ? parseFloat(cogsCost) : null,
+        materialCost: materialCost != null ? parseFloat(materialCost) : null,
+        opsCost: opsCost != null ? parseFloat(opsCost) : null,
+        totalCost: totalCost != null ? parseFloat(totalCost) : null,
+        customerPrice: customerPrice != null ? parseFloat(customerPrice) : null,
       }),
     });
 
