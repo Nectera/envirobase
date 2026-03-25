@@ -72,7 +72,6 @@ export async function POST(req: NextRequest) {
         phone: body.phone || "",
         email: body.email || "",
         website: body.website || "",
-        industry: body.industry || "",
         notes: body.notes || "",
         referralFeeEnabled: body.referralFeeEnabled || false,
         referralFeePercent: body.referralFeePercent ?? 10,
