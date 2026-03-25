@@ -36,9 +36,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     ...(r.data && typeof r.data === "object" ? r.data : {}),
   }));
 
-  const timeEntries = await prisma.timeEntry.findMany({
+  const rawTimeEntries = await prisma.timeEntry.findMany({
     where: { projectId: project.id },
+    include: { worker: true },
   });
+  const timeEntries = rawTimeEntries.map((e: any) => ({
+    ...e,
+    workerName: e.worker?.name || "Unknown",
+  }));
 
   const rawPsiJhaSpas = await prisma.psiJhaSpa.findMany({
     where: { projectId: project.id },

@@ -42,24 +42,27 @@ export default async function TimeClockPage() {
   monday.setDate(now.getDate() + mondayOffset);
   const weekStart = monday.toISOString().split("T")[0];
 
+  const addWorkerName = (entries: any[]) =>
+    entries.map((e: any) => ({ ...e, workerName: e.worker?.name || "Unknown" }));
+
   // Get all open (active) clock-ins
-  const activeEntries = await prisma.timeEntry.findMany({
+  const activeEntries = addWorkerName(await prisma.timeEntry.findMany({
     where: { clockOut: null },
     include: { project: true, worker: true },
-  });
+  }));
 
   // Get today's entries
-  const todayEntries = await prisma.timeEntry.findMany({
+  const todayEntries = addWorkerName(await prisma.timeEntry.findMany({
     where: { date: today },
     include: { project: true, worker: true },
-  });
+  }));
 
   // Get this week's entries (Monday through today)
-  const weekEntries = await prisma.timeEntry.findMany({
+  const weekEntries = addWorkerName(await prisma.timeEntry.findMany({
     where: { date: { gte: weekStart, lte: today } },
     include: { project: true, worker: true },
     orderBy: { date: "desc" },
-  });
+  }));
 
   // For technicians, filter entries to only their own
   const isTech = userRole === "TECHNICIAN";

@@ -23,9 +23,14 @@ export async function GET(req: NextRequest) {
     const project = await prisma.project.findUnique({ where: orgWhere(orgId, { id: projectId }) });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-    const entries = await prisma.timeEntry.findMany({
+    const rawEntries = await prisma.timeEntry.findMany({
       where: orgWhere(orgId, { projectId, date }),
+      include: { worker: true },
     });
+    const entries = rawEntries.map((e: any) => ({
+      ...e,
+      workerName: e.worker?.name || "Unknown",
+    }));
 
     // Build PDF
     const pdf = await PDFDocument.create();
