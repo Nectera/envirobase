@@ -5,10 +5,23 @@ import { logger } from "./logger";
 // Configure VAPID keys — set these in your .env
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:support@envirobase.app";
+const VAPID_SUBJECT_RAW = process.env.VAPID_SUBJECT || "mailto:support@envirobase.app";
+// Ensure mailto: prefix — web-push requires a valid URL
+const VAPID_SUBJECT = VAPID_SUBJECT_RAW.startsWith("mailto:") ? VAPID_SUBJECT_RAW : `mailto:${VAPID_SUBJECT_RAW}`;
 
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+// Lazy init — defer setVapidDetails until first use to avoid build-time crashes
+let vapidConfigured = false;
+function ensureVapid() {
+  if (vapidConfigured) return true;
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return false;
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    vapidConfigured = true;
+    return true;
+  } catch (err: any) {
+    logger.error("VAPID configuration failed", { error: err.message });
+    return false;
+  }
 }
 
 export type PushCategory = "chat" | "taskAssigned" | "taskDueSoon" | "alert";
@@ -56,7 +69,7 @@ export async function sendPushToUser(
   category: PushCategory,
   payload: PushPayload,
 ): Promise<number> {
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  if (!ensureVapid()) {
     return 0; // Push not configured
   }
 
