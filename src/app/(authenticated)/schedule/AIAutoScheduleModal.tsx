@@ -182,6 +182,12 @@ export default function AIAutoScheduleModal({
       d.setDate(d.getDate() + 1);
     }
 
+    // Find the Monday of the start week for the ScheduleWeek record
+    const startD = new Date(result.dateRange.start + "T12:00:00");
+    const dayOfWeek = startD.getDay();
+    startD.setDate(startD.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    const weekStart = startD.toISOString().split("T")[0];
+
     let count = 0;
     for (const workerId of Array.from(selected)) {
       try {
@@ -192,8 +198,7 @@ export default function AIAutoScheduleModal({
             workerId,
             projectId,
             dates,
-            shift: "full",
-            hours: 8,
+            isDraft: true,
           }),
         });
         count++;
@@ -201,6 +206,17 @@ export default function AIAutoScheduleModal({
       } catch {
         // continue with others
       }
+    }
+
+    // Create ScheduleWeek record to track approval status
+    try {
+      await fetch("/api/schedule/week", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekStart }),
+      });
+    } catch {
+      // Non-blocking — week record is supplementary
     }
 
     setTimeout(() => {
@@ -477,13 +493,13 @@ export default function AIAutoScheduleModal({
                 </>
               ) : (
                 <>
-                  <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                  <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center">
+                    <Clock className="w-8 h-8 text-amber-600" />
                   </div>
                   <p className="text-sm font-medium text-slate-900">
-                    {createdCount} {t("schedule.workers")}{createdCount !== 1 ? "" : ""} {t("common.assigned")}!
+                    Draft created — {createdCount} {t("schedule.workers")} scheduled
                   </p>
-                  <p className="text-xs text-slate-500">{t("schedule.refreshingSchedule")}</p>
+                  <p className="text-xs text-slate-500">Sent to General Manager for approval</p>
                 </>
               )}
             </div>
@@ -526,7 +542,7 @@ export default function AIAutoScheduleModal({
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Users className="w-4 h-4" />
-                  {t("schedule.assignWorkers")} {selected.size} {t("schedule.worker")}{selected.size !== 1 ? "s" : ""} ({result?.dateRange.workingDays} {t("schedule.days")})
+                  Send Draft — {selected.size} {t("schedule.worker")}{selected.size !== 1 ? "s" : ""} ({result?.dateRange.workingDays} {t("schedule.days")})
                 </button>
               </>
             )}

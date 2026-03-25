@@ -12,8 +12,8 @@ type Entry = {
   workerId: string;
   projectId: string;
   date: string;
-  shift: string;
-  hours: number;
+  shift?: string;
+  hours?: number;
   notes: string | null;
   worker: Worker | null;
   project: Project | null;

@@ -47,19 +47,23 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
+    // Draft mode: if isDraft is true, save entries as "draft" and skip worker notifications
+    const isDraft = body.isDraft === true;
+    const entryStatus = isDraft ? "draft" : "approved";
+
     // Resolve worker and project names for notification
     const notifyWorker = async (workerId: string, projectId: string | null, date: string) => {
       try {
         const worker = await prisma.worker.findUnique({ where: { id: workerId } });
         const project = projectId ? await prisma.project.findUnique({ where: { id: projectId } }) : null;
         if (worker) {
-          const body = buildScheduleNotificationBody(
+          const emailBody = buildScheduleNotificationBody(
             worker.name,
             project?.name || "Unassigned",
             date,
             "assigned",
           );
-          await sendNotificationToWorker(workerId, "scheduleAssigned", `Schedule: ${project?.name || "New Assignment"} — ${date}`, body);
+          await sendNotificationToWorker(workerId, "scheduleAssigned", `Schedule: ${project?.name || "New Assignment"} — ${date}`, emailBody);
         }
       } catch { /* notification failure should not block response */ }
     };
@@ -73,7 +77,6 @@ export async function POST(req: NextRequest) {
           workerId: body.workerId,
           projectId: body.projectId,
           date: { in: body.dates },
-          shift: body.shift || "full",
         },
         select: { date: true },
       });
@@ -87,15 +90,14 @@ export async function POST(req: NextRequest) {
             workerId: body.workerId,
             projectId: body.projectId,
             date,
-            shift: body.shift || "full",
-            hours: body.hours || 8,
+            status: entryStatus,
             notes: body.notes || null,
           }),
         });
         created.push(entry);
       }
-      // Notify worker once for the batch (use first date)
-      if (created.length > 0) {
+      // Only notify worker if NOT a draft (direct assignment or approved)
+      if (created.length > 0 && !isDraft) {
         notifyWorker(body.workerId, body.projectId, body.dates[0]);
       }
       return NextResponse.json(created, { status: 201 });
@@ -108,7 +110,6 @@ export async function POST(req: NextRequest) {
         workerId: body.workerId,
         projectId: body.projectId,
         date: body.date,
-        shift: body.shift || "full",
       },
     });
     if (existingSingle) {
@@ -120,14 +121,15 @@ export async function POST(req: NextRequest) {
         workerId: body.workerId,
         projectId: body.projectId,
         date: body.date,
-        shift: body.shift || "full",
-        hours: body.hours || 8,
+        status: entryStatus,
         notes: body.notes || null,
       }),
     });
 
-    // Notify assigned worker
-    notifyWorker(body.workerId, body.projectId, body.date);
+    // Only notify if NOT a draft
+    if (!isDraft) {
+      notifyWorker(body.workerId, body.projectId, body.date);
+    }
 
     return NextResponse.json(entry, { status: 201 });
   } catch (error: any) {

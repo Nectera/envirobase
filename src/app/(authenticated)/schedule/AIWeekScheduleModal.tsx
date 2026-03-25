@@ -208,14 +208,26 @@ export default function AIWeekScheduleModal({
             workerId: assignment.workerId,
             projectId: assignment.projectId,
             dates: assignment.dates,
-            shift: "full",
-            hours: 8,
+            isDraft: true,
           }),
         });
         count++;
         setCreatedCount(count);
       } catch {
         // continue
+      }
+    }
+
+    // Create ScheduleWeek record for approval tracking
+    if (result.weekStart) {
+      try {
+        await fetch("/api/schedule/week", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ weekStart: result.weekStart }),
+        });
+      } catch {
+        // Non-blocking
       }
     }
 
@@ -486,14 +498,14 @@ export default function AIWeekScheduleModal({
                 </>
               ) : (
                 <>
-                  <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                  <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center">
+                    <Clock className="w-8 h-8 text-amber-600" />
                   </div>
                   <p className="text-sm font-medium text-slate-900">
-                    {t("schedule.weekScheduledSuccess")}
+                    Draft schedule created
                   </p>
                   <p className="text-xs text-slate-500">
-                    {createdCount} {t("schedule.workerAssignments")}{createdCount !== 1 ? "s" : ""} {t("schedule.across")} {result?.projects.filter((p) => p.assignedWorkers.length > 0).length} {t("schedule.project")}{(result?.projects.filter((p) => p.assignedWorkers.length > 0).length || 0) !== 1 ? "s" : ""}
+                    {createdCount} assignment{createdCount !== 1 ? "s" : ""} across {result?.projects.filter((p) => p.assignedWorkers.length > 0).length} project{(result?.projects.filter((p) => p.assignedWorkers.length > 0).length || 0) !== 1 ? "s" : ""} — sent to General Manager for approval
                   </p>
                 </>
               )}
@@ -539,7 +551,7 @@ export default function AIWeekScheduleModal({
                     className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    {t("schedule.confirmSchedule")}
+                    Send Draft for Approval
                   </button>
                 </div>
               </>

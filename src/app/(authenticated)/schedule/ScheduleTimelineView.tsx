@@ -12,8 +12,8 @@ type Entry = {
   workerId: string;
   projectId: string;
   date: string;
-  shift: string;
-  hours: number;
+  shift?: string;
+  hours?: number;
   notes: string | null;
   worker: Worker | null;
   project: Project | null;
@@ -394,7 +394,7 @@ export default function ScheduleTimelineView({
                                 <div
                                   key={entry.id}
                                   className={`group text-[9px] leading-tight px-1 py-0.5 rounded border cursor-pointer truncate ${style.chip} ${isDeleting ? "opacity-40" : "hover:opacity-90"}`}
-                                  title={`${entry.worker?.name} · ${SHIFT_LABEL[entry.shift] || entry.shift} · ${entry.hours}h`}
+                                  title={`${entry.worker?.name}${entry.shift ? ` · ${SHIFT_LABEL[entry.shift] || entry.shift}` : ""}${entry.hours ? ` · ${entry.hours}h` : ""}`}
                                 >
                                   <div className="flex items-center gap-0.5">
                                     {mismatch && <AlertTriangle size={7} className="text-amber-500 flex-shrink-0" />}

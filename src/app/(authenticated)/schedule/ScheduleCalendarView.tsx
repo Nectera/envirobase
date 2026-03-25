@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, Sparkles, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Sparkles, CalendarDays, ShieldCheck, XCircle, Clock } from "lucide-react";
 import ScheduleTimelineView from "./ScheduleTimelineView";
 import CalendarWeekView from "./CalendarWeekView";
 import WorkerPanel from "./WorkerPanel";
@@ -18,21 +18,30 @@ type Entry = {
   workerId: string;
   projectId: string;
   date: string;
-  shift: string;
-  hours: number;
+  shift?: string;
+  hours?: number;
   notes: string | null;
   worker: Worker | null;
   project: Project | null;
+};
+
+type PendingWeek = {
+  weekStart: string;
+  status: string;
+  createdBy?: string;
+  createdAt?: string;
 };
 
 export default function ScheduleCalendarView({
   projects,
   workers,
   initialEntries,
+  userRole,
 }: {
   projects: Project[];
   workers: Worker[];
   initialEntries: Entry[];
+  userRole?: string;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"timeline" | "week">("timeline");
@@ -43,6 +52,72 @@ export default function ScheduleCalendarView({
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [weekModalOpen, setWeekModalOpen] = useState(false);
+  const [pendingWeeks, setPendingWeeks] = useState<PendingWeek[]>([]);
+  const [approving, setApproving] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
+  const [showRejectInput, setShowRejectInput] = useState<string | null>(null);
+
+  const isAdminUser = userRole === "ADMIN";
+
+  // Load pending schedule weeks for approval banner
+  useEffect(() => {
+    async function loadPendingWeeks() {
+      try {
+        const res = await fetch("/api/schedule/approve");
+        if (res.ok) {
+          const data = await res.json();
+          setPendingWeeks(Array.isArray(data) ? data : []);
+        }
+      } catch { /* ignore */ }
+    }
+    loadPendingWeeks();
+  }, []);
+
+  async function handleApprove(weekStart: string) {
+    setApproving(weekStart);
+    try {
+      const res = await fetch("/api/schedule/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekStart, action: "approve" }),
+      });
+      if (res.ok) {
+        setPendingWeeks((prev) => prev.filter((w) => w.weekStart !== weekStart));
+        router.refresh();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to approve");
+      }
+    } catch {
+      alert("Network error");
+    } finally {
+      setApproving(null);
+    }
+  }
+
+  async function handleReject(weekStart: string) {
+    setApproving(weekStart);
+    try {
+      const res = await fetch("/api/schedule/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekStart, action: "reject", rejectedNote: rejectNote }),
+      });
+      if (res.ok) {
+        setPendingWeeks((prev) => prev.filter((w) => w.weekStart !== weekStart));
+        setShowRejectInput(null);
+        setRejectNote("");
+        router.refresh();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to reject");
+      }
+    } catch {
+      alert("Network error");
+    } finally {
+      setApproving(null);
+    }
+  }
 
   function navigate(delta: number) {
     const d = new Date(current);
@@ -113,6 +188,94 @@ export default function ScheduleCalendarView({
 
   return (
     <div className="space-y-4">
+      {/* Approval Banners — shown to ADMIN (General Manager) */}
+      {isAdminUser && pendingWeeks.length > 0 && (
+        <div className="space-y-2">
+          {pendingWeeks.map((week) => {
+            const mondayDate = new Date(week.weekStart + "T12:00:00");
+            const fridayDate = new Date(mondayDate);
+            fridayDate.setDate(fridayDate.getDate() + 4);
+            const weekLabel = `${mondayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${fridayDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+
+            return (
+              <div key={week.weekStart} className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 shadow-sm">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900">
+                        Draft schedule awaiting your approval
+                      </p>
+                      <p className="text-xs text-amber-700">
+                        Week of {weekLabel}
+                      </p>
+                    </div>
+                  </div>
+
+                  {showRejectInput === week.weekStart ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Reason (optional)"
+                        value={rejectNote}
+                        onChange={(e) => setRejectNote(e.target.value)}
+                        className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg w-48 focus:ring-2 focus:ring-red-300 focus:border-red-300 outline-none"
+                      />
+                      <button
+                        onClick={() => handleReject(week.weekStart)}
+                        disabled={approving === week.weekStart}
+                        className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
+                      >
+                        Confirm Reject
+                      </button>
+                      <button
+                        onClick={() => { setShowRejectInput(null); setRejectNote(""); }}
+                        className="px-2 py-1.5 text-sm text-slate-500 hover:text-slate-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleApprove(week.weekStart)}
+                        disabled={approving === week.weekStart}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm bg-emerald-600 text-white rounded-full hover:bg-emerald-700 disabled:opacity-50 font-medium transition"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => setShowRejectInput(week.weekStart)}
+                        disabled={approving === week.weekStart}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm bg-white text-red-600 border border-red-200 rounded-full hover:bg-red-50 disabled:opacity-50 font-medium transition"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Non-admin: show pending status info */}
+      {!isAdminUser && pendingWeeks.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-500" />
+            <p className="text-sm text-blue-800">
+              {pendingWeeks.length} draft schedule{pendingWeeks.length > 1 ? "s" : ""} pending GM approval
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 space-y-3">
         {/* Top row: view toggle + navigation/hint */}

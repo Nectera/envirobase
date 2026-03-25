@@ -87,6 +87,7 @@ export default async function SchedulePage() {
         projects={projects.filter((p: any) => p.status !== "completed" && p.status !== "cancelled")}
         workers={workers}
         initialEntries={entries}
+        userRole={userRole}
       />
     </div>
   );

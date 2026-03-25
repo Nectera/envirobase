@@ -536,11 +536,26 @@ model ScheduleEntry {
   projectId String?
   project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   date      String?  // YYYY-MM-DD
+  status    String   @default("draft") // draft | approved
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("schedule_entries")
+}
+
+model ScheduleWeek {
+  id          String   @id @default(uuid())
+  weekStart   String   @unique // Monday YYYY-MM-DD
+  status      String   @default("draft") // draft | pending_approval | approved | rejected
+  createdBy   String?  // userId who generated the draft
+  approvedBy  String?  // userId who approved
+  approvedAt  DateTime?
+  rejectedNote String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("schedule_weeks")
 }
 
 model TimeOff {

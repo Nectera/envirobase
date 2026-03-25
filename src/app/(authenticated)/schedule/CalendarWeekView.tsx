@@ -27,8 +27,8 @@ type Entry = {
   workerId: string;
   projectId: string;
   date: string;
-  shift: string;
-  hours: number;
+  shift?: string;
+  hours?: number;
   notes: string | null;
   worker: Worker | null;
   project: { id: string; name: string; type: string; status: string; [key: string]: any } | null;
@@ -158,7 +158,7 @@ export default function CalendarWeekView({
                             {entry.project?.name?.substring(0, 14)}
                           </div>
                           <div className="text-[9px] opacity-70">
-                            {SHIFT_LABEL[entry.shift] || entry.shift} · {entry.hours}h
+                            {entry.shift ? `${SHIFT_LABEL[entry.shift] || entry.shift} · ` : ""}{entry.hours ? `${entry.hours}h` : ""}
                           </div>
                         </div>
                       );
