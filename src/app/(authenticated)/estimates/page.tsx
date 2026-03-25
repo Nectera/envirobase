@@ -3,6 +3,7 @@ import Link from "next/link";
 import EstimatesTable from "./EstimatesTable";
 import ConsultationActions from "./ConsultationActions";
 import EstimatesHeader from "./EstimatesHeader";
+import EstimatingTabs from "./EstimatingTabs";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isAdmin, isOffice } from "@/lib/roles";
@@ -26,7 +27,8 @@ export default async function EstimatesPage() {
 
   return (
     <div>
-      <EstimatesHeader estimateCount={estimates.length} consultationCount={consultations.length} />
+      <EstimatingTabs>
+        <EstimatesHeader estimateCount={estimates.length} consultationCount={consultations.length} />
 
       {/* Consultation Estimates */}
       {consultations.length > 0 && (
@@ -94,6 +96,7 @@ export default async function EstimatesPage() {
         <h2 className="text-sm font-semibold text-slate-700 mb-3">Estimates</h2>
         <EstimatesTable estimates={estimates} />
       </div>
+      </EstimatingTabs>
     </div>
   );
 }

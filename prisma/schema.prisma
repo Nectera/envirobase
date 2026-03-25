@@ -511,6 +511,13 @@ model TimeEntry {
   clockOutAddress  String?  // Reverse-geocoded address at clock-out
   clockOutDistance  Float?   // Miles from project site at clock-out
 
+  // Payroll approval workflow
+  approvalStatus  String   @default("pending")  // Values: pending, approved, flagged
+  approvedBy      String?  // User ID of who approved
+  approvedAt      DateTime?  // Timestamp of approval
+  flagReason      String?  // Reason if flagged
+  overtime        Boolean  @default(false)  // Auto-set if hours > 8
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -935,6 +942,9 @@ model TaskAutomationRule {
   triggerValue     String?
   actions          Json?
   enabled          Boolean  @default(true)
+  isDefault        Boolean  @default(false)
+  defaultKey       String?  @unique
+  category         String?
   taskTitle        String?
   taskDescription  String?
   taskPriority     String?  @default("medium")

@@ -89,6 +89,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.clockOutAddress) updateData.clockOutAddress = body.clockOutAddress;
     if (body.clockOutDistance !== undefined) updateData.clockOutDistance = body.clockOutDistance;
 
+    // Payroll approval workflow
+    if (body.approvalStatus) {
+      updateData.approvalStatus = body.approvalStatus;
+      if (body.approvalStatus === "approved") {
+        updateData.approvedBy = userId;
+        updateData.approvedAt = new Date();
+        updateData.flagReason = null;
+      }
+    }
+    if (body.flagReason !== undefined) updateData.flagReason = body.flagReason;
+    if (body.overtime !== undefined) updateData.overtime = body.overtime;
+
 const updated = await prisma.timeEntry.update({
       where: orgWhere(orgId, { id: params.id }),
       data: updateData,

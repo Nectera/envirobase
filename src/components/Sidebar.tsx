@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useState, useCallback } from "react";
 import {
   Home, FolderOpen, Users, ClipboardCheck, LogOut,
   Clock, ClipboardList, Building2, Calendar, CalendarDays, FileText,
   Target, LayoutDashboard, Receipt, CheckSquare, TrendingUp,
   Settings, X, Database, UserPlus, Bell, MessageSquare, DollarSign,
-  PanelLeftClose, PanelLeftOpen, Gift, Puzzle, Shield, Lock,
+  PanelLeftClose, PanelLeftOpen, Gift, Puzzle, Shield, Lock, ChevronDown,
 } from "lucide-react";
 import { FEATURE_ROUTE_MAP, hasFeature } from "@/lib/feature-flags";
 import { useMobileNav } from "./MobileNavProvider";
@@ -50,7 +51,7 @@ export default function Sidebar({
     { href: "/crm", labelKey: "sidebar.crmDashboard", icon: LayoutDashboard },
     { href: "/leads", labelKey: "sidebar.leads", icon: Target },
     { href: "/pipeline", labelKey: "sidebar.pipeline", icon: TrendingUp },
-    { href: "/estimates", labelKey: "sidebar.estimates", icon: Receipt },
+    { href: "/estimates", labelKey: "sidebar.estimating", icon: Receipt },
     { href: "/companies", labelKey: "sidebar.companies", icon: Building2 },
     { href: "/contacts", labelKey: "sidebar.contacts", icon: Users },
     { href: "/tasks", labelKey: "sidebar.tasks", icon: CheckSquare },
@@ -65,7 +66,17 @@ export default function Sidebar({
     { href: "/projects", labelKey: "sidebar.projects", icon: FolderOpen },
     { href: "/schedule", labelKey: "sidebar.schedule", icon: Calendar },
     { href: "/compliance", labelKey: "sidebar.compliance", icon: ClipboardCheck },
-    ...(userRole === "ADMIN" ? [{ href: "/budget", labelKey: "sidebar.budget", icon: DollarSign }] : []),
+  ];
+
+  const teamFinanceNavItems: NavItem[] = [
+    { href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock },
+    ...(userRole === "ADMIN" ? [
+      { href: "/payroll", labelKey: "sidebar.payroll", icon: Receipt },
+    ] : []),
+    { href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift },
+    ...(userRole === "ADMIN" ? [
+      { href: "/budget", labelKey: "sidebar.budget", icon: DollarSign },
+    ] : []),
   ];
 
   const settingsNavItems: NavItem[] = [
@@ -142,19 +153,55 @@ export default function Sidebar({
 
   const subtitleKey = isTech ? "sidebar.myPortal" : isOffice ? "sidebar.salesPortal" : isSupervisor ? "sidebar.myPortal" : isPM ? "sidebar.pms" : "sidebar.pms";
 
+  // Check if a section contains the active route
+  const sectionHasActive = useCallback((items: NavItem[]) => {
+    return items.some((item) => pathname === item.href || pathname.startsWith(item.href + "/"));
+  }, [pathname]);
+
+  // Track which sections are collapsed (default: all open)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = useCallback((key: string) => {
+    setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const isSectionOpen = useCallback((key: string, items: NavItem[]) => {
+    if (collapsedSections[key] !== undefined) return !collapsedSections[key];
+    return true;
+  }, [collapsedSections]);
+
   const sectionDivider = (
     <div className="mx-4 my-2 border-t border-white/[0.06]" />
   );
 
-  const sectionLabel = (labelKey: string) => (
-    collapsed ? (
-      <div className="mx-4 my-2 border-t border-white/[0.06]" />
-    ) : (
-      <div className="px-5 py-1.5">
-        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{t(labelKey)}</span>
-      </div>
-    )
-  );
+  const renderCollapsibleSection = (labelKey: string, items: NavItem[], mobileHiddenFn?: (href: string) => boolean) => {
+    const open = isSectionOpen(labelKey, items);
+    const hasActive = sectionHasActive(items);
+
+    return (
+      <>
+        {collapsed ? (
+          <div className="mx-4 my-2 border-t border-white/[0.06]" />
+        ) : (
+          <button
+            onClick={() => toggleSection(labelKey)}
+            className="w-full flex items-center justify-between px-5 py-1.5 group cursor-pointer"
+          >
+            <span className={`text-[10px] font-semibold uppercase tracking-wider transition-colors ${hasActive && !open ? "text-emerald-400/70" : "text-slate-500 group-hover:text-slate-400"}`}>
+              {t(labelKey)}
+            </span>
+            <ChevronDown
+              size={12}
+              className={`text-slate-500 group-hover:text-slate-400 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
+            />
+          </button>
+        )}
+        <div className={`overflow-hidden transition-all duration-200 ease-in-out ${open || collapsed ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
+          {items.map((item) => renderNavItem(item, mobileHiddenFn ? mobileHiddenFn(item.href) : false))}
+        </div>
+      </>
+    );
+  };
 
   const sidebarContent = (
     <>
@@ -190,36 +237,32 @@ export default function Sidebar({
         )}
         {isPM && (
           <>
-            {renderNavItem({ href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock })}
-            {renderNavItem({ href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift })}
             {chatNavItem()}
             {sectionDivider}
-            {sectionLabel("sidebar.projectManagement")}
-            {pmNavItems.map((item) => renderNavItem(item))}
+            {renderCollapsibleSection("sidebar.projectManagement", pmNavItems)}
             {sectionDivider}
-            {sectionLabel("sidebar.settings")}
-            {pmSettingsNavItems.map((item) => renderNavItem(item))}
+            {renderCollapsibleSection("sidebar.teamFinance", teamFinanceNavItems)}
+            {sectionDivider}
+            {renderCollapsibleSection("sidebar.settings", pmSettingsNavItems)}
           </>
         )}
         {isAdmin && (
           <>
-            {renderNavItem({ href: "/time-clock", labelKey: "sidebar.timeClock", icon: Clock })}
-            {renderNavItem({ href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift })}
             {chatNavItem()}
             {sectionDivider}
-            {sectionLabel("sidebar.salesCrm")}
-            {crmNavItems.map((item) => renderNavItem(item, mobileHiddenCrmPaths.includes(item.href)))}
+            {renderCollapsibleSection("sidebar.projectManagement", pmNavItems)}
             {sectionDivider}
-            {sectionLabel("sidebar.projectManagement")}
-            {pmNavItems.map((item) => renderNavItem(item))}
+            {renderCollapsibleSection("sidebar.teamFinance", teamFinanceNavItems)}
             {sectionDivider}
-            {sectionLabel("sidebar.settings")}
-            {settingsNavItems.map((item) => renderNavItem(item))}
+            {renderCollapsibleSection("sidebar.salesCrm", crmNavItems, (href) => mobileHiddenCrmPaths.includes(href))}
+            {sectionDivider}
+            {renderCollapsibleSection("sidebar.settings", settingsNavItems)}
             {isPlatformAdmin && (
               <>
                 {sectionDivider}
-                {sectionLabel("sidebar.platform")}
-                {renderNavItem({ href: "/admin", labelKey: "sidebar.platformAdmin", icon: Shield })}
+                {renderCollapsibleSection("sidebar.platform", [
+                  { href: "/admin", labelKey: "sidebar.platformAdmin", icon: Shield },
+                ])}
               </>
             )}
           </>
