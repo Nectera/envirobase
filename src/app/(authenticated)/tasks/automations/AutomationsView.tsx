@@ -11,6 +11,12 @@ import {
   Trash2,
   Pencil,
   ChevronRight,
+  ChevronDown,
+  Shield,
+  Zap,
+  FolderOpen,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 
 const STAGES = [
@@ -37,6 +43,29 @@ const PRIORITY_COLORS: Record<string, string> = {
   high: "bg-red-100 text-red-700",
 };
 
+const CATEGORY_META: Record<string, { label: string; description: string; color: string; icon: string }> = {
+  lead_workflow: {
+    label: "Lead Pipeline",
+    description: "Tasks auto-created when a lead moves through pipeline stages",
+    color: "border-indigo-200 bg-indigo-50/30",
+    icon: "zap",
+  },
+  coordinator: {
+    label: "Coordinator Tasks (Won)",
+    description: "Tasks created when a lead is marked Won or an estimate is approved",
+    color: "border-emerald-200 bg-emerald-50/30",
+    icon: "shield",
+  },
+};
+
+function CategoryIcon({ icon, size = 18 }: { icon: string; size?: number }) {
+  switch (icon) {
+    case "zap": return <Zap size={size} />;
+    case "shield": return <Shield size={size} />;
+    default: return <FolderOpen size={size} />;
+  }
+}
+
 type AutomationsViewProps = {
   rules: any[];
   templates: any[];
@@ -49,7 +78,7 @@ export default function AutomationsView({
   workers,
 }: AutomationsViewProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"rules" | "templates">("rules");
+  const [activeTab, setActiveTab] = useState<"workflows" | "rules" | "templates">("workflows");
   const [rules, setRules] = useState(initialRules);
   const [templates, setTemplates] = useState(initialTemplates);
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
@@ -58,6 +87,19 @@ export default function AutomationsView({
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [editingRule, setEditingRule] = useState<any>(null);
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(Object.keys(CATEGORY_META)));
+
+  // Split rules into defaults and custom
+  const defaultRules = rules.filter((r: any) => r.isDefault);
+  const customRules = rules.filter((r: any) => !r.isDefault);
+
+  // Group defaults by category
+  const groupedDefaults: Record<string, any[]> = {};
+  for (const rule of defaultRules) {
+    const cat = rule.category || "other";
+    if (!groupedDefaults[cat]) groupedDefaults[cat] = [];
+    groupedDefaults[cat].push(rule);
+  }
 
   const [ruleForm, setRuleForm] = useState({
     name: "",
@@ -103,6 +145,28 @@ export default function AutomationsView({
       return worker?.name || assignToValue || "Unknown";
     }
     return "Unassigned";
+  };
+
+  const toggleCategory = (cat: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
+  const toggleDefaultRule = async (id: string, currentEnabled: boolean) => {
+    try {
+      await fetch(`/api/task-automation-rules/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !currentEnabled }),
+      });
+      router.refresh();
+    } catch (error) {
+      logger.error("Error toggling rule:", { error: String(error) });
+    }
   };
 
   const openRuleModal = (rule?: any) => {
@@ -169,7 +233,6 @@ export default function AutomationsView({
         : "/api/task-automation-rules";
       const method = editingRule ? "PUT" : "POST";
 
-      // Map the form's "trigger" (which is the stage key) to the API's triggerValue
       const payload = {
         ...ruleForm,
         trigger: "lead_status_change",
@@ -269,6 +332,9 @@ export default function AutomationsView({
     }
   };
 
+  // Ordered category keys for display
+  const categoryOrder = ["lead_workflow", "coordinator"];
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -280,27 +346,37 @@ export default function AutomationsView({
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Task Automations</h1>
+            <h1 className="text-3xl font-bold text-slate-900">Task Settings</h1>
             <p className="text-slate-600 mt-1">
-              Configure pipeline triggers, auto-assignment rules, and reusable task templates
+              View and manage all task workflows, pipeline triggers, and reusable templates
             </p>
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("workflows")}
+            className={`px-4 py-2 rounded-full font-medium transition whitespace-nowrap ${
+              activeTab === "workflows"
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
+          >
+            Default Workflows
+          </button>
           <button
             onClick={() => setActiveTab("rules")}
-            className={`px-4 py-2 rounded-full font-medium transition ${
+            className={`px-4 py-2 rounded-full font-medium transition whitespace-nowrap ${
               activeTab === "rules"
                 ? "bg-indigo-600 text-white"
                 : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            Pipeline Rules
+            Custom Rules ({customRules.length})
           </button>
           <button
             onClick={() => setActiveTab("templates")}
-            className={`px-4 py-2 rounded-full font-medium transition ${
+            className={`px-4 py-2 rounded-full font-medium transition whitespace-nowrap ${
               activeTab === "templates"
                 ? "bg-indigo-600 text-white"
                 : "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -310,6 +386,110 @@ export default function AutomationsView({
           </button>
         </div>
 
+        {/* ── DEFAULT WORKFLOWS TAB ── */}
+        {activeTab === "workflows" && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              These are the built-in task workflows that run automatically. Toggle individual tasks on or off, or click to edit details.
+            </p>
+
+            {categoryOrder.map((cat) => {
+              const meta = CATEGORY_META[cat];
+              const catRules = groupedDefaults[cat] || [];
+              if (catRules.length === 0) return null;
+              const isExpanded = expandedCategories.has(cat);
+              const enabledCount = catRules.filter((r: any) => r.enabled).length;
+
+              return (
+                <div key={cat} className={`rounded-xl border ${meta.color} overflow-hidden`}>
+                  <button
+                    onClick={() => toggleCategory(cat)}
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/40 transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-slate-600">
+                        <CategoryIcon icon={meta.icon} />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-sm font-semibold text-slate-900">{meta.label}</h3>
+                        <p className="text-xs text-slate-500">{meta.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded-full border border-slate-200">
+                        {enabledCount}/{catRules.length} active
+                      </span>
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="border-t border-slate-200/60 bg-white/60">
+                      {catRules.map((rule: any) => (
+                        <div
+                          key={rule.id}
+                          className="flex items-center justify-between px-5 py-3 border-b border-slate-100 last:border-b-0 hover:bg-white/80 transition"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <button
+                              onClick={() => toggleDefaultRule(rule.id, rule.enabled)}
+                              className="flex-shrink-0"
+                              title={rule.enabled ? "Click to disable" : "Click to enable"}
+                            >
+                              {rule.enabled ? (
+                                <ToggleRight className="w-7 h-7 text-green-500" />
+                              ) : (
+                                <ToggleLeft className="w-7 h-7 text-slate-300" />
+                              )}
+                            </button>
+                            <div className="min-w-0">
+                              <div className={`text-sm font-medium ${rule.enabled ? "text-slate-900" : "text-slate-400"}`}>
+                                {rule.name || rule.taskTitle}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                {rule.triggerValue && cat.startsWith("project_") ? null : rule.triggerValue && (
+                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${getStageColor(rule.triggerValue)}`}>
+                                    {getStageLabel(rule.triggerValue)}
+                                  </span>
+                                )}
+                                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${PRIORITY_COLORS[rule.taskPriority] || ""}`}>
+                                  {rule.taskPriority}
+                                </span>
+                                {rule.assignToField && rule.assignToField !== "none" && (
+                                  <span className="text-[10px] text-slate-500">
+                                    → {getAssignmentText(rule.assignToField, rule.assignToValue)}
+                                  </span>
+                                )}
+                                {rule.dueDateOffsetDays && (
+                                  <span className="text-[10px] text-slate-500">
+                                    Due +{rule.dueDateOffsetDays}d
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => openRuleModal(rule)}
+                            className="p-2 hover:bg-slate-200 rounded transition flex-shrink-0"
+                            title="Edit"
+                          >
+                            <Pencil className="w-4 h-4 text-slate-400" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── CUSTOM RULES TAB ── */}
         {activeTab === "rules" && (
           <div className="space-y-4">
             <button
@@ -319,97 +499,65 @@ export default function AutomationsView({
               <Plus className="w-4 h-4" /> New Rule
             </button>
 
-            <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Trigger
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Task Title
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Assign To
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Priority
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Enabled
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {rules.map((rule) => (
-                    <tr key={rule.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                        {rule.name}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStageColor(
-                            rule.triggerValue || rule.trigger
-                          )}`}
-                        >
-                          {getStageLabel(rule.triggerValue || rule.trigger)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {rule.taskTitle}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {getAssignmentText(rule.assignToField, rule.assignToValue)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block px-3 py-1 rounded text-xs font-medium ${
-                            PRIORITY_COLORS[rule.taskPriority]
-                          }`}
-                        >
-                          {rule.taskPriority}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() =>
-                            toggleRuleEnabled(rule.id, rule.enabled)
-                          }
-                          className={`w-10 h-6 rounded-full transition ${
-                            rule.enabled
-                              ? "bg-green-500"
-                              : "bg-slate-300"
-                          }`}
-                        />
-                      </td>
-                      <td className="px-4 py-3 flex gap-2">
-                        <button
-                          onClick={() => openRuleModal(rule)}
-                          className="p-2 hover:bg-slate-200 rounded transition"
-                        >
-                          <Pencil className="w-4 h-4 text-slate-600" />
-                        </button>
-                        <button
-                          onClick={() => deleteRule(rule.id)}
-                          className="p-2 hover:bg-slate-200 rounded transition"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
-                      </td>
+            {customRules.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
+                <p className="text-slate-500">No custom rules yet. Default workflows handle most cases automatically.</p>
+                <p className="text-sm text-slate-400 mt-1">Create a custom rule to add extra automation beyond the defaults.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Trigger</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Task Title</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Assign To</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Priority</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Enabled</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {customRules.map((rule: any) => (
+                      <tr key={rule.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 text-sm font-medium text-slate-900">{rule.name}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStageColor(rule.triggerValue || rule.trigger)}`}>
+                            {getStageLabel(rule.triggerValue || rule.trigger)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{rule.taskTitle}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{getAssignmentText(rule.assignToField, rule.assignToValue)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-3 py-1 rounded text-xs font-medium ${PRIORITY_COLORS[rule.taskPriority]}`}>
+                            {rule.taskPriority}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => toggleRuleEnabled(rule.id, rule.enabled)}
+                            className={`w-10 h-6 rounded-full transition ${rule.enabled ? "bg-green-500" : "bg-slate-300"}`}
+                          />
+                        </td>
+                        <td className="px-4 py-3 flex gap-2">
+                          <button onClick={() => openRuleModal(rule)} className="p-2 hover:bg-slate-200 rounded transition">
+                            <Pencil className="w-4 h-4 text-slate-600" />
+                          </button>
+                          <button onClick={() => deleteRule(rule.id)} className="p-2 hover:bg-slate-200 rounded transition">
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
+        {/* ── TEMPLATES TAB ── */}
         {activeTab === "templates" && (
           <div className="space-y-4">
             <button
@@ -420,36 +568,23 @@ export default function AutomationsView({
             </button>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className="bg-white rounded-lg border border-slate-200 p-4"
-                >
-                  <h3 className="font-semibold text-slate-900 mb-2">
-                    {template.name}
-                  </h3>
-                  <p className="text-sm text-slate-500 mb-3">
-                    {template.description}
-                  </p>
+              {templates.map((template: any) => (
+                <div key={template.id} className="bg-white rounded-lg border border-slate-200 p-4">
+                  <h3 className="font-semibold text-slate-900 mb-2">{template.name}</h3>
+                  <p className="text-sm text-slate-500 mb-3">{template.description}</p>
                   <div className="mb-3 flex gap-2">
                     <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">
-                      {template.tasks.length} tasks
+                      {(template.tasks || []).length} tasks
                     </span>
                   </div>
                   <div className="space-y-1 mb-4">
                     {(template.tasks || []).slice(0, 3).map((task: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className="text-sm text-slate-600 flex items-start gap-2"
-                      >
+                      <div key={idx} className="text-sm text-slate-600 flex items-start gap-2">
                         <span className="text-slate-400">•</span>
                         <span>
                           {task.title}
                           {task.dayOffset > 0 && (
-                            <span className="text-slate-400">
-                              {" "}
-                              (+{task.dayOffset}d)
-                            </span>
+                            <span className="text-slate-400"> (+{task.dayOffset}d)</span>
                           )}
                         </span>
                       </div>
@@ -461,22 +596,13 @@ export default function AutomationsView({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => openApplyModal(template)}
-                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition"
-                    >
+                    <button onClick={() => openApplyModal(template)} className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition">
                       Apply
                     </button>
-                    <button
-                      onClick={() => openTemplateModal(template)}
-                      className="flex-1 px-3 py-2 bg-slate-100 text-slate-700 text-sm rounded hover:bg-slate-200 transition"
-                    >
+                    <button onClick={() => openTemplateModal(template)} className="flex-1 px-3 py-2 bg-slate-100 text-slate-700 text-sm rounded hover:bg-slate-200 transition">
                       Edit
                     </button>
-                    <button
-                      onClick={() => deleteTemplate(template.id)}
-                      className="px-3 py-2 hover:bg-slate-100 rounded transition"
-                    >
+                    <button onClick={() => deleteTemplate(template.id)} className="px-3 py-2 hover:bg-slate-100 rounded transition">
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </button>
                   </div>
@@ -487,107 +613,71 @@ export default function AutomationsView({
         )}
       </div>
 
+      {/* ── RULE MODAL ── */}
       {ruleModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white rounded-lg max-w-lg w-full mx-4 p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
                 {editingRule ? "Edit Rule" : "New Rule"}
               </h2>
-              <button
-                onClick={() => setRuleModalOpen(false)}
-                className="p-1 hover:bg-slate-200 rounded"
-              >
+              <button onClick={() => setRuleModalOpen(false)} className="p-1 hover:bg-slate-200 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Rule Name
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Rule Name</label>
                 <input
                   type="text"
                   value={ruleForm.name}
-                  onChange={(e) =>
-                    setRuleForm({ ...ruleForm, name: e.target.value })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Trigger Stage
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Trigger Stage</label>
                 <select
                   value={ruleForm.trigger}
-                  onChange={(e) =>
-                    setRuleForm({ ...ruleForm, trigger: e.target.value })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, trigger: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 >
                   {STAGES.map((stage) => (
-                    <option key={stage.key} value={stage.key}>
-                      {stage.label}
-                    </option>
+                    <option key={stage.key} value={stage.key}>{stage.label}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Task Title Template
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Task Title Template</label>
                 <input
                   type="text"
                   value={ruleForm.taskTitle}
-                  onChange={(e) =>
-                    setRuleForm({ ...ruleForm, taskTitle: e.target.value })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, taskTitle: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  Available: {"{leadName}"}, {"{companyName}"}, {"{address}"},
-                  {"{phone}"}, {"{email}"}, {"{notes}"}, {"{siteVisitDate}"},
-                  {"{siteVisitTime}"}, {"{siteVisitNotes}"}, {"{projectType}"},
-                  {"{office}"}
+                  Variables: {"{{leadName}}"}, {"{{companyName}}"}, {"{{address}}"}, {"{{phone}}"}, {"{{email}}"}, {"{{projectType}}"}, {"{{office}}"}, {"{{siteVisitDate}}"}, {"{{siteVisitTime}}"}, {"{{siteVisitNotes}}"}
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Task Description
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Task Description</label>
                 <textarea
                   value={ruleForm.taskDescription}
-                  onChange={(e) =>
-                    setRuleForm({
-                      ...ruleForm,
-                      taskDescription: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, taskDescription: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                   rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Priority
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Priority</label>
                 <select
                   value={ruleForm.taskPriority}
-                  onChange={(e) =>
-                    setRuleForm({
-                      ...ruleForm,
-                      taskPriority: e.target.value as
-                        | "low"
-                        | "medium"
-                        | "high",
-                    })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, taskPriority: e.target.value as "low" | "medium" | "high" })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 >
                   <option value="low">Low</option>
@@ -597,45 +687,26 @@ export default function AutomationsView({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Due Date (days after trigger)
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Due Date (days after trigger)</label>
                 <input
                   type="number"
                   min="0"
                   max="365"
                   placeholder="e.g. 3 = due in 3 days"
                   value={ruleForm.dueDateOffsetDays ?? ""}
-                  onChange={(e) =>
-                    setRuleForm({
-                      ...ruleForm,
-                      dueDateOffsetDays: e.target.value ? parseInt(e.target.value) : null,
-                    })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, dueDateOffsetDays: e.target.value ? parseInt(e.target.value) : null })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Assign To
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Assign To</label>
                 <select
                   value={ruleForm.assignToField}
-                  onChange={(e) =>
-                    setRuleForm({
-                      ...ruleForm,
-                      assignToField: e.target.value as
-                        | "lead_assignee"
-                        | "worker_role"
-                        | "specific_worker"
-                        | "none",
-                      assignToValue: "",
-                    })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, assignToField: e.target.value as "lead_assignee" | "worker_role" | "specific_worker" | "none", assignToValue: "" })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 >
-                  <option value="lead_assignee">Lead's Assignee</option>
+                  <option value="lead_assignee">Lead&apos;s Assignee</option>
                   <option value="worker_role">Worker by Role</option>
                   <option value="specific_worker">Specific Worker</option>
                   <option value="none">Unassigned</option>
@@ -646,12 +717,7 @@ export default function AutomationsView({
                     type="text"
                     placeholder="e.g., Sales Manager"
                     value={ruleForm.assignToValue || ""}
-                    onChange={(e) =>
-                      setRuleForm({
-                        ...ruleForm,
-                        assignToValue: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setRuleForm({ ...ruleForm, assignToValue: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm mt-2"
                   />
                 )}
@@ -659,19 +725,12 @@ export default function AutomationsView({
                 {ruleForm.assignToField === "specific_worker" && (
                   <select
                     value={ruleForm.assignToValue || ""}
-                    onChange={(e) =>
-                      setRuleForm({
-                        ...ruleForm,
-                        assignToValue: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setRuleForm({ ...ruleForm, assignToValue: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm mt-2"
                   >
                     <option value="">Select Worker</option>
-                    {workers.map((worker) => (
-                      <option key={worker.id} value={worker.id}>
-                        {worker.name}
-                      </option>
+                    {workers.map((worker: any) => (
+                      <option key={worker.id} value={worker.id}>{worker.name}</option>
                     ))}
                   </select>
                 )}
@@ -682,17 +741,10 @@ export default function AutomationsView({
                   type="checkbox"
                   id="linkedEntity"
                   checked={ruleForm.linkedEntity}
-                  onChange={(e) =>
-                    setRuleForm({
-                      ...ruleForm,
-                      linkedEntity: e.target.checked,
-                    })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, linkedEntity: e.target.checked })}
                   className="rounded"
                 />
-                <label htmlFor="linkedEntity" className="text-sm font-medium text-slate-900">
-                  Link to Lead
-                </label>
+                <label htmlFor="linkedEntity" className="text-sm font-medium text-slate-900">Link to Lead</label>
               </div>
 
               <div className="flex items-center gap-2">
@@ -700,39 +752,26 @@ export default function AutomationsView({
                   type="checkbox"
                   id="enabled"
                   checked={ruleForm.enabled}
-                  onChange={(e) =>
-                    setRuleForm({ ...ruleForm, enabled: e.target.checked })
-                  }
+                  onChange={(e) => setRuleForm({ ...ruleForm, enabled: e.target.checked })}
                   className="rounded"
                 />
-                <label htmlFor="enabled" className="text-sm font-medium text-slate-900">
-                  Enabled
-                </label>
+                <label htmlFor="enabled" className="text-sm font-medium text-slate-900">Enabled</label>
               </div>
             </div>
 
             <div className="flex gap-2 mt-6">
-              {editingRule && (
+              {editingRule && !editingRule.isDefault && (
                 <button
-                  onClick={() => {
-                    deleteRule(editingRule.id);
-                    setRuleModalOpen(false);
-                  }}
+                  onClick={() => { deleteRule(editingRule.id); setRuleModalOpen(false); }}
                   className="flex-1 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
                 >
                   Delete
                 </button>
               )}
-              <button
-                onClick={() => setRuleModalOpen(false)}
-                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition"
-              >
+              <button onClick={() => setRuleModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition">
                 Cancel
               </button>
-              <button
-                onClick={saveRule}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-              >
+              <button onClick={saveRule} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
                 Save
               </button>
             </div>
@@ -740,57 +779,40 @@ export default function AutomationsView({
         </div>
       )}
 
+      {/* ── TEMPLATE MODAL ── */}
       {templateModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
-                {editingTemplate ? "Edit Template" : "New Template"}
-              </h2>
-              <button
-                onClick={() => setTemplateModalOpen(false)}
-                className="p-1 hover:bg-slate-200 rounded"
-              >
+              <h2 className="text-xl font-bold">{editingTemplate ? "Edit Template" : "New Template"}</h2>
+              <button onClick={() => setTemplateModalOpen(false)} className="p-1 hover:bg-slate-200 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Template Name
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Template Name</label>
                 <input
                   type="text"
                   value={templateForm.name}
-                  onChange={(e) =>
-                    setTemplateForm({ ...templateForm, name: e.target.value })
-                  }
+                  onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Description
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Description</label>
                 <textarea
                   value={templateForm.description}
-                  onChange={(e) =>
-                    setTemplateForm({
-                      ...templateForm,
-                      description: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                   rows={2}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-2">
-                  Tasks
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-2">Tasks</label>
                 <div className="space-y-3">
                   {templateForm.tasks.map((task, idx) => (
                     <div key={idx} className="border border-slate-200 rounded-lg p-3 space-y-2">
@@ -802,22 +824,14 @@ export default function AutomationsView({
                           onChange={(e) => {
                             const newTasks = [...templateForm.tasks];
                             newTasks[idx].title = e.target.value;
-                            setTemplateForm({
-                              ...templateForm,
-                              tasks: newTasks,
-                            });
+                            setTemplateForm({ ...templateForm, tasks: newTasks });
                           }}
                           className="flex-1 px-3 py-2 border border-slate-200 rounded text-sm"
                         />
                         <button
                           onClick={() => {
-                            const newTasks = templateForm.tasks.filter(
-                              (_, i) => i !== idx
-                            );
-                            setTemplateForm({
-                              ...templateForm,
-                              tasks: newTasks,
-                            });
+                            const newTasks = templateForm.tasks.filter((_, i) => i !== idx);
+                            setTemplateForm({ ...templateForm, tasks: newTasks });
                           }}
                           className="p-2 hover:bg-slate-200 rounded"
                         >
@@ -830,10 +844,7 @@ export default function AutomationsView({
                         onChange={(e) => {
                           const newTasks = [...templateForm.tasks];
                           newTasks[idx].description = e.target.value;
-                          setTemplateForm({
-                            ...templateForm,
-                            tasks: newTasks,
-                          });
+                          setTemplateForm({ ...templateForm, tasks: newTasks });
                         }}
                         className="w-full px-3 py-2 border border-slate-200 rounded text-sm"
                         rows={2}
@@ -843,14 +854,8 @@ export default function AutomationsView({
                           value={task.priority}
                           onChange={(e) => {
                             const newTasks = [...templateForm.tasks];
-                            newTasks[idx].priority = e.target.value as
-                              | "low"
-                              | "medium"
-                              | "high";
-                            setTemplateForm({
-                              ...templateForm,
-                              tasks: newTasks,
-                            });
+                            newTasks[idx].priority = e.target.value as "low" | "medium" | "high";
+                            setTemplateForm({ ...templateForm, tasks: newTasks });
                           }}
                           className="flex-1 px-3 py-2 border border-slate-200 rounded text-sm"
                         >
@@ -864,13 +869,8 @@ export default function AutomationsView({
                           value={task.dayOffset}
                           onChange={(e) => {
                             const newTasks = [...templateForm.tasks];
-                            newTasks[idx].dayOffset = parseInt(
-                              e.target.value
-                            );
-                            setTemplateForm({
-                              ...templateForm,
-                              tasks: newTasks,
-                            });
+                            newTasks[idx].dayOffset = parseInt(e.target.value);
+                            setTemplateForm({ ...templateForm, tasks: newTasks });
                           }}
                           className="w-20 px-3 py-2 border border-slate-200 rounded text-sm"
                         />
@@ -882,10 +882,7 @@ export default function AutomationsView({
                   onClick={() => {
                     setTemplateForm({
                       ...templateForm,
-                      tasks: [
-                        ...templateForm.tasks,
-                        { title: "", description: "", priority: "medium", dayOffset: 0 },
-                      ],
+                      tasks: [...templateForm.tasks, { title: "", description: "", priority: "medium", dayOffset: 0 }],
                     });
                   }}
                   className="mt-2 px-3 py-2 bg-slate-100 text-slate-700 text-sm rounded hover:bg-slate-200 transition flex items-center gap-1"
@@ -898,25 +895,16 @@ export default function AutomationsView({
             <div className="flex gap-2 mt-6">
               {editingTemplate && (
                 <button
-                  onClick={() => {
-                    deleteTemplate(editingTemplate.id);
-                    setTemplateModalOpen(false);
-                  }}
+                  onClick={() => { deleteTemplate(editingTemplate.id); setTemplateModalOpen(false); }}
                   className="flex-1 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
                 >
                   Delete
                 </button>
               )}
-              <button
-                onClick={() => setTemplateModalOpen(false)}
-                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition"
-              >
+              <button onClick={() => setTemplateModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition">
                 Cancel
               </button>
-              <button
-                onClick={saveTemplate}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-              >
+              <button onClick={saveTemplate} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
                 Save
               </button>
             </div>
@@ -924,70 +912,52 @@ export default function AutomationsView({
         </div>
       )}
 
+      {/* ── APPLY TEMPLATE MODAL ── */}
       {applyModalOpen && selectedTemplate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-lg w-full mx-4 p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Apply Template</h2>
-              <button
-                onClick={() => setApplyModalOpen(false)}
-                className="p-1 hover:bg-slate-200 rounded"
-              >
+              <button onClick={() => setApplyModalOpen(false)} className="p-1 hover:bg-slate-200 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <p className="text-slate-600 mb-4">
-              {selectedTemplate.name} - {selectedTemplate.tasks.length} tasks
+              {selectedTemplate.name} - {(selectedTemplate.tasks || []).length} tasks
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Start Date
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Start Date</label>
                 <input
                   type="date"
                   value={applyForm.startDate}
-                  onChange={(e) =>
-                    setApplyForm({ ...applyForm, startDate: e.target.value })
-                  }
+                  onChange={(e) => setApplyForm({ ...applyForm, startDate: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">
-                  Assignee (optional)
-                </label>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Assignee (optional)</label>
                 <select
                   value={applyForm.assignedTo}
-                  onChange={(e) =>
-                    setApplyForm({ ...applyForm, assignedTo: e.target.value })
-                  }
+                  onChange={(e) => setApplyForm({ ...applyForm, assignedTo: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 >
                   <option value="">No assignment</option>
-                  {workers.map((worker) => (
-                    <option key={worker.id} value={worker.id}>
-                      {worker.name}
-                    </option>
+                  {workers.map((worker: any) => (
+                    <option key={worker.id} value={worker.id}>{worker.name}</option>
                   ))}
                 </select>
               </div>
             </div>
 
             <div className="flex gap-2 mt-6">
-              <button
-                onClick={() => setApplyModalOpen(false)}
-                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition"
-              >
+              <button onClick={() => setApplyModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition">
                 Cancel
               </button>
-              <button
-                onClick={applyTemplate}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-              >
+              <button onClick={applyTemplate} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
                 Apply
               </button>
             </div>

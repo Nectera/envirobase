@@ -92,9 +92,8 @@ export async function POST(request: NextRequest) {
           parentType,
           parentId,
           type: "email",
-          title: `Email: ${subject}`,
-          description: `Sent to ${to}${cc ? ` (CC: ${cc})` : ""}\n\nSubject: ${subject}\n\n${emailBody}`,
-          createdBy: "system",
+          content: `Sent to ${to}${cc ? ` (CC: ${cc})` : ""}\n\nSubject: ${subject}\n\n${emailBody}`,
+          user: "system",
         },
       });
     }

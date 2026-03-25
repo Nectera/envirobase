@@ -75,15 +75,35 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    // Create default tasks based on type(s) — merge & deduplicate for multi-type projects
+    // Create default tasks based on type(s) — check DB rules first, fall back to hardcoded
     const typesList = (body.type || "").split(",").map((t: string) => t.trim()).filter(Boolean);
     const seen = new Set<string>();
     const defaultTasks: string[] = [];
+
     for (const t of typesList) {
-      for (const task of getDefaultTasks(t)) {
-        if (!seen.has(task)) { seen.add(task); defaultTasks.push(task); }
+      // Check for DB-stored project task rules
+      const dbRules = await prisma.taskAutomationRule.findMany({
+        where: {
+          trigger: "project_created",
+          triggerValue: t,
+          enabled: true,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      if (dbRules.length > 0) {
+        for (const rule of dbRules) {
+          const name = rule.taskTitle || rule.name || "";
+          if (name && !seen.has(name)) { seen.add(name); defaultTasks.push(name); }
+        }
+      } else {
+        // Fallback to hardcoded defaults if DB has no rules for this type
+        for (const task of getDefaultTasks(t)) {
+          if (!seen.has(task)) { seen.add(task); defaultTasks.push(task); }
+        }
       }
     }
+
     if (defaultTasks.length > 0) {
       await prisma.projectTask.createMany({
         data: defaultTasks.map((name, i) => ({

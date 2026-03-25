@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import {
-  MessageSquare, Phone, Mail, ChevronRight, MapPin, Users,
+  MessageSquare, Phone, Mail, ChevronRight, ChevronDown, MapPin, Users,
 } from "lucide-react";
 import { useTranslation } from "./LanguageProvider";
 import EmojiReactions from "@/components/EmojiReactions";
@@ -63,6 +63,7 @@ export default function ActivityFeed({
   const { data: session } = useSession();
   const currentUserId = (session?.user as any)?.id || "";
   const [activityReactions, setActivityReactions] = useState<Record<string, { emoji: string; userId: string; userName: string }[]>>({});
+  const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
 
   // Merge own + linked activities, sorted by date descending
   const allActivities = [
@@ -119,20 +120,61 @@ export default function ActivityFeed({
           const Icon = ACTIVITY_ICONS[a.type] || MessageSquare;
           const typeKey = ACTIVITY_TYPE_KEYS[a.type] || "activity.note";
           const dateStr = a.createdAt || a.date || "";
+          const isEmail = a.type === "email";
+          const isExpanded = expandedEmails.has(a.id);
+
+          // For emails, extract first line as preview and rest as full body
+          const emailPreview = isEmail ? a.description.split("\n")[0] : "";
+          const emailHasBody = isEmail && a.description.includes("\n\n");
+
           return (
             <div
               key={a.id}
-              className="flex items-start gap-2 py-2 border-b border-slate-50 last:border-0"
+              className={`flex items-start gap-2 py-2 border-b border-slate-50 last:border-0 ${
+                isEmail && emailHasBody ? "cursor-pointer" : ""
+              }`}
+              onClick={
+                isEmail && emailHasBody
+                  ? () =>
+                      setExpandedEmails((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(a.id)) next.delete(a.id);
+                        else next.add(a.id);
+                        return next;
+                      })
+                  : undefined
+              }
             >
-              <div className="p-1 bg-slate-100 rounded mt-0.5">
-                <Icon size={11} className="text-slate-500" />
+              <div className={`p-1 rounded mt-0.5 ${isEmail ? "bg-blue-50" : "bg-slate-100"}`}>
+                <Icon size={11} className={isEmail ? "text-blue-500" : "text-slate-500"} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-slate-700">
-                  {renderDescription(a.description)}
-                </div>
+                {isEmail && emailHasBody ? (
+                  <>
+                    <div className="flex items-center gap-1 text-sm text-slate-700">
+                      <span>{emailPreview}</span>
+                      {isExpanded ? (
+                        <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight size={14} className="text-slate-400 flex-shrink-0" />
+                      )}
+                    </div>
+                    {isExpanded && (
+                      <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 whitespace-pre-wrap">
+                        {a.description}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-sm text-slate-700">
+                    {renderDescription(a.description)}
+                  </div>
+                )}
                 <div className="text-[10px] text-slate-400 mt-0.5">
                   {dateStr && formatDate(dateStr)} — {t(typeKey)}
+                  {isEmail && emailHasBody && !isExpanded && (
+                    <span className="ml-1 text-blue-500 font-medium">Click to view email</span>
+                  )}
                   {a._linkedFrom && (
                     <span className="ml-1 text-indigo-500">
                       ({t("activity.fromLinked")} {a._linkedFrom})

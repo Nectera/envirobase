@@ -8,7 +8,7 @@ import {
   AlertTriangle, CheckCircle2, FolderOpen, ShieldAlert,
   Clock, Users, FileText, CalendarDays,
   ArrowRight, Flame, ClipboardList,
-  Ban, Timer, AlertCircle, Palmtree, Building2,
+  Ban, Timer, AlertCircle, Palmtree, Building2, ChevronDown, ChevronRight,
 } from "lucide-react";
 import { useTranslation } from "@/components/LanguageProvider";
 import BonusPoolWidget from "@/components/BonusPoolWidget";
@@ -133,7 +133,13 @@ export default function DashboardView({
     // --- Tasks ---
     const openTasks = tasks.filter((t: any) => t.status !== "completed");
     const todayStr = new Date().toISOString().split("T")[0];
-    const overdueTasks = openTasks.filter((t: any) => t.dueDate && t.dueDate < todayStr);
+    const projectMap = new Map(projects.map((p: any) => [p.id, p.name]));
+    const overdueTasks = openTasks
+      .filter((t: any) => t.dueDate && t.dueDate < todayStr)
+      .map((t: any) => ({
+        ...t,
+        projectName: t.linkedEntityType === "project" && t.linkedEntityId ? projectMap.get(t.linkedEntityId) || null : null,
+      }));
     const urgentTasks = openTasks.filter((t: any) => t.priority === "urgent" || t.priority === "high");
 
     // --- Incidents ---
@@ -259,35 +265,14 @@ export default function DashboardView({
       </div>
 
       {/* === URGENT BANNER (if any) === */}
-      {(expiredPermits.length > 0 || openIncidents.length > 0 || overdueTasks.length > 0) && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} className="text-red-600" />
-            <span className="text-sm font-bold text-red-800">{t("dashboard.needsAttention")}</span>
-          </div>
-          <div className="flex flex-wrap gap-4 text-xs">
-            {expiredPermits.length > 0 && (
-              <span className="flex items-center gap-1.5 text-red-700">
-                <FileText size={12} /> {expiredPermits.length} {expiredPermits.length > 1 ? t("dashboard.expiredPermits") : t("dashboard.expiredPermit")}
-              </span>
-            )}
-            {expiringPermits.length > 0 && (
-              <span className="flex items-center gap-1.5 text-amber-700">
-                <Timer size={12} /> {expiringPermits.length} {expiringPermits.length > 1 ? t("dashboard.permitsExpiringWithin") : t("dashboard.permitExpiringWithin")}
-              </span>
-            )}
-            {openIncidents.length > 0 && (
-              <span className="flex items-center gap-1.5 text-red-700">
-                <Flame size={12} /> {openIncidents.length} {openIncidents.length > 1 ? t("dashboard.openIncidents") : t("dashboard.openIncident")}
-              </span>
-            )}
-            {overdueTasks.length > 0 && (
-              <span className="flex items-center gap-1.5 text-orange-700">
-                <AlertCircle size={12} /> {overdueTasks.length} {overdueTasks.length > 1 ? t("dashboard.overdueTasks") : t("dashboard.overdueTask")}
-              </span>
-            )}
-          </div>
-        </div>
+      {(expiredPermits.length > 0 || expiringPermits.length > 0 || openIncidents.length > 0 || overdueTasks.length > 0) && (
+        <NeedsAttentionBanner
+          expiredPermits={expiredPermits}
+          expiringPermits={expiringPermits}
+          openIncidents={openIncidents}
+          overdueTasks={overdueTasks}
+          t={t}
+        />
       )}
 
       {/* === ROW 2: Active Projects === */}
@@ -607,6 +592,150 @@ export default function DashboardView({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Needs Attention Banner ─── */
+function NeedsAttentionBanner({
+  expiredPermits,
+  expiringPermits,
+  openIncidents,
+  overdueTasks,
+  t,
+}: {
+  expiredPermits: any[];
+  expiringPermits: any[];
+  openIncidents: any[];
+  overdueTasks: any[];
+  t: (key: string) => string;
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const toggle = (key: string) => setExpanded(expanded === key ? null : key);
+
+  const totalItems = expiredPermits.length + expiringPermits.length + openIncidents.length + overdueTasks.length;
+
+  const formatDaysOverdue = (dueDate: string) => {
+    const days = Math.ceil((new Date().getTime() - new Date(dueDate + "T12:00:00").getTime()) / 86400000);
+    return days === 1 ? "1 day overdue" : `${days} days overdue`;
+  };
+
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={16} className="text-red-600" />
+          <span className="text-sm font-bold text-red-800">{t("dashboard.needsAttention")}</span>
+          <span className="text-[10px] font-medium bg-red-200 text-red-800 px-1.5 py-0.5 rounded-full">{totalItems}</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {/* Expired Permits */}
+        {expiredPermits.length > 0 && (
+          <div>
+            <button onClick={() => toggle("permits")} className="flex items-center gap-1.5 text-xs text-red-700 font-medium hover:text-red-900 w-full text-left">
+              {expanded === "permits" ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <FileText size={12} />
+              {expiredPermits.length} {expiredPermits.length > 1 ? t("dashboard.expiredPermits") : t("dashboard.expiredPermit")}
+            </button>
+            {expanded === "permits" && (
+              <div className="ml-6 mt-1.5 space-y-1">
+                {expiredPermits.map((p: any) => (
+                  <Link key={p.id} href={`/projects/${p.projectId}`} className="flex items-center justify-between px-3 py-1.5 bg-white rounded-lg border border-red-100 hover:border-red-300 transition text-xs group">
+                    <span className="text-slate-800 group-hover:text-red-700 font-medium truncate">{p.project?.name || p.name || "Project"}</span>
+                    <span className="text-red-500 text-[10px] flex-shrink-0 ml-2">Expired {p.endDate ? new Date(p.endDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Expiring Permits */}
+        {expiringPermits.length > 0 && (
+          <div>
+            <button onClick={() => toggle("expiring")} className="flex items-center gap-1.5 text-xs text-amber-700 font-medium hover:text-amber-900 w-full text-left">
+              {expanded === "expiring" ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <Timer size={12} />
+              {expiringPermits.length} {expiringPermits.length > 1 ? t("dashboard.permitsExpiringWithin") : t("dashboard.permitExpiringWithin")}
+            </button>
+            {expanded === "expiring" && (
+              <div className="ml-6 mt-1.5 space-y-1">
+                {expiringPermits.map((p: any) => {
+                  const daysLeft = Math.ceil((new Date(p.endDate).getTime() - new Date().getTime()) / 86400000);
+                  return (
+                    <Link key={p.id} href={`/projects/${p.projectId}`} className="flex items-center justify-between px-3 py-1.5 bg-white rounded-lg border border-amber-100 hover:border-amber-300 transition text-xs group">
+                      <span className="text-slate-800 group-hover:text-amber-700 font-medium truncate">{p.project?.name || p.name || "Project"}</span>
+                      <span className="text-amber-500 text-[10px] flex-shrink-0 ml-2">{daysLeft} {daysLeft === 1 ? "day" : "days"} left</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Open Incidents */}
+        {openIncidents.length > 0 && (
+          <div>
+            <button onClick={() => toggle("incidents")} className="flex items-center gap-1.5 text-xs text-red-700 font-medium hover:text-red-900 w-full text-left">
+              {expanded === "incidents" ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <Flame size={12} />
+              {openIncidents.length} {openIncidents.length > 1 ? t("dashboard.openIncidents") : t("dashboard.openIncident")}
+            </button>
+            {expanded === "incidents" && (
+              <div className="ml-6 mt-1.5 space-y-1">
+                {openIncidents.map((i: any) => (
+                  <Link key={i.id} href={`/projects/${i.projectId}`} className="flex items-center justify-between px-3 py-1.5 bg-white rounded-lg border border-red-100 hover:border-red-300 transition text-xs group">
+                    <div className="min-w-0">
+                      <span className="text-slate-800 group-hover:text-red-700 font-medium truncate block">{i.title || i.type}</span>
+                      {i.project?.name && <span className="text-slate-400 text-[10px]">{i.project.name}</span>}
+                    </div>
+                    <span className={`text-[10px] flex-shrink-0 ml-2 px-1.5 py-0.5 rounded font-medium ${i.severity === "critical" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                      {i.severity || "open"}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Overdue Tasks */}
+        {overdueTasks.length > 0 && (
+          <div>
+            <button onClick={() => toggle("tasks")} className="flex items-center gap-1.5 text-xs text-orange-700 font-medium hover:text-orange-900 w-full text-left">
+              {expanded === "tasks" ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <AlertCircle size={12} />
+              {overdueTasks.length} {overdueTasks.length > 1 ? t("dashboard.overdueTasks") : t("dashboard.overdueTask")}
+            </button>
+            {expanded === "tasks" && (
+              <div className="ml-6 mt-1.5 space-y-1">
+                {overdueTasks.slice(0, 20).map((task: any) => (
+                  <Link key={task.id} href={task.linkedEntityType === "project" && task.linkedEntityId ? `/projects/${task.linkedEntityId}` : "/tasks"} className="flex items-center justify-between px-3 py-1.5 bg-white rounded-lg border border-orange-100 hover:border-orange-300 transition text-xs group">
+                    <div className="min-w-0">
+                      <span className="text-slate-800 group-hover:text-orange-700 font-medium truncate block">{task.title || task.name}</span>
+                      {task.projectName && <span className="text-slate-400 text-[10px]">{task.projectName}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      {task.priority && (task.priority === "urgent" || task.priority === "high") && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 uppercase">{task.priority}</span>
+                      )}
+                      <span className="text-orange-500 text-[10px]">{task.dueDate ? formatDaysOverdue(task.dueDate) : "overdue"}</span>
+                    </div>
+                  </Link>
+                ))}
+                {overdueTasks.length > 20 && (
+                  <Link href="/tasks" className="block text-center text-[11px] text-orange-600 hover:text-orange-800 font-medium py-1">
+                    View all {overdueTasks.length} overdue tasks →
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -392,6 +392,25 @@ export async function sendFieldReportEmail(
       console.error("[DFR-EMAIL] Email send FAILED:", result.error);
     }
 
+    // Send a copy of the field report to the company email
+    const COMPANY_EMAIL = "Xtract@xtractes.com";
+    try {
+      console.log("[DFR-EMAIL] Sending company copy to:", COMPANY_EMAIL);
+      const companyResult = await sendHtmlEmail({
+        to: COMPANY_EMAIL,
+        subject: `[Copy] Daily Progress Update — ${project.name} (${reportDate})`,
+        html,
+        text: plainText,
+      });
+      if (companyResult.success) {
+        console.log("[DFR-EMAIL] Company copy sent successfully!", { messageId: companyResult.messageId });
+      } else {
+        console.error("[DFR-EMAIL] Company copy FAILED:", companyResult.error);
+      }
+    } catch (companyErr: any) {
+      console.error("[DFR-EMAIL] Company copy error:", companyErr.message);
+    }
+
     // Also notify office/PM users that a field report was submitted
     try {
       const notifBody = buildFieldReportBody(

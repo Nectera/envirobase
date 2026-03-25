@@ -32,10 +32,10 @@ export default async function DashboardPage() {
     prisma.certification.findMany(),
     prisma.lead.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.task.findMany(),
-    prisma.incident.findMany(),
+    prisma.incident.findMany({ include: { project: { select: { id: true, name: true } } } }),
     prisma.timeEntry.findMany(),
     prisma.scheduleEntry.findMany({ include: { worker: true, project: true } }),
-    prisma.document.findMany(),
+    prisma.document.findMany({ include: { project: { select: { id: true, name: true } } } }),
     prisma.timeOff.findMany({ include: { worker: true } }),
   ]);
 
