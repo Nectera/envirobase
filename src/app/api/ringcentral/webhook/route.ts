@@ -5,6 +5,54 @@ import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
+// Delay helper
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Try to fetch the recording for a call session and update the activity
+async function fetchRecordingLater(activityId: string, sessionId: string) {
+  // RingCentral takes time to process recordings — retry a few times
+  const delays = [15000, 30000, 60000]; // 15s, 30s, 60s
+  for (const waitMs of delays) {
+    await delay(waitMs);
+    try {
+      // Look up the call-log entry by session ID to find the recording
+      const callLog = await rcApiCall(
+        "GET",
+        `/account/~/extension/~/call-log?sessionId=${sessionId}&withRecording=true&view=Detailed`
+      );
+      const records = callLog?.records || [];
+      const withRecording = records.find((r: any) => r.recording?.id);
+      if (withRecording?.recording?.id) {
+        // Fetch the actual recording content URI
+        let recordingUrl = withRecording.recording.contentUri || null;
+        if (!recordingUrl) {
+          try {
+            const recData = await rcApiCall("GET", `/account/~/recording/${withRecording.recording.id}`);
+            recordingUrl = recData?.contentUri || null;
+          } catch {}
+        }
+        if (recordingUrl) {
+          // Append recording to the existing activity
+          const activity = await prisma.activity.findUnique({ where: { id: activityId } });
+          if (activity?.content && !activity.content.includes("Recording:")) {
+            await prisma.activity.update({
+              where: { id: activityId },
+              data: { content: activity.content + `\n🎙️ Recording: ${recordingUrl}` },
+            });
+            logger.info("Recording attached to activity", { activityId, sessionId });
+          }
+          return; // Done
+        }
+      }
+    } catch (err: any) {
+      logger.warn("Recording fetch attempt failed", { sessionId, error: err.message });
+    }
+  }
+  logger.info("No recording found after retries", { activityId, sessionId });
+}
+
 // Normalize phone number for comparison — strip +1 prefix, spaces, dashes
 function normalizePhone(phone: string): string {
   const cleaned = phone.replace(/[\s\-\(\)\.\+]/g, "");
@@ -247,23 +295,7 @@ export async function POST(request: NextRequest) {
               content += ` — ${durationMin} min`;
             }
 
-            // Check for recording
-            let recordingUrl: string | null = null;
-            const recording = party.recording || eventBody.recording || null;
-            if (recording?.id) {
-              try {
-                const recData = await rcApiCall("GET", `/account/~/recording/${recording.id}`);
-                recordingUrl = recData?.contentUri || null;
-              } catch {
-                // Recording fetch may fail
-              }
-            }
-
-            if (recordingUrl) {
-              content += `\n🎙️ Recording: ${recordingUrl}`;
-            }
-
-            await prisma.activity.create({
+            const createdActivity = await prisma.activity.create({
               data: {
                 parentType: entity?.parentType || null,
                 parentId: entity?.parentId || null,
@@ -277,8 +309,15 @@ export async function POST(request: NextRequest) {
               direction: callDirection,
               entity: entity?.parentType || "unmatched",
               entityId: entity?.parentId || null,
-              hasRecording: !!recordingUrl,
             });
+
+            // Recordings aren't available at disconnect time — fetch asynchronously
+            const sessionId = eventBody.telephonySessionId || eventBody.sessionId;
+            if (sessionId) {
+              fetchRecordingLater(createdActivity.id, sessionId).catch((err) =>
+                logger.warn("Background recording fetch failed", { error: String(err) })
+              );
+            }
           }
         }
       }
