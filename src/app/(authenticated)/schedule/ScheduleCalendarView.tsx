@@ -12,7 +12,7 @@ import AIWeekScheduleModal from "./AIWeekScheduleModal";
 
 type Cert = { id: string; name: string; expires: string | null; status: string };
 type Worker = { id: string; name: string; role: string; city: string | null; state: string | null; types: string[]; certifications?: Cert[] };
-type Project = { id: string; name: string; type: string; status: string; projectNumber?: string; address: string; startDate: string | null; estEndDate: string | null };
+type Project = { id: string; name: string; type: string; status: string; projectNumber?: string; address: string; startDate: string | null; estEndDate: string | null; isSubbedOut?: boolean; subContractorId?: string | null };
 type Entry = {
   id: string;
   workerId: string;

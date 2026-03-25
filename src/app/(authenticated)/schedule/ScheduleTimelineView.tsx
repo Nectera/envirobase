@@ -6,7 +6,7 @@ import { AlertTriangle, MapPin, GripHorizontal, X, Check, Loader2, XCircle } fro
 import { useTranslation } from "@/components/LanguageProvider";
 
 type Worker = { id: string; name: string; role: string; city: string | null; state: string | null; types: string[] };
-type Project = { id: string; name: string; type: string; status: string; projectNumber?: string; address: string; startDate: string | null; estEndDate: string | null };
+type Project = { id: string; name: string; type: string; status: string; projectNumber?: string; address: string; startDate: string | null; estEndDate: string | null; isSubbedOut?: boolean; subContractorId?: string | null };
 type Entry = {
   id: string;
   workerId: string;
@@ -323,6 +323,11 @@ export default function ScheduleTimelineView({
                             <span className={`text-[9px] font-semibold px-1 py-0 rounded ${style.badge}`}>
                               {pType}
                             </span>
+                            {project.isSubbedOut && (
+                              <span className="text-[9px] font-semibold px-1 py-0 rounded bg-orange-100 text-orange-700">
+                                Subbed Out
+                              </span>
+                            )}
                             {project.projectNumber && (
                               <span className="text-[9px] text-slate-400 font-mono">{project.projectNumber}</span>
                             )}

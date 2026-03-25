@@ -127,6 +127,7 @@ export async function calculateWorkerScores(
     include: { tasks: true, workers: true },
   });
   if (!project) throw new Error("Project not found");
+  if ((project as any).isSubbedOut) throw new Error("Project is subbed out to a subcontractor and excluded from AI scheduling");
 
   // 2. Determine crew size and difficulty
   let crew = crewSize || 0;

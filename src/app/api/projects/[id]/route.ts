@@ -77,6 +77,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.clearanceInvoiceUrl !== undefined) data.clearanceInvoiceUrl = body.clearanceInvoiceUrl || null;
     if (body.clearanceInvoiceName !== undefined) data.clearanceInvoiceName = body.clearanceInvoiceName || null;
 
+    // Subcontractor
+    if (body.isSubbedOut !== undefined) data.isSubbedOut = body.isSubbedOut;
+    if (body.subContractorId !== undefined) data.subContractorId = body.subContractorId || null;
+
     // Get current project to detect status change
     const currentProject = await prisma.project.findFirst({ where: { id: params.id, organizationId: orgId } });
     if (!currentProject) return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -36,6 +36,7 @@ export default function AddCompanyModal() {
     notes: "",
     referralFeeEnabled: false,
     referralFeePercent: 10,
+    isSubcontractor: false,
   });
 
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -67,6 +68,7 @@ export default function AddCompanyModal() {
       notes: "",
       referralFeeEnabled: false,
       referralFeePercent: 10,
+      isSubcontractor: false,
     });
     setError("");
   };
@@ -285,6 +287,23 @@ export default function AddCompanyModal() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Subcontractor Toggle */}
+              <div className="border border-slate-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">Subcontractor</label>
+                    <p className="text-[10px] text-slate-400">Available as a sub when scheduling projects</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, isSubcontractor: !prev.isSubcontractor }))}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${form.isSubcontractor ? "bg-[#7BC143]" : "bg-slate-300"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.isSubcontractor ? "translate-x-5" : ""}`} />
+                  </button>
+                </div>
               </div>
 
               {/* Notes */}

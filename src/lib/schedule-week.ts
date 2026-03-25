@@ -78,7 +78,8 @@ export async function calculateWeekSchedule(
     (p: any) =>
       (p.status === "in_progress" || p.status === "planning" || p.status === "scheduled") &&
       p.status !== "completed" &&
-      p.status !== "cancelled"
+      p.status !== "cancelled" &&
+      !p.isSubbedOut // Exclude projects subbed out to subcontractors
   );
 
   // 2. Get consultation estimates for crew sizes

@@ -108,6 +108,31 @@ async function createSmsNotification(
   }
 }
 
+// GET /api/ringcentral/webhook — debug: check recent RC activities
+export async function GET(request: NextRequest) {
+  try {
+    const recentActivities = await prisma.activity.findMany({
+      where: { user: "RingCentral" },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+    return NextResponse.json({
+      message: "Webhook endpoint is active",
+      recentRCActivities: recentActivities.length,
+      activities: recentActivities.map((a: any) => ({
+        id: a.id,
+        type: a.type,
+        parentType: a.parentType,
+        parentId: a.parentId,
+        content: (a.content || "").slice(0, 100),
+        createdAt: a.createdAt,
+      })),
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 // POST /api/ringcentral/webhook — receives events from RingCentral
 export async function POST(request: NextRequest) {
   try {
@@ -186,14 +211,86 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ─── Call Recording ─────────────────────────────────────────
-    if (event.includes("/call-log") || event.includes("/telephony/sessions")) {
+    // ─── Telephony Sessions (real-time call events) ────────────
+    if (event.includes("/telephony/sessions")) {
+      // Telephony sessions fire multiple events per call (Setup → Proceeding → Answered → Disconnected)
+      // Only create activity when call is finished (Disconnected) to avoid duplicates
+      const parties = eventBody.parties || [];
+      const party = parties[0]; // Primary party
+
+      if (party) {
+        const partyStatus = party.status?.code?.toLowerCase() || "";
+        const callDirection = (party.direction || "").toLowerCase();
+        const fromNumber = party.from?.phoneNumber || "";
+        const toNumber = party.to?.phoneNumber || "";
+
+        logger.info("RC telephony session event", {
+          status: partyStatus,
+          direction: callDirection,
+          from: fromNumber,
+          to: toNumber,
+          sessionId: eventBody.telephonySessionId,
+        });
+
+        // Only process when the call is completed
+        if (partyStatus === "disconnected") {
+          const externalNumber = callDirection === "inbound" ? fromNumber : toNumber;
+
+          if (externalNumber) {
+            const entity = await findEntityByPhone(externalNumber);
+            const callerName = entity?.entityName || externalNumber;
+            const duration = party.duration || 0;
+            const durationMin = Math.ceil(duration / 60);
+
+            let content = `${callDirection === "inbound" ? "Inbound" : "Outbound"} call with ${callerName} (${externalNumber})`;
+            if (duration > 0) {
+              content += ` — ${durationMin} min`;
+            }
+
+            // Check for recording
+            let recordingUrl: string | null = null;
+            const recording = party.recording || eventBody.recording || null;
+            if (recording?.id) {
+              try {
+                const recData = await rcApiCall("GET", `/account/~/recording/${recording.id}`);
+                recordingUrl = recData?.contentUri || null;
+              } catch {
+                // Recording fetch may fail
+              }
+            }
+
+            if (recordingUrl) {
+              content += `\n🎙️ Recording: ${recordingUrl}`;
+            }
+
+            await prisma.activity.create({
+              data: {
+                parentType: entity?.parentType || null,
+                parentId: entity?.parentId || null,
+                type: "call",
+                content,
+                user: "RingCentral",
+              },
+            });
+
+            logger.info("Call activity logged (telephony session)", {
+              direction: callDirection,
+              entity: entity?.parentType || "unmatched",
+              entityId: entity?.parentId || null,
+              hasRecording: !!recordingUrl,
+            });
+          }
+        }
+      }
+    }
+
+    // ─── Call Log (fallback event format) ─────────────────────
+    if (event.includes("/call-log") && !event.includes("/telephony/sessions")) {
       const recording = eventBody.recording || null;
       const result = eventBody.result || eventBody;
-      const callDirection = result.direction?.toLowerCase() || "";
+      const callDirection = (result.direction || "").toLowerCase();
       const callDuration = result.duration || 0;
 
-      // Determine the external phone number
       const externalNumber =
         callDirection === "inbound"
           ? result.from?.phoneNumber || ""
@@ -201,8 +298,6 @@ export async function POST(request: NextRequest) {
 
       if (externalNumber) {
         const entity = await findEntityByPhone(externalNumber);
-
-        // Build activity content
         const durationMin = Math.ceil(callDuration / 60);
         const callerName = entity?.entityName || externalNumber;
         let content = `${callDirection === "inbound" ? "Inbound" : "Outbound"} call with ${callerName} (${externalNumber})`;
@@ -210,25 +305,20 @@ export async function POST(request: NextRequest) {
           content += ` — ${durationMin} min`;
         }
 
-        // Add recording URL if available
         let recordingUrl: string | null = null;
         if (recording?.id) {
           try {
-            const recData = await rcApiCall(
-              "GET",
-              `/account/~/recording/${recording.id}`
-            );
+            const recData = await rcApiCall("GET", `/account/~/recording/${recording.id}`);
             recordingUrl = recData?.contentUri || null;
           } catch {
-            // Recording fetch may fail, that's ok
+            // Recording fetch may fail
           }
         }
 
         if (recordingUrl) {
-          content += `\nRecording: ${recordingUrl}`;
+          content += `\n🎙️ Recording: ${recordingUrl}`;
         }
 
-        // Log as activity — always create, even if no entity match
         await prisma.activity.create({
           data: {
             parentType: entity?.parentType || null,
@@ -239,7 +329,7 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        logger.info("Call activity logged", {
+        logger.info("Call activity logged (call-log)", {
           direction: callDirection,
           entity: entity?.parentType || "unmatched",
           entityId: entity?.parentId || null,

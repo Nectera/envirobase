@@ -14,10 +14,12 @@ export async function GET(req: NextRequest) {
 
     const search = req.nextUrl.searchParams.get("search") || "";
     const type = req.nextUrl.searchParams.get("type") || "";
+    const isSubcontractor = req.nextUrl.searchParams.get("isSubcontractor");
 
     const where: any = orgWhere(orgId);
     if (search) where.search = search;
     if (type) where.type = type;
+    if (isSubcontractor === "true") where.isSubcontractor = true;
 
     const companies = await prisma.company.findMany({
       where,
@@ -74,6 +76,7 @@ export async function POST(req: NextRequest) {
         notes: body.notes || "",
         referralFeeEnabled: body.referralFeeEnabled || false,
         referralFeePercent: body.referralFeePercent ?? 10,
+        isSubcontractor: body.isSubcontractor || false,
       }),
     });
 

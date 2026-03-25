@@ -158,6 +158,11 @@ export default function ProjectTabs({
   const [completing, setCompleting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [savingPM, setSavingPM] = useState(false);
+  // Sub-out state
+  const [isSubbedOut, setIsSubbedOut] = useState(project.isSubbedOut || false);
+  const [subContractorId, setSubContractorId] = useState(project.subContractorId || "");
+  const [subSaving, setSubSaving] = useState(false);
+  const [subCompanies, setSubCompanies] = useState<{ id: string; name: string }[]>([]);
   const [uploadModal, setUploadModal] = useState<"permit" | "sampling" | null>(null);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [uploadSaving, setUploadSaving] = useState(false);
@@ -244,6 +249,14 @@ export default function ProjectTabs({
     } catch {}
     setPortalLoading(false);
   }
+
+  // Fetch subcontractor companies on mount
+  useEffect(() => {
+    fetch("/api/companies?isSubcontractor=true")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setSubCompanies(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   // Fetch change orders when tab is active
   useEffect(() => {
@@ -440,6 +453,36 @@ export default function ProjectTabs({
     setSavingPM(false);
     router.refresh();
   }
+
+  const handleSubOut = async (subbed: boolean) => {
+    setSubSaving(true);
+    try {
+      setIsSubbedOut(subbed);
+      await fetch(`/api/projects/${project.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isSubbedOut: subbed,
+          subContractorId: subbed ? subContractorId || null : null,
+        }),
+      });
+      router.refresh();
+    } finally {
+      setSubSaving(false);
+    }
+  };
+
+  const handleSubContractorChange = async (companyId: string) => {
+    setSubContractorId(companyId);
+    if (isSubbedOut) {
+      await fetch(`/api/projects/${project.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subContractorId: companyId || null }),
+      });
+      router.refresh();
+    }
+  };
 
   async function handleStartProject() {
     if (!project.projectManagerId) {
@@ -819,6 +862,34 @@ export default function ProjectTabs({
               ))}
             </select>
             {savingPM && <Loader2 size={14} className="animate-spin text-indigo-500" />}
+          </div>
+
+          {/* Sub Out Toggle */}
+          <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+            <button
+              onClick={() => handleSubOut(!isSubbedOut)}
+              disabled={subSaving}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition border ${
+                isSubbedOut
+                  ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                  : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+              } disabled:opacity-50`}
+            >
+              {subSaving ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+              {isSubbedOut ? "Subbed Out" : "Sub Out"}
+            </button>
+            {isSubbedOut && (
+              <select
+                value={subContractorId}
+                onChange={(e) => handleSubContractorChange(e.target.value)}
+                className="border border-orange-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:ring-orange-400 focus:border-orange-400 max-w-[160px] bg-orange-50"
+              >
+                <option value="">Select sub...</option>
+                {subCompanies.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Right: Desktop action buttons inline + Mobile overflow */}

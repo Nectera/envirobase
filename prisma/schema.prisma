@@ -225,6 +225,10 @@ model Project {
 
   isArchived       Boolean  @default(false)
 
+  // Subcontractor
+  isSubbedOut          Boolean  @default(false) // Exclude from AI scheduling
+  subContractorId      String?  // FK to Company acting as subcontractor
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -616,6 +620,7 @@ model Company {
   notes              String?
   referralFeeEnabled Boolean  @default(false)
   referralFeePercent Float?   @default(10)
+  isSubcontractor    Boolean  @default(false)
   organizationId     String?
   organization       Organization? @relation(fields: [organizationId], references: [id])
   createdAt          DateTime @default(now())

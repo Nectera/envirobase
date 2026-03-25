@@ -67,6 +67,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.notes !== undefined) data.notes = body.notes;
     if (body.referralFeeEnabled !== undefined) data.referralFeeEnabled = body.referralFeeEnabled;
     if (body.referralFeePercent !== undefined) data.referralFeePercent = body.referralFeePercent;
+    if (body.isSubcontractor !== undefined) data.isSubcontractor = body.isSubcontractor;
 
     // Verify company belongs to org
     const existingCompany = await prisma.company.findFirst({
