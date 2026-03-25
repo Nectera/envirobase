@@ -103,8 +103,19 @@ export async function calculateWeekSchedule(
     );
 
     let crewSize = (linked as any)?.crewSize || proj.workers?.length || 3;
-    let daysNeeded = 5; // default full week
     let difficultyRating = (linked as any)?.difficultyRating || 3;
+
+    // Calculate which weekdays actually overlap with the project date range
+    const projStartStr = projStart;
+    const projEndStr = projEnd || weekEnd; // if no end date, assume open-ended through the week
+    const projectWeekDays = weekDates.filter(
+      (d) => d >= projStartStr && d <= projEndStr
+    );
+
+    // If no weekdays overlap, skip this project
+    if (projectWeekDays.length === 0) continue;
+
+    let daysNeeded = projectWeekDays.length;
 
     // Apply overrides
     const override = projectOverrides?.find((o) => o.projectId === proj.id);
@@ -123,7 +134,8 @@ export async function calculateWeekSchedule(
       crewSize,
       daysNeeded: Math.min(daysNeeded, 5),
       assignedWorkers: [],
-    });
+      _schedulableDays: projectWeekDays, // internal: the actual dates this project needs
+    } as any);
   }
 
   if (projectSlots.length === 0) {
@@ -199,12 +211,13 @@ export async function calculateWeekSchedule(
         distanceScore = Math.max(0, 100 - distanceMiles / 2);
       }
 
-      // Availability (for this specific week)
+      // Availability — scored against the project's actual schedulable days, not full week
       const busyDays = workerBusyDays[w.id] || new Set();
-      const availableDays = weekDates.filter((d) => !busyDays.has(d));
+      const projectDays: string[] = (slot as any)._schedulableDays || weekDates;
+      const availableDays = projectDays.filter((d) => !busyDays.has(d));
       const availabilityScore =
-        weekDates.length > 0
-          ? Math.round((availableDays.length / weekDates.length) * 100)
+        projectDays.length > 0
+          ? Math.round((availableDays.length / projectDays.length) * 100)
           : 100;
 
       // Cert match
@@ -281,7 +294,8 @@ export async function calculateWeekSchedule(
       );
     }
 
-    const daysForProject = weekDates.slice(0, slot.daysNeeded);
+    // Use the actual schedulable days for this project (based on project start/end dates)
+    const daysForProject: string[] = (slot as any)._schedulableDays || weekDates.slice(0, slot.daysNeeded);
     const availableForThis = daysForProject.filter(
       (d) => !workerAssignedDays[pair.workerId].has(d)
     );
