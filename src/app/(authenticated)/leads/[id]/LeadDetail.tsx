@@ -55,6 +55,9 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
   const [siteVisitTime, setSiteVisitTime] = useState("");
   const [siteVisitAssignee, setSiteVisitAssignee] = useState("");
   const [siteVisitSaving, setSiteVisitSaving] = useState(false);
+  const [displaySiteVisitDate, setDisplaySiteVisitDate] = useState(lead.siteVisitDate || "");
+  const [displaySiteVisitTime, setDisplaySiteVisitTime] = useState(lead.siteVisitTime || "");
+  const [displaySiteVisitNotes, setDisplaySiteVisitNotes] = useState(lead.siteVisitNotes || "");
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [docUploadModal, setDocUploadModal] = useState<string | null>(null);
@@ -125,6 +128,8 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
         alert(err.error || "Failed to save changes");
         return;
       }
+      setDisplaySiteVisitDate(editForm.siteVisitDate || "");
+      setDisplaySiteVisitNotes(editForm.siteVisitNotes || "");
       setShowEditModal(false);
       router.refresh();
     } catch {
@@ -201,7 +206,7 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
     if (!siteVisitDate) return;
     setSiteVisitSaving(true);
     try {
-      await fetch(`/api/leads/${lead.id}`, {
+      const res = await fetch(`/api/leads/${lead.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -211,11 +216,20 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
           siteVisitAssignee: siteVisitAssignee || null,
         }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || "Failed to save site visit");
+        return;
+      }
+      setDisplaySiteVisitDate(siteVisitDate);
+      setDisplaySiteVisitTime(siteVisitTime || "");
       setShowSiteVisitModal(false);
       setSiteVisitDate("");
       setSiteVisitTime("");
       setSiteVisitAssignee("");
       router.refresh();
+    } catch {
+      alert("Failed to save site visit");
     } finally {
       setSiteVisitSaving(false);
     }
@@ -621,15 +635,15 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
       </div>
 
       {/* ─── Site Visit Schedule Banner ─── */}
-      {(lead.siteVisitDate || lead.siteVisitTime) && (
+      {(displaySiteVisitDate || displaySiteVisitTime) && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-center gap-4">
           <Calendar size={16} className="text-amber-600 flex-shrink-0" />
           <div className="flex items-center gap-4 text-sm">
             <span className="font-semibold text-amber-800">Site Visit</span>
-            {lead.siteVisitDate && <span className="text-slate-700">{formatDate(lead.siteVisitDate)}</span>}
-            {lead.siteVisitTime && <span className="text-slate-500">at {lead.siteVisitTime}</span>}
+            {displaySiteVisitDate && <span className="text-slate-700">{formatDate(displaySiteVisitDate)}</span>}
+            {displaySiteVisitTime && <span className="text-slate-500">at {displaySiteVisitTime}</span>}
           </div>
-          {lead.siteVisitNotes && <span className="text-xs text-slate-500 ml-auto">{lead.siteVisitNotes}</span>}
+          {displaySiteVisitNotes && <span className="text-xs text-slate-500 ml-auto">{displaySiteVisitNotes}</span>}
         </div>
       )}
 
