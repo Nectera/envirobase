@@ -1035,6 +1035,7 @@ export default function ProjectTabs({
           allWorkers={allWorkers}
           postProjectInspections={postProjectInspections}
           isSupervisor={isSupervisor}
+          onNavigateTab={(t) => setTab(t as any)}
         />
       )}
 
@@ -1151,10 +1152,16 @@ export default function ProjectTabs({
                     <ClipboardList size={16} className="text-indigo-500" />
                     Field Reports ({fieldReports.length})
                   </h3>
-                  <Link href={`/field-reports/new?projectId=${project.id}`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition">
-                    <Plus size={14} /> New Report
-                  </Link>
+                  {project.status === "in_progress" ? (
+                    <Link href={`/field-reports/new?projectId=${project.id}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition">
+                      <Plus size={14} /> New Report
+                    </Link>
+                  ) : (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-300 text-white text-xs font-medium rounded-lg cursor-not-allowed" title="Project must be started">
+                      <Plus size={14} /> New Report
+                    </span>
+                  )}
                 </div>
                 {fieldReports.length === 0 ? (
                   <div className="text-center py-8 bg-white rounded-lg border border-slate-200">
@@ -1276,7 +1283,7 @@ export default function ProjectTabs({
                     PSI / JHA / SPA ({psiJhaSpas.length})
                   </h3>
                 </div>
-                <PsiTab entries={psiJhaSpas} projectId={project.id} />
+                <PsiTab entries={psiJhaSpas} projectId={project.id} projectStatus={project.status} />
               </div>
 
               <div>
@@ -1286,7 +1293,7 @@ export default function ProjectTabs({
                     Pre-Abatement Inspections ({preAbatementInspections.length})
                   </h3>
                 </div>
-                <PreAbatementTab entries={preAbatementInspections} projectId={project.id} />
+                <PreAbatementTab entries={preAbatementInspections} projectId={project.id} projectStatus={project.status} />
               </div>
             </div>
           )}
@@ -1301,7 +1308,7 @@ export default function ProjectTabs({
                     Certificates of Completion ({certificatesOfCompletion.length})
                   </h3>
                 </div>
-                <CertsTab entries={certificatesOfCompletion} projectId={project.id} />
+                <CertsTab entries={certificatesOfCompletion} projectId={project.id} projectStatus={project.status} />
               </div>
 
               <div>
@@ -1311,7 +1318,7 @@ export default function ProjectTabs({
                     Post-Project Inspections ({postProjectInspections.length})
                   </h3>
                 </div>
-                <PostProjectTab entries={postProjectInspections} projectId={project.id} />
+                <PostProjectTab entries={postProjectInspections} projectId={project.id} projectStatus={project.status} />
               </div>
 
               {/* ─── Air Clearance Results ─── */}
@@ -2111,15 +2118,35 @@ export default function ProjectTabs({
         {/* Menu items */}
         {quickAddOpen && (
           <div className="mb-3 flex flex-col items-end gap-1.5">
+            {project.status !== "in_progress" && (
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-full shadow-md mb-1">
+                <AlertTriangle size={14} className="text-amber-600 flex-shrink-0" />
+                <span className="text-xs font-medium text-amber-700">Project must be started to create reports</span>
+              </div>
+            )}
             {[
-              { label: "Field Report", href: `/field-reports/new?projectId=${project.id}`, icon: ClipboardList, color: "text-indigo-600 bg-indigo-50" },
-              { label: "Time Report", href: "/time-clock", icon: Clock, color: "text-blue-600 bg-blue-50" },
-              { label: "PSI / JHA / SPA", href: `/psi-jha-spa/new?projectId=${project.id}`, icon: Shield, color: "text-amber-600 bg-amber-50" },
-              { label: "Pre-Abatement", href: `/pre-abatement-inspection/new?projectId=${project.id}`, icon: CheckSquare, color: "text-emerald-600 bg-emerald-50" },
-              { label: "Certificate of Completion", href: `/certificate-of-completion/new?projectId=${project.id}`, icon: Award, color: "text-purple-600 bg-purple-50" },
-              { label: "Post-Project Inspection", href: `/post-project-inspection/new?projectId=${project.id}`, icon: FileCheck, color: "text-teal-600 bg-teal-50" },
+              { label: "Field Report", href: `/field-reports/new?projectId=${project.id}`, icon: ClipboardList, color: "text-indigo-600 bg-indigo-50", requiresStart: true },
+              { label: "Time Report", href: "/time-clock", icon: Clock, color: "text-blue-600 bg-blue-50", requiresStart: false },
+              { label: "PSI / JHA / SPA", href: `/psi-jha-spa/new?projectId=${project.id}`, icon: Shield, color: "text-amber-600 bg-amber-50", requiresStart: true },
+              { label: "Pre-Abatement", href: `/pre-abatement-inspection/new?projectId=${project.id}`, icon: CheckSquare, color: "text-emerald-600 bg-emerald-50", requiresStart: true },
+              { label: "Certificate of Completion", href: `/certificate-of-completion/new?projectId=${project.id}`, icon: Award, color: "text-purple-600 bg-purple-50", requiresStart: true },
+              { label: "Post-Project Inspection", href: `/post-project-inspection/new?projectId=${project.id}`, icon: FileCheck, color: "text-teal-600 bg-teal-50", requiresStart: true },
             ].map((item) => {
               const ItemIcon = item.icon;
+              const disabled = item.requiresStart && project.status !== "in_progress";
+              if (disabled) {
+                return (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-2.5 pl-3 pr-4 py-2 bg-white/60 rounded-full shadow-md border border-slate-200 opacity-50 cursor-not-allowed"
+                  >
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center ${item.color}`}>
+                      <ItemIcon size={13} />
+                    </div>
+                    <span className="text-sm font-medium text-slate-400 whitespace-nowrap">{item.label}</span>
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={item.label}
@@ -2210,7 +2237,8 @@ export default function ProjectTabs({
 }
 
 /* ───── PSI / JHA / SPA Sub-Tab ───── */
-function PsiTab({ entries, projectId }: { entries: PsiJhaSpaEntry[]; projectId: string }) {
+function PsiTab({ entries, projectId, projectStatus }: { entries: PsiJhaSpaEntry[]; projectId: string; projectStatus: string }) {
+  const canCreate = projectStatus === "in_progress";
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",
     submitted: "bg-blue-100 text-blue-800",
@@ -2222,11 +2250,15 @@ function PsiTab({ entries, projectId }: { entries: PsiJhaSpaEntry[]; projectId: 
       <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
         <Shield size={36} className="mx-auto text-slate-300 mb-3" />
         <h3 className="font-semibold text-slate-700">No PSI/JHA/SPA forms yet</h3>
-        <p className="text-sm text-slate-500 mt-1">Create the first pre-shift safety form for this project.</p>
-        <Link href={`/psi-jha-spa/new?projectId=${projectId}`}
-          className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
-          <Plus size={16} /> New PSI / JHA / SPA
-        </Link>
+        <p className="text-sm text-slate-500 mt-1">
+          {canCreate ? "Create the first pre-shift safety form for this project." : "Project must be started to create forms."}
+        </p>
+        {canCreate ? (
+          <Link href={`/psi-jha-spa/new?projectId=${projectId}`}
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+            <Plus size={16} /> New PSI / JHA / SPA
+          </Link>
+        ) : null}
       </div>
     );
   }
@@ -2234,10 +2266,16 @@ function PsiTab({ entries, projectId }: { entries: PsiJhaSpaEntry[]; projectId: 
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <Link href={`/psi-jha-spa/new?projectId=${projectId}`}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
-          <Plus size={16} /> New PSI / JHA / SPA
-        </Link>
+        {canCreate ? (
+          <Link href={`/psi-jha-spa/new?projectId=${projectId}`}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
+            <Plus size={16} /> New PSI / JHA / SPA
+          </Link>
+        ) : (
+          <span className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-400 text-sm font-medium rounded-lg cursor-not-allowed">
+            <Plus size={16} /> New PSI / JHA / SPA
+          </span>
+        )}
       </div>
       <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <table className="w-full text-sm">
@@ -2403,7 +2441,8 @@ function TimeReportsTab({ entries, projectId }: { entries: TimeEntry[]; projectI
 }
 
 /* ───── Pre-Abatement Inspection Sub-Tab ───── */
-function PreAbatementTab({ entries, projectId }: { entries: PreAbatementEntry[]; projectId: string }) {
+function PreAbatementTab({ entries, projectId, projectStatus }: { entries: PreAbatementEntry[]; projectId: string; projectStatus: string }) {
+  const canCreate = projectStatus === "in_progress";
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",
     submitted: "bg-blue-100 text-blue-800",
@@ -2415,11 +2454,15 @@ function PreAbatementTab({ entries, projectId }: { entries: PreAbatementEntry[];
       <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
         <CheckSquare size={36} className="mx-auto text-slate-300 mb-3" />
         <h3 className="font-semibold text-slate-700">No pre-abatement inspections yet</h3>
-        <p className="text-sm text-slate-500 mt-1">Create an inspection checklist before work begins.</p>
-        <Link href={`/pre-abatement-inspection/new?projectId=${projectId}`}
-          className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
-          <Plus size={16} /> New Inspection
-        </Link>
+        <p className="text-sm text-slate-500 mt-1">
+          {canCreate ? "Create an inspection checklist before work begins." : "Project must be started to create forms."}
+        </p>
+        {canCreate ? (
+          <Link href={`/pre-abatement-inspection/new?projectId=${projectId}`}
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+            <Plus size={16} /> New Inspection
+          </Link>
+        ) : null}
       </div>
     );
   }
@@ -2427,10 +2470,16 @@ function PreAbatementTab({ entries, projectId }: { entries: PreAbatementEntry[];
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <Link href={`/pre-abatement-inspection/new?projectId=${projectId}`}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
-          <Plus size={16} /> New Inspection
-        </Link>
+        {canCreate ? (
+          <Link href={`/pre-abatement-inspection/new?projectId=${projectId}`}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
+            <Plus size={16} /> New Inspection
+          </Link>
+        ) : (
+          <span className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-400 text-sm font-medium rounded-lg cursor-not-allowed">
+            <Plus size={16} /> New Inspection
+          </span>
+        )}
       </div>
       <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <table className="w-full text-sm">
@@ -2481,7 +2530,8 @@ function PreAbatementTab({ entries, projectId }: { entries: PreAbatementEntry[];
 }
 
 /* ───── Certificates of Completion Sub-Tab ───── */
-function CertsTab({ entries, projectId }: { entries: CertEntry[]; projectId: string }) {
+function CertsTab({ entries, projectId, projectStatus }: { entries: CertEntry[]; projectId: string; projectStatus: string }) {
+  const canCreate = projectStatus === "in_progress";
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",
     submitted: "bg-blue-100 text-blue-800",
@@ -2493,11 +2543,15 @@ function CertsTab({ entries, projectId }: { entries: CertEntry[]; projectId: str
       <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
         <Award size={36} className="mx-auto text-slate-300 mb-3" />
         <h3 className="font-semibold text-slate-700">No certificates of completion yet</h3>
-        <p className="text-sm text-slate-500 mt-1">Create a certificate when work is complete for property owner sign-off.</p>
-        <Link href={`/certificate-of-completion/new?projectId=${projectId}`}
-          className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
-          <Plus size={16} /> New Certificate
-        </Link>
+        <p className="text-sm text-slate-500 mt-1">
+          {canCreate ? "Create a certificate when work is complete for property owner sign-off." : "Project must be started to create forms."}
+        </p>
+        {canCreate ? (
+          <Link href={`/certificate-of-completion/new?projectId=${projectId}`}
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+            <Plus size={16} /> New Certificate
+          </Link>
+        ) : null}
       </div>
     );
   }
@@ -2505,10 +2559,16 @@ function CertsTab({ entries, projectId }: { entries: CertEntry[]; projectId: str
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <Link href={`/certificate-of-completion/new?projectId=${projectId}`}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
-          <Plus size={16} /> New Certificate
-        </Link>
+        {canCreate ? (
+          <Link href={`/certificate-of-completion/new?projectId=${projectId}`}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
+            <Plus size={16} /> New Certificate
+          </Link>
+        ) : (
+          <span className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-400 text-sm font-medium rounded-lg cursor-not-allowed">
+            <Plus size={16} /> New Certificate
+          </span>
+        )}
       </div>
       <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <table className="w-full text-sm">
@@ -2549,7 +2609,8 @@ function CertsTab({ entries, projectId }: { entries: CertEntry[]; projectId: str
 }
 
 /* ───── Post Project Inspection Sub-Tab ───── */
-function PostProjectTab({ entries, projectId }: { entries: PostProjectEntry[]; projectId: string }) {
+function PostProjectTab({ entries, projectId, projectStatus }: { entries: PostProjectEntry[]; projectId: string; projectStatus: string }) {
+  const canCreate = projectStatus === "in_progress";
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",
     submitted: "bg-blue-100 text-blue-800",
@@ -2561,11 +2622,15 @@ function PostProjectTab({ entries, projectId }: { entries: PostProjectEntry[]; p
       <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
         <ClipboardList size={36} className="mx-auto text-slate-300 mb-3" />
         <h3 className="font-semibold text-slate-700">No post-project inspections yet</h3>
-        <p className="text-sm text-slate-500 mt-1">Complete a closeout inspection when the project wraps up.</p>
-        <Link href={`/post-project-inspection/new?projectId=${projectId}`}
-          className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
-          <Plus size={16} /> New Inspection
-        </Link>
+        <p className="text-sm text-slate-500 mt-1">
+          {canCreate ? "Complete a closeout inspection when the project wraps up." : "Project must be started to create forms."}
+        </p>
+        {canCreate ? (
+          <Link href={`/post-project-inspection/new?projectId=${projectId}`}
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+            <Plus size={16} /> New Inspection
+          </Link>
+        ) : null}
       </div>
     );
   }
@@ -2573,10 +2638,16 @@ function PostProjectTab({ entries, projectId }: { entries: PostProjectEntry[]; p
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <Link href={`/post-project-inspection/new?projectId=${projectId}`}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
-          <Plus size={16} /> New Inspection
-        </Link>
+        {canCreate ? (
+          <Link href={`/post-project-inspection/new?projectId=${projectId}`}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
+            <Plus size={16} /> New Inspection
+          </Link>
+        ) : (
+          <span className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-400 text-sm font-medium rounded-lg cursor-not-allowed">
+            <Plus size={16} /> New Inspection
+          </span>
+        )}
       </div>
       <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <table className="w-full text-sm">
@@ -2966,6 +3037,7 @@ function DashboardTab({
   allWorkers = [],
   postProjectInspections = [],
   isSupervisor = false,
+  onNavigateTab,
 }: {
   project: any;
   timeEntries: TimeEntry[];
@@ -2984,6 +3056,7 @@ function DashboardTab({
   allWorkers?: any[];
   postProjectInspections?: PostProjectEntry[];
   isSupervisor?: boolean;
+  onNavigateTab?: (tab: string) => void;
 }) {
   const [editingDays, setEditingDays] = useState(false);
   const [editingHours, setEditingHours] = useState(false);
@@ -3302,10 +3375,16 @@ function DashboardTab({
               </div>
             )}
             {openIncidents.length > 0 && (
-              <div className="text-xs text-red-700 font-medium">{openIncidents.length} open incident{openIncidents.length > 1 ? "s" : ""} — {openIncidents.map((i: any) => INCIDENT_TYPE_LABELS[i.type] || i.type).join(", ")}</div>
+              <button onClick={() => onNavigateTab?.("activity")} className="flex items-center gap-1 text-xs text-red-700 font-medium hover:underline cursor-pointer text-left">
+                {openIncidents.length} open incident{openIncidents.length > 1 ? "s" : ""} — {openIncidents.map((i: any) => INCIDENT_TYPE_LABELS[i.type] || i.type).join(", ")}
+                <ChevronRight size={12} className="text-red-400 flex-shrink-0" />
+              </button>
             )}
             {overdueTasksArr.length > 0 && (
-              <div className="text-xs text-orange-700 font-medium">{overdueTasksArr.length} overdue task{overdueTasksArr.length > 1 ? "s" : ""}</div>
+              <button onClick={() => onNavigateTab?.("tasks")} className="flex items-center gap-1 text-xs text-orange-700 font-medium hover:underline cursor-pointer text-left">
+                {overdueTasksArr.length} overdue task{overdueTasksArr.length > 1 ? "s" : ""}
+                <ChevronRight size={12} className="text-orange-400 flex-shrink-0" />
+              </button>
             )}
           </div>
         </div>

@@ -64,6 +64,7 @@ export default function Sidebar({
   const pmNavItems: NavItem[] = [
     { href: "/dashboard", labelKey: "sidebar.dashboard", icon: Home },
     { href: "/projects", labelKey: "sidebar.projects", icon: FolderOpen },
+    { href: "/tasks", labelKey: "sidebar.tasks", icon: CheckSquare },
     { href: "/schedule", labelKey: "sidebar.schedule", icon: Calendar },
     { href: "/compliance", labelKey: "sidebar.compliance", icon: ClipboardCheck },
   ];
