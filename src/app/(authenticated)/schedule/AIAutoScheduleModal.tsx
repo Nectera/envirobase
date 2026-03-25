@@ -96,7 +96,7 @@ export default function AIAutoScheduleModal({
   const [createdCount, setCreatedCount] = useState(0);
 
   const activeProjects = projects.filter(
-    (p) => p.status !== "completed" && p.status !== "cancelled" && !(p as any).isSubbedOut
+    (p) => p.status !== "completed" && p.status !== "cancelled" && !(p as any).isSubbedOut && p.startDate
   );
 
   // Auto-fill dates when project changes

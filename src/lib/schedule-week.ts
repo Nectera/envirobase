@@ -79,7 +79,8 @@ export async function calculateWeekSchedule(
       (p.status === "in_progress" || p.status === "planning" || p.status === "scheduled") &&
       p.status !== "completed" &&
       p.status !== "cancelled" &&
-      !p.isSubbedOut // Exclude projects subbed out to subcontractors
+      !p.isSubbedOut && // Exclude projects subbed out to subcontractors
+      p.startDate // Must have a start date to be schedulable
   );
 
   // 2. Get consultation estimates for crew sizes
@@ -92,8 +93,8 @@ export async function calculateWeekSchedule(
     const projStart = proj.startDate || "";
     const projEnd = (proj as any).estEndDate || (proj as any).estimatedEndDate || "";
 
-    // If project has dates, check overlap; otherwise assume it needs scheduling
-    if (projStart && projStart > weekEnd) continue; // hasn't started yet
+    // Check date overlap with this week
+    if (!projStart || projStart > weekEnd) continue; // hasn't started yet or no date
     if (projEnd && projEnd < weekStartDate) continue; // already ended
 
     // Get estimate data
