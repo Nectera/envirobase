@@ -90,6 +90,9 @@ model Organization {
   projectEstimates       ProjectEstimate[]
   carrierInfos           CarrierInfo[]
   smsMessages            SmsMessage[]
+  timeEntries            TimeEntry[]
+  scheduleEntries        ScheduleEntry[]
+  scheduleWeeks          ScheduleWeek[]
 
   @@map("organizations")
 }
