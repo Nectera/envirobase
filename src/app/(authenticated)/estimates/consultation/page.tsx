@@ -63,6 +63,7 @@ export default async function ConsultationEstimatePage({
       notes: true,
       companyId: true,
       status: true,
+      office: true,
       company: {
         select: {
           id: true,

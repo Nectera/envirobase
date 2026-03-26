@@ -103,12 +103,24 @@ export const LABOR_RATES = {
   technician: { hourly: 27.0, taxBurden: 2.781 },
 };
 
-// office address for miles calculation
-export const DEFAULT_OFFICE = {
-  address: "903 5th St, Greeley, CO 80631",
-  lat: 40.4189,
-  lng: -104.7064,
+// Office locations for miles calculation
+export const OFFICES: Record<string, { label: string; address: string; lat: number; lng: number }> = {
+  greeley: {
+    label: "Greeley",
+    address: "903 5th St, Greeley, CO 80631",
+    lat: 40.4189,
+    lng: -104.7064,
+  },
+  grand_junction: {
+    label: "Grand Junction",
+    address: "Grand Junction, CO 81501", // Update with exact office address
+    lat: 39.0639,
+    lng: -108.5506,
+  },
 };
+
+// Default office (backwards compatible)
+export const DEFAULT_OFFICE = OFFICES.greeley;
 
 // Default COGS line items with readable notes
 export const DEFAULT_COGS = [

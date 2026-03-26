@@ -18,6 +18,15 @@ export default async function EditConsultationPage({ params }: { params: { id: s
 
   if (!data) return notFound();
 
+  // Fetch the lead's office for miles calculation
+  const leadOffice = (data as any).leadId
+    ? await prisma.lead.findUnique({
+        where: { id: (data as any).leadId },
+        select: { office: true },
+      })
+    : null;
+  (data as any).leadOffice = leadOffice?.office || null;
+
   // Post-cost estimates are restricted to Admin/Office Manager
   if ((data as any).isPostCost) {
     const session = await getServerSession(authOptions);

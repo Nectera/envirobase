@@ -11,6 +11,7 @@ import {
   DEFAULT_OPS_RATE,
   SITE_VISIT_REQUIREMENTS,
   DEFAULT_OFFICE,
+  OFFICES,
   WASTE_RATE_PER_YARD,
   calcMaterialQty,
   calcFuelSurcharge,
@@ -39,6 +40,7 @@ interface Lead {
   notes?: string;
   companyId: string;
   status?: string;
+  office?: string | null;
   company: { id: string; name: string; referralFeeEnabled?: boolean; referralFeePercent?: number | null };
 }
 
@@ -177,15 +179,24 @@ function haversineDistance(
   return R * c;
 }
 
-// Estimate miles from office to city
-function estimateMilesToCity(city: string): number {
+// Get office coordinates by key (defaults to Greeley)
+function getOfficeCoords(officeKey?: string | null) {
+  if (officeKey && OFFICES[officeKey]) {
+    return OFFICES[officeKey];
+  }
+  return DEFAULT_OFFICE; // default Greeley
+}
+
+// Estimate miles from designated office to city
+function estimateMilesToCity(city: string, officeKey?: string | null): number {
+  const office = getOfficeCoords(officeKey);
   const normalizedCity = city.toLowerCase().trim();
   const cityCoords = CO_CITIES[normalizedCity];
   if (cityCoords) {
     return Math.round(
       haversineDistance(
-        DEFAULT_OFFICE.lat,
-        DEFAULT_OFFICE.lng,
+        office.lat,
+        office.lng,
         cityCoords.lat,
         cityCoords.lng
       )
@@ -771,12 +782,18 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
   );
 
   const [estimatingMiles, setEstimatingMiles] = useState(false);
+
+  // Determine which office to calculate miles from (based on selected lead's office)
+  const activeOfficeKey = selectedLead?.office || (lead as any)?.office || (initialData as any)?.leadOffice || null;
+  const activeOffice = getOfficeCoords(activeOfficeKey);
+
   const handleEstimateMiles = useCallback(async () => {
     const { address, city, state, zip } = formData;
     if (!city && !address) return;
 
     // Build full address string for geocoding
     const fullAddress = [address, city, state || "CO", zip].filter(Boolean).join(", ");
+    const office = getOfficeCoords(activeOfficeKey);
 
     setEstimatingMiles(true);
     try {
@@ -785,7 +802,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         const data = await res.json();
         if (data.lat && data.lng) {
           const miles = Math.round(
-            haversineDistance(DEFAULT_OFFICE.lat, DEFAULT_OFFICE.lng, data.lat, data.lng)
+            haversineDistance(office.lat, office.lng, data.lat, data.lng)
           );
           handleInputChange("milesFromShop", miles);
           setEstimatingMiles(false);
@@ -798,11 +815,11 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
     // Fallback: use city lookup table
     if (city) {
-      const estimated = estimateMilesToCity(city);
+      const estimated = estimateMilesToCity(city, activeOfficeKey);
       handleInputChange("milesFromShop", estimated);
     }
     setEstimatingMiles(false);
-  }, [formData.address, formData.city, formData.state, formData.zip, handleInputChange]);
+  }, [formData.address, formData.city, formData.state, formData.zip, handleInputChange, activeOfficeKey]);
 
   const handleSiteVisitCheckbox = useCallback(
     (requirement: string) => {
@@ -1322,7 +1339,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Auto-estimated from office (903 5th St, Greeley, CO)
+                Auto-estimated from {activeOffice.label} office ({activeOffice.address.replace(/, CO \d+$/, ", CO")})
               </p>
             </div>
 
