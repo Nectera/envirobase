@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText, DollarSign, X, Pencil } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, X, Pencil, RefreshCw } from "lucide-react";
 import { LABOR_RATES, DEFAULT_COGS, DEFAULT_MATERIALS } from "@/lib/materials";
 import {
   DEFAULT_CONSULTATION_FIELDS,
@@ -126,6 +126,8 @@ interface ConsultationEstimateData {
   customerPrice?: number;
   customerPriceOverride?: number | null;
   serviceDescription?: string;
+  projectId?: string;
+  leadId?: string;
 }
 
 function formatCurrency(value: number): string {
@@ -177,6 +179,31 @@ export default function ConsultationDetail({
 }) {
   const router = useRouter();
   const [isConverting, setIsConverting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ success?: boolean; message?: string } | null>(null);
+
+  const handleSyncToProject = async () => {
+    if (!confirm("Sync estimated days and labor hours from this estimate to the linked project? This will overwrite the project's current estimates.")) return;
+    setIsSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch(`/api/consultation-estimates/${data.id}/sync-to-project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setSyncResult({ success: true, message: `Synced to project: ${result.synced.estimatedDays} days, ${result.synced.estimatedLaborHours} hours` });
+        router.refresh();
+      } else {
+        setSyncResult({ success: false, message: result.error || "Failed to sync" });
+      }
+    } catch {
+      setSyncResult({ success: false, message: "Network error" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Normalize labor hours from either flat or nested format
   const supRegHours =
@@ -344,7 +371,22 @@ export default function ConsultationDetail({
               View Invoice
             </Link>
           )}
+          {(data.projectId || data.leadId) && (
+            <button
+              onClick={handleSyncToProject}
+              disabled={isSyncing}
+              className="px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "Syncing..." : "Sync to Project"}
+            </button>
+          )}
         </div>
+        {syncResult && (
+          <div className={`mt-2 text-sm px-3 py-2 rounded ${syncResult.success ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+            {syncResult.message}
+          </div>
+        )}
       </div>
 
       {/* Site Info Card */}

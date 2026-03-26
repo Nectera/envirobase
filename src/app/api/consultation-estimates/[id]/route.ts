@@ -246,6 +246,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             include: { company: true },
           });
 
+          // Link the consultation estimate to the project for future syncing
+          await prisma.consultationEstimate.update({
+            where: { id: params.id },
+            data: {
+              projectId: project.id,
+              projectNumber: (project as any).projectNumber || null,
+            },
+          });
+
           // Log the status change
           await prisma.activity.create({
             data: {
