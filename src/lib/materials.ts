@@ -103,7 +103,9 @@ export const LABOR_RATES = {
   technician: { hourly: 27.0, taxBurden: 2.781 },
 };
 
-// Office locations for miles calculation
+// Demo/fallback office locations for miles calculation
+// TODO: In production, each org should store their offices in Settings (key: "offices_<orgId>")
+// and the form should load them at render time instead of using these defaults.
 export const OFFICES: Record<string, { label: string; address: string; lat: number; lng: number }> = {
   greeley: {
     label: "Greeley",
@@ -113,13 +115,13 @@ export const OFFICES: Record<string, { label: string; address: string; lat: numb
   },
   grand_junction: {
     label: "Grand Junction",
-    address: "Grand Junction, CO 81501", // Update with exact office address
+    address: "Grand Junction, CO 81501",
     lat: 39.0639,
     lng: -108.5506,
   },
 };
 
-// Default office (backwards compatible)
+// Default office (used as fallback when no office is specified)
 export const DEFAULT_OFFICE = OFFICES.greeley;
 
 // Default COGS line items with readable notes

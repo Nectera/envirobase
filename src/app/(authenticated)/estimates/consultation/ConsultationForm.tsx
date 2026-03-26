@@ -1339,7 +1339,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Auto-estimated from {activeOffice.label} office ({activeOffice.address.replace(/, CO \d+$/, ", CO")})
+                Auto-estimated from {activeOffice.label} office
               </p>
             </div>
 
