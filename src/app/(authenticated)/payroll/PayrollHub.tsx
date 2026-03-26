@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Clock, Users, AlertTriangle, CheckCircle2, Flag, ChevronDown, ChevronRight,
   Download, FileText, Search, Filter, ArrowLeft, DollarSign, CalendarDays,
-  BarChart3, Eye, Check, X as XIcon, MapPin, Pencil, Save, Loader2,
+  BarChart3, Eye, Check, X as XIcon, MapPin, Pencil, Save, Loader2, Trash2,
 } from "lucide-react";
 
 type Worker = {
@@ -201,6 +201,21 @@ export default function PayrollHub({
     const pending = entries.filter((e) => (e.approvalStatus || "pending") === "pending" && e.clockOut);
     for (const entry of pending) {
       await updateEntryStatus(entry.id, "approved");
+    }
+  };
+
+  // Delete a time entry
+  const handleDeleteEntry = async (entryId: string, workerName: string) => {
+    if (!confirm(`Delete this time entry for ${workerName}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/time-clock/${entryId}`, { method: "DELETE" });
+      if (res.ok) {
+        setEntries((prev) => prev.filter((e) => e.id !== entryId));
+      } else {
+        alert("Failed to delete entry");
+      }
+    } catch {
+      alert("Failed to delete entry");
     }
   };
 
@@ -480,6 +495,9 @@ export default function PayrollHub({
                           </button>
                         </>
                       )}
+                      <button onClick={() => handleDeleteEntry(entry.id, entry.worker?.name || "Unknown")} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
                   {entry.flagReason && (
@@ -554,6 +572,9 @@ export default function PayrollHub({
                         {entry.approvalStatus === "approved" && (
                           <span className="text-[10px] text-slate-400">Done</span>
                         )}
+                        <button onClick={() => handleDeleteEntry(entry.id, entry.worker?.name || "Unknown")} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete">
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
