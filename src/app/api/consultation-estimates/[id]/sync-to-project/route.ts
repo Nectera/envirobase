@@ -80,6 +80,7 @@ export async function POST(
       data: {
         estimatedDays: estDays,
         estimatedLaborHours: estLaborHours,
+        maxHoursPerDay: est.hoursPerDay || 8,
       },
     });
 

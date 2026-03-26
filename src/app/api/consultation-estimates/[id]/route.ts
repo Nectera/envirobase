@@ -210,6 +210,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
               compliance: null,
               estimatedDays: estDays,
               estimatedLaborHours: estLaborHours,
+              maxHoursPerDay: est.hoursPerDay || 8,
             }),
           });
 
@@ -288,6 +289,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
               data: {
                 estimatedDays: estDays,
                 estimatedLaborHours: estLaborHours,
+                maxHoursPerDay: est.hoursPerDay || 8,
               },
             });
 

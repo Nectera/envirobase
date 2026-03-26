@@ -7,7 +7,7 @@ import {
   MapPin, Navigation, Pencil, X, Trash2, Calendar, Camera, Upload, FileText, Image as ImageIcon,
 } from "lucide-react";
 
-type Project = { id: string; name: string; type: string };
+type Project = { id: string; name: string; type: string; maxHoursPerDay?: number };
 type Worker = { id: string; name: string; role: string; userId?: string; isTemp?: boolean; tempAgency?: string | null; tempCertifications?: string | null };
 type TimeEntry = {
   id: string;
@@ -126,6 +126,7 @@ export default function TimeClockPanel({
   const [breakMinutes, setBreakMinutes] = useState(0);
   const [entryNotes, setEntryNotes] = useState("");
   const [gpsStatus, setGpsStatus] = useState<"idle" | "fetching" | "granted" | "denied">("idle");
+  const [overtimeEntryId, setOvertimeEntryId] = useState<string | null>(null);
 
   // Time log view toggle
   const [timeLogView, setTimeLogView] = useState<"today" | "week">("today");
@@ -355,7 +356,28 @@ export default function TimeClockPanel({
     }
   }
 
-  async function handleClockOut(entryId: string) {
+  async function handleClockOut(entryId: string, skipOvertimeCheck = false) {
+    const entry = activeEntries.find((e) => e.id === entryId);
+
+    // Check if hours exceed the project's maxHoursPerDay before clocking out
+    if (!skipOvertimeCheck && entry?.clockIn) {
+      const maxHours = entry.project?.maxHoursPerDay || 8;
+      const elapsedMs = Date.now() - new Date(entry.clockIn).getTime();
+      const elapsedHours = elapsedMs / (1000 * 60 * 60);
+
+      if (elapsedHours > maxHours) {
+        const rounded = Math.round(elapsedHours * 100) / 100;
+        const confirmed = confirm(
+          `You've been clocked in for ${rounded.toFixed(1)} hours. ` +
+          `The expected hours for this project is ${maxHours}. Is this correct?`
+        );
+        if (!confirmed) return;
+
+        // Worker confirmed overtime — notify admins after clock-out
+        setOvertimeEntryId(entryId);
+      }
+    }
+
     setLoading(true);
 
     // Capture GPS location on clock-out
@@ -367,8 +389,6 @@ export default function TimeClockPanel({
     let clockOutDistance: number | null = null;
 
     if (loc) {
-      // Find the entry to get its project address for distance calc
-      const entry = activeEntries.find((e) => e.id === entryId);
       const [addr, dist] = await Promise.all([
         reverseGeocode(loc.lat, loc.lng),
         calcDistanceFromProject(loc.lat, loc.lng, entry?.project?.address),
@@ -391,6 +411,29 @@ export default function TimeClockPanel({
           clockOutDistance,
         }),
       });
+
+      // If overtime was confirmed, flag the entry and notify admins
+      if (overtimeEntryId === entryId || (!skipOvertimeCheck && entry?.clockIn)) {
+        const maxHours = entry?.project?.maxHoursPerDay || 8;
+        const elapsedMs = Date.now() - new Date(entry?.clockIn || "").getTime();
+        const elapsedHours = elapsedMs / (1000 * 60 * 60);
+
+        if (elapsedHours > maxHours) {
+          // Fire-and-forget: flag entry + send overtime notification to admins
+          fetch(`/api/time-clock/${entryId}/overtime-alert`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              hours: Math.round(elapsedHours * 100) / 100,
+              maxHours,
+              projectName: entry?.project?.name || "Unknown",
+              workerName: entry?.workerName || "Unknown",
+            }),
+          }).catch(() => {});
+        }
+      }
+
+      setOvertimeEntryId(null);
       setEditingEntry(null);
       setBreakMinutes(0);
       setEntryNotes("");

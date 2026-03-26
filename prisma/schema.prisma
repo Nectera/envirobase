@@ -211,6 +211,8 @@ model Project {
   projectManagerId    String?
   estimatedDays       Int?
   estimatedLaborHours Int?
+  // Max allowed hours per day (from estimate checklist, default 8)
+  maxHoursPerDay       Int      @default(8)
   compliance          Json?    // Compliance checklist as JSON
   organizationId      String?
   organization        Organization? @relation(fields: [organizationId], references: [id])
@@ -858,6 +860,7 @@ model ConsultationEstimate {
   waterSource           Boolean? @default(true)
   difficultyRating      Int?     @default(1)
   fieldNotes            String?
+  hoursPerDay           Int?     @default(8) // 8, 9, 10, or 12
   // Labor
   supervisorHours       Float?   @default(0)
   supervisorOtHours     Float?   @default(0)

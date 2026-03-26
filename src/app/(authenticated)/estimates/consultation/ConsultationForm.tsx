@@ -71,6 +71,7 @@ interface ConsultationFormData {
   siteVisitRequirements: string[];
   scopeOfWork: string;
   daysNeeded: number;
+  hoursPerDay: number;
   crewSize: number;
   paymentType: string;
   typeOfLoss: string;
@@ -335,6 +336,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         siteVisitRequirements: initialData.siteVisitRequirements || [],
         scopeOfWork: initialData.scopeOfWork || "",
         daysNeeded: initialData.daysNeeded ?? 0,
+        hoursPerDay: initialData.hoursPerDay ?? 8,
         crewSize: initialData.crewSize ?? 0,
         paymentType: initialData.paymentType || "",
         typeOfLoss: initialData.typeOfLoss || initialData.lossType || "",
@@ -396,6 +398,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
       siteVisitRequirements: [],
       scopeOfWork: lead?.description || lead?.notes || "",
       daysNeeded: 0,
+      hoursPerDay: 8,
       crewSize: 0,
       paymentType: "",
       typeOfLoss: "",
@@ -503,13 +506,13 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
     if (formData.permitRequired === "Yes" && formData.crewSize > 0) {
       // Supervisor: work hours + their own drive time
-      supervisorRegularHours = formData.daysNeeded * 8 + formData.driveTimeHours;
+      supervisorRegularHours = formData.daysNeeded * formData.hoursPerDay + formData.driveTimeHours;
       technicianCount = Math.max(formData.crewSize - 1, 0); // subtract supervisor from crew
     }
 
     // Each technician gets work hours + their own drive time
     const techDriveTotal = technicianCount * formData.driveTimeHours;
-    const technicianRegularHours = technicianCount * formData.daysNeeded * 8 + techDriveTotal;
+    const technicianRegularHours = technicianCount * formData.daysNeeded * formData.hoursPerDay + techDriveTotal;
 
     setFormData((prev) => ({
       ...prev,
@@ -528,7 +531,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
       },
     }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.crewSize, formData.daysNeeded, formData.permitRequired, formData.driveTimeHours, laborOverrideCount]);
+  }, [formData.crewSize, formData.daysNeeded, formData.hoursPerDay, formData.permitRequired, formData.driveTimeHours, laborOverrideCount]);
 
   // Auto-populate COGS when consultation changes
   useEffect(() => {
@@ -957,6 +960,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
       projectDate: formData.projectDate,
       siteVisitRequirements: formData.siteVisitRequirements,
       daysNeeded: formData.daysNeeded,
+      hoursPerDay: formData.hoursPerDay,
       crewSize: formData.crewSize,
       scopeOfWork: formData.scopeOfWork,
       paymentType: formData.paymentType,
@@ -1539,6 +1543,23 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Hours Per Day
+                    </label>
+                    <select
+                      value={formData.hoursPerDay}
+                      onChange={(e) =>
+                        handleInputChange("hoursPerDay", parseInt(e.target.value))
+                      }
+                      className="w-full px-3 py-2 md:min-h-[44px] border rounded"
+                    >
+                      <option value={8}>8 hours (standard)</option>
+                      <option value={9}>9 hours</option>
+                      <option value={10}>10 hours</option>
+                      <option value={12}>12 hours</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium mb-2">Crew Size</label>
                     <input
                       type="number"
@@ -1627,7 +1648,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
             <div className="bg-blue-50 border border-blue-200 p-4 rounded">
               <p className="text-sm">
                 Hours auto-populated from consultation: {formData.crewSize} crew ×{" "}
-                {formData.daysNeeded} days × 8 hrs/day
+                {formData.daysNeeded} days × {formData.hoursPerDay} hrs/day
                 {formData.permitRequired === "Yes" && ` (1 supervisor + ${Math.max(formData.crewSize - 1, 0)} techs)`}
                 {formData.driveTimeHours > 0 && (
                   <span className="block mt-1 text-blue-700">
@@ -2266,7 +2287,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
             <p>Step: {currentStep} of 7</p>
             <p>Total Hours: {totalHours.toFixed(1)}</p>
             <p>Crew: {formData.crewSize}</p>
-            <p>Days: {formData.daysNeeded}</p>
+            <p>Days: {formData.daysNeeded} ({formData.hoursPerDay} hrs/day)</p>
             <p>Miles: {formData.milesFromShop}</p>
           </div>
 
