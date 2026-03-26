@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { rcApiCall } from "@/lib/ringcentral";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -316,21 +315,8 @@ export async function POST(request: NextRequest) {
               entityId: entity?.parentId || null,
             });
 
-            // Try to fetch recording — schedule via separate endpoint instead of background delay
-            // This avoids the serverless function timeout issue
-            if (sessionId) {
-              try {
-                const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || "";
-                if (baseUrl) {
-                  // Fire-and-forget: call ourselves to fetch recording after a delay
-                  fetch(`${baseUrl}/api/ringcentral/fetch-recording`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ activityId: createdActivity.id, sessionId }),
-                  }).catch(() => {});
-                }
-              } catch {}
-            }
+            // Recording isn't available at disconnect time — the backfill-recordings
+            // endpoint will pick it up when the activity feed loads (or via cron)
           }
         }
       }
@@ -354,10 +340,8 @@ export async function POST(request: NextRequest) {
 
         let recordingUrl: string | null = null;
         if (recording?.id) {
-          try {
-            const recData = await rcApiCall("GET", `/account/~/recording/${recording.id}`);
-            recordingUrl = recData?.contentUri || null;
-          } catch {}
+          // Use our proxy endpoint so the browser can play without RC auth token
+          recordingUrl = `/api/ringcentral/recording/${recording.id}`;
         }
 
         await createCallActivity({

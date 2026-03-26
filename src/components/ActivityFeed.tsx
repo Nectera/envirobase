@@ -109,6 +109,7 @@ export default function ActivityFeed({
   const currentUserId = (session?.user as any)?.id || "";
   const [activityReactions, setActivityReactions] = useState<Record<string, { emoji: string; userId: string; userName: string }[]>>({});
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
+  const [backfillDone, setBackfillDone] = useState(false);
 
   // Merge own + linked activities, sorted by date descending
   const allActivities = [
@@ -136,6 +137,34 @@ export default function ActivityFeed({
   useEffect(() => {
     if (allActivities.length > 0) fetchActivityReactions(allActivities);
   }, [activities, linkedActivities]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Trigger recording backfill if there are recent calls missing recordings/duration
+  useEffect(() => {
+    if (backfillDone) return;
+    const hasCalls = allActivities.some((a) => a.type === "call");
+    if (!hasCalls) return;
+    const needsBackfill = allActivities.some((a) => {
+      if (a.type !== "call") return false;
+      const meta = a.metadata as CallMetadata | null;
+      return meta?.sessionId && (!meta.recordingUrl || meta.duration === 0);
+    });
+    if (needsBackfill) {
+      fetch("/api/ringcentral/backfill-recordings", { method: "POST" })
+        .then((res) => {
+          if (res.ok) return res.json();
+        })
+        .then((data) => {
+          if (data?.updated > 0) {
+            // Refresh the page to show updated data
+            window.location.reload();
+          }
+        })
+        .catch(() => {})
+        .finally(() => setBackfillDone(true));
+    } else {
+      setBackfillDone(true);
+    }
+  }, [allActivities, backfillDone]);
 
   // Render description with @mentions and recording links highlighted
   const renderDescription = (text: string, type?: string) => {
@@ -201,15 +230,23 @@ export default function ActivityFeed({
           </span>
         )}
         {recordingUrl && (
-          <a
-            href={recordingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full hover:bg-indigo-100 transition"
-          >
-            <Mic size={9} />
-            Play Recording
-          </a>
+          recordingUrl.startsWith("/api/") ? (
+            <div className="w-full mt-1">
+              <audio controls preload="none" className="h-8 w-full max-w-xs" style={{ minWidth: 200 }}>
+                <source src={recordingUrl} type="audio/mpeg" />
+              </audio>
+            </div>
+          ) : (
+            <a
+              href={recordingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full hover:bg-indigo-100 transition"
+            >
+              <Mic size={9} />
+              Play Recording
+            </a>
+          )
         )}
       </div>
     );
