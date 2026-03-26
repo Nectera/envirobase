@@ -153,8 +153,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           },
         });
 
-        // When estimate is accepted, automatically mark lead as Won
-        if (newStatus === "accepted" && lead.status !== "won") {
+        // When estimate is accepted/approved, automatically mark lead as Won
+        if ((newStatus === "accepted" || newStatus === "approved") && lead.status !== "won") {
           const leadName = [lead.firstName, lead.lastName].filter(Boolean).join(" ");
           const oldLeadStatus = lead.status;
 
@@ -181,8 +181,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           const fullAddress = addressParts.join(", ");
           const projectType = lead.projectType || "ASBESTOS";
 
-          // Pull estimated days and labor hours from this estimate
-          const est = currentEstimate as any;
+          // Pull estimated days and labor hours from the UPDATED estimate (not pre-update)
+          const est = item as any;
           const estDays = est.daysNeeded ? Math.ceil(est.daysNeeded) : null;
           const estLaborHours = est
             ? Math.ceil(
