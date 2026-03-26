@@ -7,7 +7,7 @@ import {
   Building2, User, MapPin, DollarSign, Phone, Mail, MessageSquare, Calendar,
   FileText, ChevronRight, Check, X, ArrowLeft, Shield, ExternalLink, Send,
   PhoneCall, CheckCircle, Upload, Trash2, FlaskConical, File, Loader2, ShieldCheck,
-  Clock, Briefcase, StickyNote, Hash, Pencil,
+  Clock, Briefcase, StickyNote, Hash, Pencil, RefreshCw,
 } from "lucide-react";
 import ActivityFeed from "@/components/ActivityFeed";
 import NotesTab from "@/components/NotesTab";
@@ -61,6 +61,8 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [docUploadModal, setDocUploadModal] = useState<string | null>(null);
+  const [isSyncingDocs, setIsSyncingDocs] = useState(false);
+  const [docSyncResult, setDocSyncResult] = useState<{ success?: boolean; message?: string } | null>(null);
   const [docTitle, setDocTitle] = useState("");
   const [docRef, setDocRef] = useState("");
   const [docNotes, setDocNotes] = useState("");
@@ -334,6 +336,32 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
   const handleDocDelete = async (docId: string) => {
     await fetch(`/api/leads/${lead.id}/documents?docId=${docId}`, { method: "DELETE" });
     router.refresh();
+  };
+
+  const handleSyncDocsToProject = async () => {
+    if (!confirm("Sync all documents from this lead to the linked project? Duplicates will be skipped.")) return;
+    setIsSyncingDocs(true);
+    setDocSyncResult(null);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/documents/sync-to-project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setDocSyncResult({
+          success: true,
+          message: `Synced ${result.synced} document${result.synced !== 1 ? "s" : ""} to project${result.skipped > 0 ? ` (${result.skipped} already existed)` : ""}`,
+        });
+        router.refresh();
+      } else {
+        setDocSyncResult({ success: false, message: result.error || "Failed to sync" });
+      }
+    } catch {
+      setDocSyncResult({ success: false, message: "Network error" });
+    } finally {
+      setIsSyncingDocs(false);
+    }
   };
 
   const hasSamplingReport = leadDocuments.some((d: any) => d.docType === "initial_sampling");
@@ -743,8 +771,25 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                 <FileText size={12} className="text-indigo-500" /> Documents
               </h3>
-              <span className="text-[10px] text-slate-400">{leadDocuments.length} file{leadDocuments.length !== 1 ? "s" : ""}</span>
+              <div className="flex items-center gap-2">
+                {lead.projectId && leadDocuments.length > 0 && (
+                  <button
+                    onClick={handleSyncDocsToProject}
+                    disabled={isSyncingDocs}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded transition disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isSyncingDocs ? "animate-spin" : ""}`} />
+                    {isSyncingDocs ? "Syncing..." : "Sync to Project"}
+                  </button>
+                )}
+                <span className="text-[10px] text-slate-400">{leadDocuments.length} file{leadDocuments.length !== 1 ? "s" : ""}</span>
+              </div>
             </div>
+            {docSyncResult && (
+              <div className={`mb-3 text-[11px] px-3 py-2 rounded ${docSyncResult.success ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                {docSyncResult.message}
+              </div>
+            )}
 
             {/* Upload Tiles */}
             <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 mb-3">
