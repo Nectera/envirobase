@@ -325,23 +325,55 @@ export function buildFieldReportBody(
   `;
 }
 
+/**
+ * Resolve a human-readable label for a note's parent entity.
+ * e.g. "Project: 123 Main St" or "Lead: John Smith"
+ */
+export const resolveEntityLabel = async (entityType: string | null, entityId: string | null): Promise<string | null> => {
+  if (!entityType || !entityId) return null;
+  try {
+    if (entityType === "project") {
+      const p = await prisma.project.findUnique({ where: { id: entityId }, select: { name: true } });
+      return p ? `Project: ${p.name}` : null;
+    }
+    if (entityType === "lead") {
+      const l = await prisma.lead.findUnique({ where: { id: entityId }, select: { firstName: true, lastName: true } });
+      if (l) {
+        const name = [l.firstName, l.lastName].filter(Boolean).join(" ") || "Unknown";
+        return `Lead: ${name}`;
+      }
+      return null;
+    }
+    if (entityType === "worker") {
+      const w = await prisma.worker.findUnique({ where: { id: entityId }, select: { name: true } });
+      return w ? `Worker: ${w.name}` : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 export function buildNoteMentionBody(
   fromName: string,
   noteTitle: string | null,
   noteContent: string,
   context: "note" | "comment",
   link?: string | null,
+  entityLabel?: string | null,
 ): string {
   const preview = noteContent.length > 200 ? noteContent.slice(0, 200) + "..." : noteContent;
   const action = context === "comment" ? "mentioned you in a note comment" : "mentioned you in a note";
+  const onEntity = entityLabel ? ` on <strong>${escapeHtml(entityLabel)}</strong>` : "";
   const appUrl = process.env.NEXTAUTH_URL || "";
   const fullLink = link && appUrl ? `${appUrl}${link}` : link || "";
   return `
     <p style="margin:0 0 16px;color:#475569;font-size:14px;line-height:1.7;">
-      <strong>${escapeHtml(fromName)}</strong> ${action}${noteTitle ? `: <strong>${escapeHtml(noteTitle)}</strong>` : ""}.
+      <strong>${escapeHtml(fromName)}</strong> ${action}${noteTitle ? `: <strong>${escapeHtml(noteTitle)}</strong>` : ""}${onEntity}.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;margin:0 0 16px;">
       <tr><td style="padding:16px 20px;">
+        ${entityLabel ? `<p style="margin:0 0 8px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(entityLabel)}</p>` : ""}
         <p style="margin:0;color:#1e293b;font-size:14px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(preview)}</p>
       </td></tr>
     </table>

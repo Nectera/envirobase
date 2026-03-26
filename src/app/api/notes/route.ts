@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { sendNotificationToUser, buildNoteMentionBody } from "@/lib/notifications";
+import { sendNotificationToUser, buildNoteMentionBody, resolveEntityLabel } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +124,8 @@ export async function POST(req: NextRequest) {
 
       const fromName = user.name || user.email;
       const link = entityType && entityId ? `/${entityType}s/${entityId}` : null;
+      const entityLabel = await resolveEntityLabel(entityType || null, entityId || null);
+      const onCtx = entityLabel ? ` (${entityLabel})` : "";
 
       for (const mentionedUserId of targetIds) {
         try {
@@ -132,8 +134,8 @@ export async function POST(req: NextRequest) {
               type: "mention",
               title: isAll ? "Team note posted" : "You were mentioned in a note",
               message: title
-                ? `${fromName} ${isAll ? "posted a note to everyone" : `mentioned you`} in "${title}"`
-                : `${fromName} ${isAll ? "posted a note to everyone" : "mentioned you in a note"}`,
+                ? `${fromName} ${isAll ? "posted a note to everyone" : `mentioned you`} in "${title}"${onCtx}`
+                : `${fromName} ${isAll ? "posted a note to everyone" : "mentioned you in a note"}${onCtx}`,
               link,
               userId: mentionedUserId,
               fromUserId: user.id,
@@ -147,9 +149,9 @@ export async function POST(req: NextRequest) {
 
         // Fire-and-forget email notification
         const emailSubject = title
-          ? `${fromName} mentioned you in "${title}"`
-          : `${fromName} mentioned you in a note`;
-        const emailBody = buildNoteMentionBody(fromName, title || null, content, "note", link);
+          ? `${fromName} mentioned you in "${title}"${onCtx}`
+          : `${fromName} mentioned you in a note${onCtx}`;
+        const emailBody = buildNoteMentionBody(fromName, title || null, content, "note", link, entityLabel);
         sendNotificationToUser(mentionedUserId, "noteMention", emailSubject, emailBody).catch(() => {});
       }
     }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { sendNotificationToUser, buildNoteMentionBody } from "@/lib/notifications";
+import { sendNotificationToUser, buildNoteMentionBody, resolveEntityLabel } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +60,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const fromName = user.name || user.email;
     const noteLink = note.entityType && note.entityId ? `/${note.entityType}s/${note.entityId}` : null;
+    const entityLabel = await resolveEntityLabel(note.entityType, note.entityId);
+    const onCtx = entityLabel ? ` (${entityLabel})` : "";
 
     // Notify note creator about the new comment (if it's not their own comment)
     if (note.createdById !== user.id) {
@@ -69,8 +71,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             type: "mention",
             title: "New comment on your note",
             message: note.title
-              ? `${fromName} commented on "${note.title}"`
-              : `${fromName} commented on your note`,
+              ? `${fromName} commented on "${note.title}"${onCtx}`
+              : `${fromName} commented on your note${onCtx}`,
             link: noteLink,
             userId: note.createdById,
             fromUserId: user.id,
@@ -84,9 +86,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       // Fire-and-forget email to note creator
       const creatorSubject = note.title
-        ? `${fromName} commented on "${note.title}"`
-        : `${fromName} commented on your note`;
-      const creatorBody = buildNoteMentionBody(fromName, note.title, content, "comment", noteLink);
+        ? `${fromName} commented on "${note.title}"${onCtx}`
+        : `${fromName} commented on your note${onCtx}`;
+      const creatorBody = buildNoteMentionBody(fromName, note.title, content, "comment", noteLink, entityLabel);
       sendNotificationToUser(note.createdById, "noteMention", creatorSubject, creatorBody).catch(() => {});
     }
 
@@ -108,7 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             data: {
               type: "mention",
               title: isAll ? "Team comment posted" : "You were mentioned in a comment",
-              message: `${fromName} ${isAll ? "commented to everyone" : "mentioned you"} on a note`,
+              message: `${fromName} ${isAll ? "commented to everyone" : "mentioned you"} on a note${onCtx}`,
               link: noteLink,
               userId: mentionedUserId,
               fromUserId: user.id,
@@ -122,9 +124,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         // Fire-and-forget email notification
         const mentionSubject = note.title
-          ? `${fromName} mentioned you in a comment on "${note.title}"`
-          : `${fromName} mentioned you in a comment`;
-        const mentionBody = buildNoteMentionBody(fromName, note.title, content, "comment", noteLink);
+          ? `${fromName} mentioned you in a comment on "${note.title}"${onCtx}`
+          : `${fromName} mentioned you in a comment${onCtx}`;
+        const mentionBody = buildNoteMentionBody(fromName, note.title, content, "comment", noteLink, entityLabel);
         sendNotificationToUser(mentionedUserId, "noteMention", mentionSubject, mentionBody).catch(() => {});
       }
     }
