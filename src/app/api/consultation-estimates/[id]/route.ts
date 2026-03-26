@@ -273,8 +273,46 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           // Run any automation rules for "won" status
           await runLeadStatusAutomations(updatedLead, oldLeadStatus, "won", "system");
         } else {
-          // For approved/converted, just create coordinator tasks
-          await createCoordinatorTasks(lead);
+          // Lead is already won or status is just "converted" — sync hours to existing project if one exists
+          const existingProjectId = (lead as any).projectId;
+          if (existingProjectId) {
+            const est = item as any;
+            const estDays = est.daysNeeded ? Math.ceil(est.daysNeeded) : null;
+            const estLaborHours = Math.ceil(
+              (est.supervisorHours || 0) + (est.supervisorOtHours || 0) +
+              (est.technicianHours || 0) + (est.technicianOtHours || 0)
+            ) || null;
+
+            await prisma.project.update({
+              where: { id: existingProjectId },
+              data: {
+                estimatedDays: estDays,
+                estimatedLaborHours: estLaborHours,
+              },
+            });
+
+            // Link estimate to the project
+            await prisma.consultationEstimate.update({
+              where: { id: params.id },
+              data: {
+                projectId: existingProjectId,
+                projectNumber: null, // will be filled on next load
+              },
+            });
+
+            await prisma.activity.create({
+              data: {
+                parentType: "lead",
+                parentId: leadId,
+                leadId,
+                type: "estimate_approved",
+                content: `Estimate approved and synced to existing project (${estDays} days, ${estLaborHours} hrs).`,
+                user: "system",
+              },
+            });
+          }
+
+          await createCoordinatorTasks(lead, existingProjectId || undefined);
         }
       }
     }
