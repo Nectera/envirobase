@@ -270,55 +270,74 @@ export async function POST(request: NextRequest) {
     // ─── Telephony Sessions (real-time call events) ────────────
     if (event.includes("/telephony/sessions")) {
       const parties = eventBody.parties || [];
-      const party = parties[0];
 
-      if (party) {
+      logger.info("RC telephony session event", {
+        partyCount: parties.length,
+        sessionId: eventBody.telephonySessionId,
+        parties: parties.map((p: any) => ({
+          direction: p.direction,
+          status: p.status?.code,
+          from: p.from?.phoneNumber || p.from?.extensionNumber || "none",
+          to: p.to?.phoneNumber || p.to?.extensionNumber || "none",
+        })),
+      });
+
+      // Check ALL parties for a disconnected one (outbound calls may not be parties[0])
+      for (const party of parties) {
         const partyStatus = party.status?.code?.toLowerCase() || "";
+        if (partyStatus !== "disconnected") continue;
+
         const callDirection = (party.direction || "").toLowerCase();
         const fromNumber = party.from?.phoneNumber || "";
         const toNumber = party.to?.phoneNumber || "";
 
-        logger.info("RC telephony session event", {
-          status: partyStatus,
-          direction: callDirection,
-          from: fromNumber,
-          to: toNumber,
-          sessionId: eventBody.telephonySessionId,
-        });
+        // For outbound calls, the external number is in `to`; for inbound, it's in `from`
+        // If the primary field is empty, check other parties for the external number
+        let externalNumber = callDirection === "inbound" ? fromNumber : toNumber;
 
-        // Only process when the call is completed
-        if (partyStatus === "disconnected") {
-          const externalNumber = callDirection === "inbound" ? fromNumber : toNumber;
-
-          if (externalNumber) {
-            const entity = await findEntityByPhone(externalNumber);
-            const callerName = entity?.entityName || formatPhoneDisplay(externalNumber);
-            const duration = party.duration || 0;
-            const sessionId = eventBody.telephonySessionId || eventBody.sessionId;
-
-            const createdActivity = await createCallActivity({
-              direction: callDirection,
-              entityName: callerName,
-              externalNumber,
-              duration,
-              sessionId,
-              fromNumber,
-              toNumber,
-              entity,
-              startTime: eventBody.creationTime || null,
-            });
-
-            logger.info("Call activity logged (telephony session)", {
-              direction: callDirection,
-              duration,
-              entity: entity?.parentType || "unmatched",
-              entityId: entity?.parentId || null,
-            });
-
-            // Recording isn't available at disconnect time — the backfill-recordings
-            // endpoint will pick it up when the activity feed loads (or via cron)
+        // Fallback: if external number is empty, scan other parties for a phone number
+        if (!externalNumber) {
+          for (const otherParty of parties) {
+            if (otherParty === party) continue;
+            const otherPhone = callDirection === "inbound"
+              ? otherParty.from?.phoneNumber
+              : otherParty.to?.phoneNumber;
+            if (otherPhone) {
+              externalNumber = otherPhone;
+              break;
+            }
           }
         }
+
+        if (!externalNumber) continue;
+
+        const entity = await findEntityByPhone(externalNumber);
+        const callerName = entity?.entityName || formatPhoneDisplay(externalNumber);
+        const duration = party.duration || 0;
+        const sessionId = eventBody.telephonySessionId || eventBody.sessionId;
+
+        await createCallActivity({
+          direction: callDirection,
+          entityName: callerName,
+          externalNumber,
+          duration,
+          sessionId,
+          fromNumber: fromNumber || externalNumber,
+          toNumber: toNumber || externalNumber,
+          entity,
+          startTime: eventBody.creationTime || null,
+        });
+
+        logger.info("Call activity logged (telephony session)", {
+          direction: callDirection,
+          duration,
+          entity: entity?.parentType || "unmatched",
+          entityId: entity?.parentId || null,
+        });
+
+        // Recording isn't available at disconnect time — the backfill-recordings
+        // endpoint will pick it up when the activity feed loads (or via cron)
+        break; // Only log once per session event
       }
     }
 
