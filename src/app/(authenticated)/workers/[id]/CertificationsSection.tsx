@@ -259,86 +259,161 @@ export default function CertificationsSection({
         </div>
       )}
 
-      {/* Certifications Table */}
+      {/* Certifications List */}
       {certs.length > 0 ? (
-        <div className="overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Certification</th>
-                <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Number</th>
-                <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Issued</th>
-                <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Expires</th>
-                <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Status</th>
-                <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">File</th>
-                <th className="px-4 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {certs.map((c) => (
-                <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-4 py-2.5 font-medium text-[13px]">{c.name}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-slate-600">{c.number || "—"}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-600">{formatDate(c.issued)}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-600">{formatDate(c.expires)}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded capitalize ${getStatusColor(c.status)}`}>
-                      {c.status.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {uploading === c.id ? (
-                      <span className="text-[11px] text-slate-400">Uploading...</span>
-                    ) : c.fileUrl ? (
-                      <a
-                        href={c.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-700 font-medium"
-                        title={c.fileName || "View certificate"}
-                      >
-                        <FileText size={12} />
-                        <span className="truncate max-w-[80px]">{c.fileName || "View"}</span>
-                        <ExternalLink size={10} />
-                      </a>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => uploadInputRefs.current[c.id]?.click()}
-                          className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-indigo-600 font-medium transition"
-                        >
-                          <Upload size={12} />
-                          Attach
-                        </button>
-                        <input
-                          ref={(el) => { uploadInputRefs.current[c.id] = el; }}
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png,.webp"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUploadToExisting(c.id, file);
-                            e.target.value = "";
-                          }}
-                        />
-                      </>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <button
-                      onClick={() => handleDelete(c.id)}
-                      disabled={deleting === c.id}
-                      className="text-slate-300 hover:text-red-500 transition disabled:opacity-50"
-                      title="Delete certification"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
+        <>
+          {/* Desktop: Table */}
+          <div className="hidden md:block overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Certification</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Number</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Issued</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Expires</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Status</th>
+                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">File</th>
+                  <th className="px-4 py-2"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {certs.map((c) => (
+                  <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-4 py-2.5 font-medium text-[13px]">{c.name}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono text-slate-600">{c.number || "—"}</td>
+                    <td className="px-4 py-2.5 text-xs text-slate-600">{formatDate(c.issued)}</td>
+                    <td className="px-4 py-2.5 text-xs text-slate-600">{formatDate(c.expires)}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded capitalize ${getStatusColor(c.status)}`}>
+                        {c.status.replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {uploading === c.id ? (
+                        <span className="text-[11px] text-slate-400">Uploading...</span>
+                      ) : c.fileUrl ? (
+                        <a
+                          href={c.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-700 font-medium"
+                          title={c.fileName || "View certificate"}
+                        >
+                          <FileText size={12} />
+                          <span className="truncate max-w-[80px]">{c.fileName || "View"}</span>
+                          <ExternalLink size={10} />
+                        </a>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => uploadInputRefs.current[c.id]?.click()}
+                            className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-indigo-600 font-medium transition"
+                          >
+                            <Upload size={12} />
+                            Attach
+                          </button>
+                          <input
+                            ref={(el) => { uploadInputRefs.current[c.id] = el; }}
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUploadToExisting(c.id, file);
+                              e.target.value = "";
+                            }}
+                          />
+                        </>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        disabled={deleting === c.id}
+                        className="text-slate-300 hover:text-red-500 transition disabled:opacity-50"
+                        title="Delete certification"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile: Card layout */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {certs.map((c) => (
+              <div key={c.id} className="px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm text-slate-900">{c.name}</span>
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded capitalize ${getStatusColor(c.status)}`}>
+                        {c.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    {c.number && (
+                      <p className="text-xs font-mono text-slate-500 mt-0.5">{c.number}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                      {c.issued && <span>Issued: {formatDate(c.issued)}</span>}
+                      <span>Expires: {formatDate(c.expires)}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    disabled={deleting === c.id}
+                    className="p-2 text-slate-300 active:text-red-500 transition disabled:opacity-50"
+                    title="Delete certification"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+
+                {/* File action — large tap target on mobile */}
+                <div className="mt-2">
+                  {uploading === c.id ? (
+                    <span className="text-xs text-slate-400">Uploading...</span>
+                  ) : c.fileUrl ? (
+                    <a
+                      href={c.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-600 active:text-indigo-800 bg-indigo-50 rounded-lg"
+                    >
+                      <FileText size={14} />
+                      <span className="truncate max-w-[200px]">{c.fileName || "View Certificate"}</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => uploadInputRefs.current[c.id]?.click()}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500 active:text-indigo-600 bg-slate-50 rounded-lg transition"
+                      >
+                        <Upload size={14} />
+                        Attach File
+                      </button>
+                      <input
+                        ref={(el) => { uploadInputRefs.current[c.id] = el; }}
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleUploadToExisting(c.id, file);
+                          e.target.value = "";
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       ) : !showForm ? (
         <div className="p-5 text-center">
           <Award size={28} className="mx-auto text-slate-300 mb-2" />
