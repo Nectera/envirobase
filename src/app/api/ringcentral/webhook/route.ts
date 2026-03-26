@@ -273,74 +273,82 @@ export async function POST(request: NextRequest) {
     if (event.includes("/telephony/sessions")) {
       const parties = eventBody.parties || [];
 
-      logger.info("RC telephony session event", {
-        partyCount: parties.length,
-        sessionId: eventBody.telephonySessionId,
-        parties: parties.map((p: any) => ({
-          direction: p.direction,
-          status: p.status?.code,
-          from: p.from?.phoneNumber || p.from?.extensionNumber || "none",
-          to: p.to?.phoneNumber || p.to?.extensionNumber || "none",
-        })),
-      });
+      // Find the disconnected party — for outbound calls, the relevant party
+      // may not be at index 0 (could be index 1 or later)
+      const disconnectedParty = parties.find(
+        (p: any) => (p.status?.code || "").toLowerCase() === "disconnected"
+      );
+      // Fall back to first party if none are explicitly disconnected yet
+      const party = disconnectedParty || parties[0];
 
-      // Check ALL parties for a disconnected one (outbound calls may not be parties[0])
-      for (const party of parties) {
-        const partyStatus = party.status?.code?.toLowerCase() || "";
-        if (partyStatus !== "disconnected") continue;
-
+      if (party) {
+        const partyStatus = (party.status?.code || "").toLowerCase();
         const callDirection = (party.direction || "").toLowerCase();
         const fromNumber = party.from?.phoneNumber || "";
         const toNumber = party.to?.phoneNumber || "";
 
-        // For outbound calls, the external number is in `to`; for inbound, it's in `from`
-        // If the primary field is empty, check other parties for the external number
-        let externalNumber = callDirection === "inbound" ? fromNumber : toNumber;
+        logger.info("RC telephony session event", {
+          status: partyStatus,
+          direction: callDirection,
+          from: fromNumber,
+          to: toNumber,
+          sessionId: eventBody.telephonySessionId,
+          partyCount: parties.length,
+        });
 
-        // Fallback: if external number is empty, scan other parties for a phone number
-        if (!externalNumber) {
-          for (const otherParty of parties) {
-            if (otherParty === party) continue;
-            const otherPhone = callDirection === "inbound"
-              ? otherParty.from?.phoneNumber
-              : otherParty.to?.phoneNumber;
-            if (otherPhone) {
-              externalNumber = otherPhone;
-              break;
+        // Only process when the call is completed
+        if (partyStatus === "disconnected") {
+          const externalNumber = callDirection === "inbound" ? fromNumber : toNumber;
+
+          // For outbound, also check other parties for the external number
+          const resolvedExternal = externalNumber || (() => {
+            for (const p of parties) {
+              const dir = (p.direction || "").toLowerCase();
+              if (dir === "outbound" && p.to?.phoneNumber) return p.to.phoneNumber;
+              if (dir === "inbound" && p.from?.phoneNumber) return p.from.phoneNumber;
             }
+            return "";
+          })();
+
+          if (resolvedExternal) {
+            const entity = await findEntityByPhone(resolvedExternal);
+            const callerName = entity?.entityName || formatPhoneDisplay(resolvedExternal);
+            const duration = party.duration || 0;
+            const sessionId = eventBody.telephonySessionId || eventBody.sessionId;
+
+            // Determine direction from any party if the disconnected one doesn't have it
+            const resolvedDirection = callDirection || (() => {
+              for (const p of parties) {
+                const dir = (p.direction || "").toLowerCase();
+                if (dir === "inbound" || dir === "outbound") return dir;
+              }
+              return "outbound";
+            })();
+
+            await createCallActivity({
+              direction: resolvedDirection,
+              entityName: callerName,
+              externalNumber: resolvedExternal,
+              duration,
+              sessionId: eventBody.sessionId || sessionId,
+              telephonySessionId: eventBody.telephonySessionId || null,
+              fromNumber: fromNumber || parties.find((p: any) => p.from?.phoneNumber)?.from?.phoneNumber || "",
+              toNumber: toNumber || parties.find((p: any) => p.to?.phoneNumber)?.to?.phoneNumber || "",
+              entity,
+              startTime: eventBody.creationTime || null,
+            });
+
+            logger.info("Call activity logged (telephony session)", {
+              direction: resolvedDirection,
+              duration,
+              entity: entity?.parentType || "unmatched",
+              entityId: entity?.parentId || null,
+            });
+
+            // Recording isn't available at disconnect time — the backfill-recordings
+            // endpoint will pick it up when the activity feed loads (or via cron)
           }
         }
-
-        if (!externalNumber) continue;
-
-        const entity = await findEntityByPhone(externalNumber);
-        const callerName = entity?.entityName || formatPhoneDisplay(externalNumber);
-        const duration = party.duration || 0;
-        const sessionId = eventBody.telephonySessionId || eventBody.sessionId;
-
-        await createCallActivity({
-          direction: callDirection,
-          entityName: callerName,
-          externalNumber,
-          duration,
-          sessionId: eventBody.sessionId || sessionId,
-          telephonySessionId: eventBody.telephonySessionId || null,
-          fromNumber: fromNumber || externalNumber,
-          toNumber: toNumber || externalNumber,
-          entity,
-          startTime: eventBody.creationTime || null,
-        });
-
-        logger.info("Call activity logged (telephony session)", {
-          direction: callDirection,
-          duration,
-          entity: entity?.parentType || "unmatched",
-          entityId: entity?.parentId || null,
-        });
-
-        // Recording isn't available at disconnect time — the backfill-recordings
-        // endpoint will pick it up when the activity feed loads (or via cron)
-        break; // Only log once per session event
       }
     }
 
