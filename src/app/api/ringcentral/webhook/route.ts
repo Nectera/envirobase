@@ -5,62 +5,22 @@ import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-// Delay helper
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Try to fetch the recording for a call session and update the activity
-async function fetchRecordingLater(activityId: string, sessionId: string) {
-  // RingCentral takes time to process recordings — retry a few times
-  const delays = [15000, 30000, 60000]; // 15s, 30s, 60s
-  for (const waitMs of delays) {
-    await delay(waitMs);
-    try {
-      // Look up the call-log entry by session ID to find the recording
-      const callLog = await rcApiCall(
-        "GET",
-        `/account/~/extension/~/call-log?sessionId=${sessionId}&withRecording=true&view=Detailed`
-      );
-      const records = callLog?.records || [];
-      const withRecording = records.find((r: any) => r.recording?.id);
-      if (withRecording?.recording?.id) {
-        // Fetch the actual recording content URI
-        let recordingUrl = withRecording.recording.contentUri || null;
-        if (!recordingUrl) {
-          try {
-            const recData = await rcApiCall("GET", `/account/~/recording/${withRecording.recording.id}`);
-            recordingUrl = recData?.contentUri || null;
-          } catch {}
-        }
-        if (recordingUrl) {
-          // Append recording to the existing activity
-          const activity = await prisma.activity.findUnique({ where: { id: activityId } });
-          if (activity?.content && !activity.content.includes("Recording:")) {
-            await prisma.activity.update({
-              where: { id: activityId },
-              data: { content: activity.content + `\n🎙️ Recording: ${recordingUrl}` },
-            });
-            logger.info("Recording attached to activity", { activityId, sessionId });
-          }
-          return; // Done
-        }
-      }
-    } catch (err: any) {
-      logger.warn("Recording fetch attempt failed", { sessionId, error: err.message });
-    }
-  }
-  logger.info("No recording found after retries", { activityId, sessionId });
-}
-
 // Normalize phone number for comparison — strip +1 prefix, spaces, dashes
 function normalizePhone(phone: string): string {
   const cleaned = phone.replace(/[\s\-\(\)\.\+]/g, "");
-  // Remove leading 1 for US numbers if 11 digits
   if (cleaned.length === 11 && cleaned.startsWith("1")) {
     return cleaned.slice(1);
   }
   return cleaned;
+}
+
+// Format phone for display: (303) 555-1234
+function formatPhoneDisplay(phone: string): string {
+  const digits = normalizePhone(phone);
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  return phone;
 }
 
 // Look up entity (lead, contact, company) by phone number
@@ -68,24 +28,23 @@ async function findEntityByPhone(phoneNumber: string): Promise<{
   parentType: string;
   parentId: string;
   entityName: string;
+  leadId?: string;
 } | null> {
   const normalized = normalizePhone(phoneNumber);
   if (!normalized || normalized.length < 7) return null;
 
-  // Search pattern — check last 10 digits
   const last10 = normalized.slice(-10);
 
   // Check leads first (most common)
   const lead = await prisma.lead.findFirst({
-    where: {
-      phone: { contains: last10 },
-    },
+    where: { phone: { contains: last10 } },
     select: { id: true, firstName: true, lastName: true, phone: true },
   });
   if (lead) {
     return {
       parentType: "lead",
       parentId: lead.id,
+      leadId: lead.id,
       entityName: [lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unknown Lead",
     };
   }
@@ -110,9 +69,7 @@ async function findEntityByPhone(phoneNumber: string): Promise<{
 
   // Check companies
   const company = await prisma.company.findFirst({
-    where: {
-      phone: { contains: last10 },
-    },
+    where: { phone: { contains: last10 } },
     select: { id: true, name: true },
   });
   if (company) {
@@ -134,7 +91,6 @@ async function createSmsNotification(
   parentId: string,
   messagePreview: string
 ) {
-  // Notify all users (we don't have a specific assignment model for SMS)
   const users = await prisma.user.findMany({
     select: { id: true },
     take: 20,
@@ -156,6 +112,56 @@ async function createSmsNotification(
   }
 }
 
+// Create call activity with structured metadata
+async function createCallActivity(opts: {
+  direction: string;
+  entityName: string;
+  externalNumber: string;
+  duration: number;
+  sessionId?: string;
+  fromNumber: string;
+  toNumber: string;
+  entity: { parentType: string; parentId: string; leadId?: string } | null;
+  recordingUrl?: string | null;
+  startTime?: string | null;
+}) {
+  const { direction, entityName, externalNumber, duration, sessionId, fromNumber, toNumber, entity, recordingUrl, startTime } = opts;
+  const durationMin = Math.ceil(duration / 60);
+  const dirLabel = direction === "inbound" ? "Inbound" : "Outbound";
+
+  let content = `${dirLabel} call with ${entityName} (${formatPhoneDisplay(externalNumber)})`;
+  if (duration > 0) {
+    content += ` — ${durationMin} min`;
+  }
+  if (recordingUrl) {
+    content += `\n🎙️ Recording: ${recordingUrl}`;
+  }
+
+  const metadata: Record<string, any> = {
+    direction,
+    duration, // seconds
+    fromNumber,
+    toNumber,
+    sessionId: sessionId || null,
+    recordingUrl: recordingUrl || null,
+    startTime: startTime || new Date().toISOString(),
+  };
+
+  const activity = await prisma.activity.create({
+    data: {
+      parentType: entity?.parentType || null,
+      parentId: entity?.parentId || null,
+      leadId: entity?.leadId || null,
+      type: "call",
+      content,
+      user: "RingCentral",
+      metadata,
+    },
+  });
+
+  return activity;
+}
+
 // GET /api/ringcentral/webhook — debug: check recent RC activities
 export async function GET(request: NextRequest) {
   try {
@@ -173,6 +179,7 @@ export async function GET(request: NextRequest) {
         parentType: a.parentType,
         parentId: a.parentId,
         content: (a.content || "").slice(0, 100),
+        metadata: a.metadata,
         createdAt: a.createdAt,
       })),
     });
@@ -208,10 +215,8 @@ export async function POST(request: NextRequest) {
       const rcMessageId = eventBody.id ? String(eventBody.id) : null;
 
       if (direction === "inbound" && fromNumber && messageText) {
-        // Look up who sent this
         const entity = await findEntityByPhone(fromNumber);
 
-        // Store the message
         await prisma.smsMessage.create({
           data: {
             direction: "inbound",
@@ -226,21 +231,25 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Also create an Activity record so it shows in the activity feed
-        const smsActivityContent = `Inbound SMS from ${entity?.entityName || fromNumber} (${fromNumber}): ${messageText}`;
+        const smsActivityContent = `Inbound SMS from ${entity?.entityName || fromNumber} (${formatPhoneDisplay(fromNumber)}): ${messageText}`;
         if (entity) {
           await prisma.activity.create({
             data: {
               parentType: entity.parentType,
               parentId: entity.parentId,
+              leadId: entity.leadId || null,
               type: "sms",
               content: smsActivityContent,
               user: "RingCentral",
+              metadata: {
+                direction: "inbound",
+                fromNumber,
+                toNumber,
+              },
             },
           });
         }
 
-        // Create notification
         if (entity) {
           await createSmsNotification(
             fromNumber,
@@ -261,10 +270,8 @@ export async function POST(request: NextRequest) {
 
     // ─── Telephony Sessions (real-time call events) ────────────
     if (event.includes("/telephony/sessions")) {
-      // Telephony sessions fire multiple events per call (Setup → Proceeding → Answered → Disconnected)
-      // Only create activity when call is finished (Disconnected) to avoid duplicates
       const parties = eventBody.parties || [];
-      const party = parties[0]; // Primary party
+      const party = parties[0];
 
       if (party) {
         const partyStatus = party.status?.code?.toLowerCase() || "";
@@ -286,37 +293,43 @@ export async function POST(request: NextRequest) {
 
           if (externalNumber) {
             const entity = await findEntityByPhone(externalNumber);
-            const callerName = entity?.entityName || externalNumber;
+            const callerName = entity?.entityName || formatPhoneDisplay(externalNumber);
             const duration = party.duration || 0;
-            const durationMin = Math.ceil(duration / 60);
+            const sessionId = eventBody.telephonySessionId || eventBody.sessionId;
 
-            let content = `${callDirection === "inbound" ? "Inbound" : "Outbound"} call with ${callerName} (${externalNumber})`;
-            if (duration > 0) {
-              content += ` — ${durationMin} min`;
-            }
-
-            const createdActivity = await prisma.activity.create({
-              data: {
-                parentType: entity?.parentType || null,
-                parentId: entity?.parentId || null,
-                type: "call",
-                content,
-                user: "RingCentral",
-              },
+            const createdActivity = await createCallActivity({
+              direction: callDirection,
+              entityName: callerName,
+              externalNumber,
+              duration,
+              sessionId,
+              fromNumber,
+              toNumber,
+              entity,
+              startTime: eventBody.creationTime || null,
             });
 
             logger.info("Call activity logged (telephony session)", {
               direction: callDirection,
+              duration,
               entity: entity?.parentType || "unmatched",
               entityId: entity?.parentId || null,
             });
 
-            // Recordings aren't available at disconnect time — fetch asynchronously
-            const sessionId = eventBody.telephonySessionId || eventBody.sessionId;
+            // Try to fetch recording — schedule via separate endpoint instead of background delay
+            // This avoids the serverless function timeout issue
             if (sessionId) {
-              fetchRecordingLater(createdActivity.id, sessionId).catch((err) =>
-                logger.warn("Background recording fetch failed", { error: String(err) })
-              );
+              try {
+                const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || "";
+                if (baseUrl) {
+                  // Fire-and-forget: call ourselves to fetch recording after a delay
+                  fetch(`${baseUrl}/api/ringcentral/fetch-recording`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ activityId: createdActivity.id, sessionId }),
+                  }).catch(() => {});
+                }
+              } catch {}
             }
           }
         }
@@ -337,35 +350,27 @@ export async function POST(request: NextRequest) {
 
       if (externalNumber) {
         const entity = await findEntityByPhone(externalNumber);
-        const durationMin = Math.ceil(callDuration / 60);
-        const callerName = entity?.entityName || externalNumber;
-        let content = `${callDirection === "inbound" ? "Inbound" : "Outbound"} call with ${callerName} (${externalNumber})`;
-        if (callDuration > 0) {
-          content += ` — ${durationMin} min`;
-        }
+        const callerName = entity?.entityName || formatPhoneDisplay(externalNumber);
 
         let recordingUrl: string | null = null;
         if (recording?.id) {
           try {
             const recData = await rcApiCall("GET", `/account/~/recording/${recording.id}`);
             recordingUrl = recData?.contentUri || null;
-          } catch {
-            // Recording fetch may fail
-          }
+          } catch {}
         }
 
-        if (recordingUrl) {
-          content += `\n🎙️ Recording: ${recordingUrl}`;
-        }
-
-        await prisma.activity.create({
-          data: {
-            parentType: entity?.parentType || null,
-            parentId: entity?.parentId || null,
-            type: "call",
-            content,
-            user: "RingCentral",
-          },
+        await createCallActivity({
+          direction: callDirection,
+          entityName: callerName,
+          externalNumber,
+          duration: callDuration,
+          sessionId: result.sessionId || null,
+          fromNumber: result.from?.phoneNumber || "",
+          toNumber: result.to?.phoneNumber || result.to?.[0]?.phoneNumber || "",
+          entity,
+          recordingUrl,
+          startTime: result.startTime || null,
         });
 
         logger.info("Call activity logged (call-log)", {

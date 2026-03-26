@@ -937,6 +937,7 @@ model Activity {
   type       String?  // note, call, email, meeting, status_change
   content    String?
   user       String?  // Who performed the activity
+  metadata   Json?    // Structured data (call: direction, duration, recordingUrl, sessionId, fromNumber, toNumber)
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
   createdAt  DateTime @default(now())
