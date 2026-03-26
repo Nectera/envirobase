@@ -226,6 +226,9 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
   // Track manually edited material/COGS indices so auto-populate doesn't overwrite them
   const manualMaterialEdits = useRef<Set<number>>(new Set());
   const manualCogsEdits = useRef<Set<number>>(new Set());
+  // Track manually edited labor hours so auto-populate doesn't overwrite them
+  const manualLaborEdits = useRef<Set<string>>(new Set());
+  const [laborOverrideCount, setLaborOverrideCount] = useState(0); // triggers re-render when manual edits change
 
   // Auto-save state
   const [draftId, setDraftId] = useState<string | null>(editId || null);
@@ -451,6 +454,34 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
     }
   }, [formData.scopeOfWork]);
 
+  // On load: detect if existing hours differ from the formula (meaning they were previously overridden)
+  useEffect(() => {
+    if (!initialData) return;
+    const d = formData.daysNeeded;
+    const c = formData.crewSize;
+    const dt = formData.driveTimeHours;
+    const permit = formData.permitRequired === "Yes";
+
+    let expectedSup = 0;
+    let techCount = c;
+    if (permit && c > 0) {
+      expectedSup = d * 8 + dt;
+      techCount = Math.max(c - 1, 0);
+    }
+    const expectedTech = techCount * d * 8 + techCount * dt;
+
+    if (formData.laborSupervisor.regularHours !== expectedSup && formData.laborSupervisor.regularHours > 0) {
+      manualLaborEdits.current.add("supervisorRegularHours");
+    }
+    if (formData.laborTechnician.regularHours !== expectedTech && formData.laborTechnician.regularHours > 0) {
+      manualLaborEdits.current.add("technicianRegularHours");
+    }
+    if (manualLaborEdits.current.size > 0) {
+      setLaborOverrideCount((c) => c + 1);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
+
   // Auto-populate labor when consultation changes
   // Crew size INCLUDES the supervisor when permit is required.
   // e.g. crewSize=3 with permit → 1 supervisor + 2 technicians
@@ -473,14 +504,20 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
       ...prev,
       laborSupervisor: {
         ...prev.laborSupervisor,
-        regularHours: supervisorRegularHours,
+        // Only auto-populate if user hasn't manually overridden
+        regularHours: manualLaborEdits.current.has("supervisorRegularHours")
+          ? prev.laborSupervisor.regularHours
+          : supervisorRegularHours,
       },
       laborTechnician: {
         ...prev.laborTechnician,
-        regularHours: technicianRegularHours,
+        regularHours: manualLaborEdits.current.has("technicianRegularHours")
+          ? prev.laborTechnician.regularHours
+          : technicianRegularHours,
       },
     }));
-  }, [formData.crewSize, formData.daysNeeded, formData.permitRequired, formData.driveTimeHours]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.crewSize, formData.daysNeeded, formData.permitRequired, formData.driveTimeHours, laborOverrideCount]);
 
   // Auto-populate COGS when consultation changes
   useEffect(() => {
@@ -1581,6 +1618,11 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                   </span>
                 )}
               </p>
+              {(manualLaborEdits.current.has("supervisorRegularHours") || manualLaborEdits.current.has("technicianRegularHours")) && (
+                <p className="text-xs text-amber-700 mt-2 font-medium">
+                  ⚠ Hours have been manually overridden — changes to crew size or days will not recalculate overridden fields.
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1597,14 +1639,30 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                       min="0"
                       step="0.5"
                       value={formData.laborSupervisor.regularHours}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        if (!manualLaborEdits.current.has("supervisorRegularHours")) {
+                          manualLaborEdits.current.add("supervisorRegularHours");
+                          setLaborOverrideCount((c) => c + 1);
+                        }
                         handleInputChange(
                           "laborSupervisor.regularHours",
                           parseFloat(e.target.value) || 0
-                        )
-                      }
+                        );
+                      }}
                       className="w-full px-3 py-2 md:min-h-[44px] border rounded"
                     />
+                    {manualLaborEdits.current.has("supervisorRegularHours") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          manualLaborEdits.current.delete("supervisorRegularHours");
+                          setLaborOverrideCount((c) => c + 1); // triggers useEffect recalc
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                      >
+                        ↺ Reset to auto-calculated
+                      </button>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -1660,14 +1718,30 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                       min="0"
                       step="0.5"
                       value={formData.laborTechnician.regularHours}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        if (!manualLaborEdits.current.has("technicianRegularHours")) {
+                          manualLaborEdits.current.add("technicianRegularHours");
+                          setLaborOverrideCount((c) => c + 1);
+                        }
                         handleInputChange(
                           "laborTechnician.regularHours",
                           parseFloat(e.target.value) || 0
-                        )
-                      }
+                        );
+                      }}
                       className="w-full px-3 py-2 md:min-h-[44px] border rounded"
                     />
+                    {manualLaborEdits.current.has("technicianRegularHours") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          manualLaborEdits.current.delete("technicianRegularHours");
+                          setLaborOverrideCount((c) => c + 1); // triggers useEffect recalc
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                      >
+                        ↺ Reset to auto-calculated
+                      </button>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
