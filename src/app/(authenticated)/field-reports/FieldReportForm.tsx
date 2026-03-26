@@ -67,19 +67,33 @@ function resizeImage(file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.
     reader.onload = (e) => {
       const img = new window.Image();
       img.onload = () => {
-        let w = img.width;
-        let h = img.height;
-        if (w > maxWidth) { h = (h * maxWidth) / w; w = maxWidth; }
-        if (h > maxHeight) { w = (w * maxHeight) / h; h = maxHeight; }
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(w);
-        canvas.height = Math.round(h);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { reject(new Error("Canvas context failed")); return; }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        try {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxWidth) { h = (h * maxWidth) / w; w = maxWidth; }
+          if (h > maxHeight) { w = (w * maxHeight) / h; h = maxHeight; }
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(w);
+          canvas.height = Math.round(h);
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { reject(new Error("Canvas context failed")); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const result = canvas.toDataURL("image/jpeg", quality);
+          // Verify we actually got image data (some mobile browsers return empty)
+          if (!result || result === "data:,") {
+            resolve(e.target?.result as string); // Fallback to original
+          } else {
+            resolve(result);
+          }
+        } catch (err) {
+          // Fallback to original data URL if canvas fails (common on some mobile browsers)
+          resolve(e.target?.result as string);
+        }
       };
-      img.onerror = reject;
+      img.onerror = () => {
+        // If Image decode fails (e.g. HEIC on non-Safari), use original data URL
+        resolve(e.target?.result as string);
+      };
       img.src = e.target?.result as string;
     };
     reader.onerror = reject;
@@ -718,15 +732,17 @@ export default function FieldReportForm({
 
         <div className="space-y-3">
           {form.photos.map((photo, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg">
-              <span className="text-xs text-slate-400 w-5 text-right mt-1 flex-shrink-0">{i + 1}.</span>
-              {(photo.url || photo.dataUrl) ? (
-                <img src={photo.url || photo.dataUrl} alt={photo.caption || `Photo ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200 flex-shrink-0" />
-              ) : (
-                <div className="w-20 h-20 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
-                  <label className="cursor-pointer flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-500 transition">
-                    <Camera size={16} />
-                    <span className="text-[9px]">Upload</span>
+            <div key={i} className="p-3 bg-white border border-slate-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <span className="text-xs text-slate-400 w-5 text-right mt-1 flex-shrink-0">{i + 1}.</span>
+                {(photo.url || photo.dataUrl) ? (
+                  <img src={photo.url || photo.dataUrl} alt={photo.caption || `Photo ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200 flex-shrink-0" />
+                ) : (
+                  <label className="w-20 h-20 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 cursor-pointer active:bg-indigo-50 active:border-indigo-300 transition">
+                    <div className="flex flex-col items-center gap-1 text-slate-400">
+                      <Camera size={20} />
+                      <span className="text-[10px] font-medium">Upload</span>
+                    </div>
                     <input
                       type="file"
                       accept="image/*"
@@ -734,43 +750,77 @@ export default function FieldReportForm({
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        const dataUrl = await resizeImage(file);
-                        const updated = [...form.photos];
-                        updated[i] = { ...updated[i], dataUrl, filename: file.name };
-                        update("photos", updated);
+                        try {
+                          const dataUrl = await resizeImage(file);
+                          const updated = [...form.photos];
+                          updated[i] = { ...updated[i], dataUrl, filename: file.name };
+                          update("photos", updated);
+                        } catch (err) {
+                          console.error("Photo processing failed:", err);
+                          alert("Failed to process photo. Please try again.");
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <Input
+                    value={photo.filename}
+                    onChange={(e) => {
+                      const updated = [...form.photos];
+                      updated[i] = { ...updated[i], filename: e.target.value };
+                      update("photos", updated);
+                    }}
+                    placeholder="Filename (e.g., IMG_3012.jpeg)"
+                  />
+                  <Input
+                    value={photo.caption}
+                    onChange={(e) => {
+                      const updated = [...form.photos];
+                      updated[i] = { ...updated[i], caption: e.target.value };
+                      update("photos", updated);
+                    }}
+                    placeholder="Caption (e.g., Overall work area)"
+                  />
+                </div>
+                <button type="button" onClick={() => update("photos", form.photos.filter((_, idx) => idx !== i))} className="p-1 text-red-400 active:text-red-600 flex-shrink-0 mt-1">
+                  <X size={16} />
+                </button>
+              </div>
+              {/* Mobile: show replace/add photo button when photo exists */}
+              {(photo.url || photo.dataUrl) && (
+                <div className="mt-2 ml-8 sm:hidden">
+                  <label className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-600 active:text-indigo-800 bg-indigo-50 rounded-lg cursor-pointer">
+                    <Camera size={14} />
+                    Replace Photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const dataUrl = await resizeImage(file);
+                          const updated = [...form.photos];
+                          updated[i] = { ...updated[i], dataUrl, filename: file.name, url: undefined };
+                          update("photos", updated);
+                        } catch (err) {
+                          console.error("Photo processing failed:", err);
+                          alert("Failed to process photo. Please try again.");
+                        }
                         e.target.value = "";
                       }}
                     />
                   </label>
                 </div>
               )}
-              <div className="flex-1 space-y-1.5 min-w-0">
-                <Input
-                  value={photo.filename}
-                  onChange={(e) => {
-                    const updated = [...form.photos];
-                    updated[i] = { ...updated[i], filename: e.target.value };
-                    update("photos", updated);
-                  }}
-                  placeholder="Filename (e.g., IMG_3012.jpeg)"
-                />
-                <Input
-                  value={photo.caption}
-                  onChange={(e) => {
-                    const updated = [...form.photos];
-                    updated[i] = { ...updated[i], caption: e.target.value };
-                    update("photos", updated);
-                  }}
-                  placeholder="Caption (e.g., Overall work area)"
-                />
-              </div>
-              <button type="button" onClick={() => update("photos", form.photos.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-600 flex-shrink-0 mt-1">
-                <X size={16} />
-              </button>
             </div>
           ))}
-          <div className="flex gap-2">
-            <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg border border-indigo-200 hover:bg-indigo-100 cursor-pointer transition">
+          {/* Upload buttons — stacked on mobile for larger tap targets */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <label className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg border border-indigo-200 active:bg-indigo-100 cursor-pointer transition">
               <Upload size={16} />
               Upload Photos
               <input
@@ -781,17 +831,22 @@ export default function FieldReportForm({
                 onChange={async (e) => {
                   const files = e.target.files;
                   if (!files?.length) return;
-                  const newPhotos: PhotoEntry[] = [];
-                  for (const file of Array.from(files)) {
-                    const dataUrl = await resizeImage(file);
-                    newPhotos.push({ filename: file.name, caption: "", dataUrl });
+                  try {
+                    const newPhotos: PhotoEntry[] = [];
+                    for (const file of Array.from(files)) {
+                      const dataUrl = await resizeImage(file);
+                      newPhotos.push({ filename: file.name, caption: "", dataUrl });
+                    }
+                    update("photos", [...form.photos, ...newPhotos]);
+                  } catch (err) {
+                    console.error("Photo processing failed:", err);
+                    alert("Failed to process photos. Please try again.");
                   }
-                  update("photos", [...form.photos, ...newPhotos]);
                   e.target.value = "";
                 }}
               />
             </label>
-            <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer transition">
+            <label className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-200 active:bg-slate-100 cursor-pointer transition">
               <Camera size={16} />
               Take Photo
               <input
@@ -802,8 +857,13 @@ export default function FieldReportForm({
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const dataUrl = await resizeImage(file);
-                  update("photos", [...form.photos, { filename: file.name, caption: "", dataUrl }]);
+                  try {
+                    const dataUrl = await resizeImage(file);
+                    update("photos", [...form.photos, { filename: file.name, caption: "", dataUrl }]);
+                  } catch (err) {
+                    console.error("Photo processing failed:", err);
+                    alert("Failed to process photo. Please try again.");
+                  }
                   e.target.value = "";
                 }}
               />
@@ -811,7 +871,7 @@ export default function FieldReportForm({
             <button
               type="button"
               onClick={() => update("photos", [...form.photos, { filename: "", caption: "" }])}
-              className="text-sm text-slate-500 hover:text-slate-700 font-medium px-4 py-2"
+              className="text-sm text-slate-500 active:text-slate-700 font-medium px-4 py-3 sm:py-2"
             >
               + Add Manually
             </button>
