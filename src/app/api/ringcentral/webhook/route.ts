@@ -118,13 +118,14 @@ async function createCallActivity(opts: {
   externalNumber: string;
   duration: number;
   sessionId?: string;
+  telephonySessionId?: string;
   fromNumber: string;
   toNumber: string;
   entity: { parentType: string; parentId: string; leadId?: string } | null;
   recordingUrl?: string | null;
   startTime?: string | null;
 }) {
-  const { direction, entityName, externalNumber, duration, sessionId, fromNumber, toNumber, entity, recordingUrl, startTime } = opts;
+  const { direction, entityName, externalNumber, duration, sessionId, telephonySessionId, fromNumber, toNumber, entity, recordingUrl, startTime } = opts;
   const durationMin = Math.ceil(duration / 60);
   const dirLabel = direction === "inbound" ? "Inbound" : "Outbound";
 
@@ -142,6 +143,7 @@ async function createCallActivity(opts: {
     fromNumber,
     toNumber,
     sessionId: sessionId || null,
+    telephonySessionId: telephonySessionId || null,
     recordingUrl: recordingUrl || null,
     startTime: startTime || new Date().toISOString(),
   };
@@ -321,7 +323,8 @@ export async function POST(request: NextRequest) {
           entityName: callerName,
           externalNumber,
           duration,
-          sessionId,
+          sessionId: eventBody.sessionId || sessionId,
+          telephonySessionId: eventBody.telephonySessionId || null,
           fromNumber: fromNumber || externalNumber,
           toNumber: toNumber || externalNumber,
           entity,
@@ -369,6 +372,7 @@ export async function POST(request: NextRequest) {
           externalNumber,
           duration: callDuration,
           sessionId: result.sessionId || null,
+          telephonySessionId: result.telephonySessionId || null,
           fromNumber: result.from?.phoneNumber || "",
           toNumber: result.to?.phoneNumber || result.to?.[0]?.phoneNumber || "",
           entity,

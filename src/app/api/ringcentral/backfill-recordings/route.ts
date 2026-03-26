@@ -32,7 +32,7 @@ export async function POST(_req: NextRequest) {
     // Filter to ones missing recording or with 0 duration
     const needsUpdate = callActivities.filter((a: any) => {
       const meta = a.metadata as any;
-      if (!meta?.sessionId) return false;
+      if (!meta?.sessionId && !meta?.telephonySessionId && !meta?.fromNumber) return false;
       return !meta.recordingUrl || meta.duration === 0;
     });
 
