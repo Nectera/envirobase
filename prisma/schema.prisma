@@ -523,9 +523,13 @@ model TimeEntry {
   flagReason      String?  // Reason if flagged
   overtime        Boolean  @default(false)  // Auto-set if hours > 8
 
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([organizationId])
   @@map("time_entries")
 }
 
@@ -538,9 +542,12 @@ model ScheduleEntry {
   date      String?  // YYYY-MM-DD
   status    String   @default("draft") // draft | approved
   notes     String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([organizationId])
   @@map("schedule_entries")
 }
 
@@ -552,9 +559,12 @@ model ScheduleWeek {
   approvedBy  String?  // userId who approved
   approvedAt  DateTime?
   rejectedNote String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([organizationId])
   @@map("schedule_weeks")
 }
 
