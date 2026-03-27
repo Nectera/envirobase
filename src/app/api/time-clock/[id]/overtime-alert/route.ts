@@ -70,7 +70,7 @@ export async function POST(
             type: "overtime",
             title: "Overtime Requires Approval",
             message: `${workerName} worked ${hours}h on ${projectName} (max ${maxHours}h)`,
-            link: "/time-clock/payroll",
+            link: "/time-clock/overtime",
             userId: admin.id,
             fromUserId: (session.user as any).id,
             fromName: workerName,
