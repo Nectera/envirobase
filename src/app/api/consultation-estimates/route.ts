@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
@@ -120,6 +121,12 @@ export async function POST(req: NextRequest) {
         } : {}),
       }),
     });
+
+    // Revalidate lead page and estimates page so they reflect the new estimate
+    if (body.leadId) {
+      revalidatePath(`/leads/${body.leadId}`);
+    }
+    revalidatePath("/estimates");
 
     return NextResponse.json(item, { status: 201 });
   } catch (error: any) {

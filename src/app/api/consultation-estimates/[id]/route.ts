@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { createCoordinatorTasks } from "@/lib/coordinatorTasks";
 import { generateProjectNumber } from "@/lib/utils";
@@ -92,6 +93,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.waterSource !== undefined) data.waterSource = body.waterSource;
     if (body.difficultyRating !== undefined) data.difficultyRating = body.difficultyRating;
     if (body.fieldNotes !== undefined) data.fieldNotes = body.fieldNotes;
+    if (body.hoursPerDay !== undefined) data.hoursPerDay = body.hoursPerDay;
     // Labor
     if (body.supervisorHours !== undefined) data.supervisorHours = body.supervisorHours;
     if (body.supervisorOtHours !== undefined) data.supervisorOtHours = body.supervisorOtHours;
@@ -318,6 +320,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         }
       }
     }
+
+    // Revalidate lead page(s) and estimates page so they reflect changes
+    const oldLeadId = (currentEstimate as any).leadId;
+    const newLeadId = body.leadId !== undefined ? body.leadId : oldLeadId;
+    if (oldLeadId) revalidatePath(`/leads/${oldLeadId}`);
+    if (newLeadId && newLeadId !== oldLeadId) revalidatePath(`/leads/${newLeadId}`);
+    revalidatePath("/estimates");
 
     return NextResponse.json(item);
   } catch (error: any) {
