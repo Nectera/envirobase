@@ -135,10 +135,14 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName, br
         setUnreadCount((c) => Math.max(0, c - 1));
       } catch {}
     }
-    // Navigate to the linked page
-    if (notif.link) {
+    // Navigate to the linked page (fix legacy overtime links)
+    let dest = notif.link;
+    if (notif.type === "overtime") {
+      dest = "/time-clock/overtime";
+    }
+    if (dest) {
       setShowPanel(false);
-      router.push(notif.link);
+      router.push(dest);
     }
   };
 
