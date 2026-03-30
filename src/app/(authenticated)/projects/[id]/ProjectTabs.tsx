@@ -127,6 +127,7 @@ export default function ProjectTabs({
   allWorkers = [],
   officeManagerId = null,
   linkedConsultationEstimate = null,
+  linkedPostCostEstimate = null,
 }: {
   project: any;
   checklist: ChecklistSection[];
@@ -149,6 +150,7 @@ export default function ProjectTabs({
   allWorkers?: any[];
   officeManagerId?: string | null;
   linkedConsultationEstimate?: any;
+  linkedPostCostEstimate?: any;
 }) {
   const [tab, setTab] = useState<"dashboard" | "tasks" | "reports" | "decon_report" | "documents" | "activity" | "inventory" | "notes" | "budget" | "change_orders" | "insurance">("dashboard");
   const router = useRouter();
@@ -1083,6 +1085,9 @@ export default function ProjectTabs({
           postProjectInspections={postProjectInspections}
           isSupervisor={isSupervisor}
           onNavigateTab={(t) => setTab(t as any)}
+          userRole={userRole}
+          linkedConsultationEstimate={linkedConsultationEstimate}
+          linkedPostCostEstimate={linkedPostCostEstimate}
         />
       )}
 
@@ -3026,6 +3031,9 @@ function DashboardTab({
   postProjectInspections = [],
   isSupervisor = false,
   onNavigateTab,
+  userRole,
+  linkedConsultationEstimate = null,
+  linkedPostCostEstimate = null,
 }: {
   project: any;
   timeEntries: TimeEntry[];
@@ -3045,6 +3053,9 @@ function DashboardTab({
   postProjectInspections?: PostProjectEntry[];
   isSupervisor?: boolean;
   onNavigateTab?: (tab: string) => void;
+  userRole?: string;
+  linkedConsultationEstimate?: any;
+  linkedPostCostEstimate?: any;
 }) {
   const [editingDays, setEditingDays] = useState(false);
   const [editingHours, setEditingHours] = useState(false);
@@ -3614,6 +3625,118 @@ function DashboardTab({
               </div>
             ) : (
               <p className="text-xs text-slate-400">No incidents reported</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* === Cost Analysis: Pre-Cost & Post-Cost (ADMIN / OFFICE only) === */}
+      {(userRole === "ADMIN" || userRole === "OFFICE") && (linkedConsultationEstimate || linkedPostCostEstimate) && (
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 size={14} className="text-emerald-500" />
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Cost Analysis</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Pre-Cost */}
+            {linkedConsultationEstimate && (
+              <div className="border border-slate-200 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Pre-Cost (Estimated)</span>
+                  <Link
+                    href={`/estimates/consultation/${linkedConsultationEstimate.id}`}
+                    className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-600 hover:text-indigo-800"
+                  >
+                    View <ExternalLink size={9} />
+                  </Link>
+                </div>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Supervisor Hours</span>
+                    <span className="font-semibold text-slate-800">{linkedConsultationEstimate.supervisorHours ?? 0}h</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Technician Hours</span>
+                    <span className="font-semibold text-slate-800">{linkedConsultationEstimate.technicianHours ?? 0}h</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-100 pt-1.5">
+                    <span className="text-slate-500">Labor Cost</span>
+                    <span className="font-semibold text-slate-800">${(linkedConsultationEstimate.laborCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Cost</span>
+                    <span className="font-semibold text-slate-800">${(linkedConsultationEstimate.totalCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {linkedConsultationEstimate.customerPrice != null && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Customer Price</span>
+                      <span className="font-bold text-emerald-700">${linkedConsultationEstimate.customerPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Post-Cost */}
+            {linkedPostCostEstimate ? (
+              <div className="border border-emerald-200 bg-emerald-50/30 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Post-Cost (Actual)</span>
+                  <Link
+                    href={`/estimates/consultation/${linkedPostCostEstimate.id}/edit`}
+                    className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900"
+                  >
+                    Edit <ExternalLink size={9} />
+                  </Link>
+                </div>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Supervisor Hours</span>
+                    <span className="font-semibold text-slate-800">
+                      {linkedPostCostEstimate.supervisorHours ?? 0}h
+                      {linkedConsultationEstimate && linkedPostCostEstimate.supervisorHours !== linkedConsultationEstimate.supervisorHours && (
+                        <span className={`ml-1 text-[10px] ${(linkedPostCostEstimate.supervisorHours ?? 0) > (linkedConsultationEstimate.supervisorHours ?? 0) ? "text-red-500" : "text-emerald-600"}`}>
+                          ({(linkedPostCostEstimate.supervisorHours ?? 0) > (linkedConsultationEstimate.supervisorHours ?? 0) ? "+" : ""}{((linkedPostCostEstimate.supervisorHours ?? 0) - (linkedConsultationEstimate.supervisorHours ?? 0)).toFixed(1)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Technician Hours</span>
+                    <span className="font-semibold text-slate-800">
+                      {linkedPostCostEstimate.technicianHours ?? 0}h
+                      {linkedConsultationEstimate && linkedPostCostEstimate.technicianHours !== linkedConsultationEstimate.technicianHours && (
+                        <span className={`ml-1 text-[10px] ${(linkedPostCostEstimate.technicianHours ?? 0) > (linkedConsultationEstimate.technicianHours ?? 0) ? "text-red-500" : "text-emerald-600"}`}>
+                          ({(linkedPostCostEstimate.technicianHours ?? 0) > (linkedConsultationEstimate.technicianHours ?? 0) ? "+" : ""}{((linkedPostCostEstimate.technicianHours ?? 0) - (linkedConsultationEstimate.technicianHours ?? 0)).toFixed(1)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-emerald-100 pt-1.5">
+                    <span className="text-slate-500">Labor Cost</span>
+                    <span className="font-semibold text-slate-800">${(linkedPostCostEstimate.laborCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Cost</span>
+                    <span className="font-semibold text-slate-800">${(linkedPostCostEstimate.totalCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {linkedPostCostEstimate.status === "post_cost" && (
+                    <div className="mt-1.5 pt-1.5 border-t border-emerald-100">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Needs Review</span>
+                    </div>
+                  )}
+                  {(linkedPostCostEstimate.status === "approved" || linkedPostCostEstimate.status === "completed") && (
+                    <div className="mt-1.5 pt-1.5 border-t border-emerald-100">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Finalized</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : linkedConsultationEstimate && (
+              <div className="border border-dashed border-slate-300 rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                <p className="text-xs text-slate-400 mb-1">Post-Cost not yet created</p>
+                <p className="text-[10px] text-slate-400">Generated when project is marked complete</p>
+              </div>
             )}
           </div>
         </div>

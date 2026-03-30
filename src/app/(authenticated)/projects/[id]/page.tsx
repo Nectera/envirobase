@@ -90,19 +90,35 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     (w: any) => w.position === "Office Manager"
   );
 
-  // Find consultation estimate linked to this project (via lead or direct match)
-  const allConsultationEstimates = await prisma.consultationEstimate.findMany();
-  const relatedLeadsForEst: any[] = [];  // Lead model has no projectId FK
-  const leadIdsForEst = relatedLeadsForEst.map((l: any) => l.id);
+  // Find consultation estimates linked to this project (pre-cost and post-cost)
+  const allConsultationEstimates = await prisma.consultationEstimate.findMany({
+    where: {
+      OR: [
+        { projectId: project.id },
+        { projectNumber: project.projectNumber || "__none__" },
+      ],
+    },
+  });
   const linkedConsultationEstimate = (allConsultationEstimates as any[]).find(
-    (e: any) => e.projectId === project.id || e.projectNumber === project.projectNumber || (e.leadId && leadIdsForEst.includes(e.leadId))
+    (e: any) => !e.isPostCost
+  ) || null;
+  const linkedPostCostEstimate = (allConsultationEstimates as any[]).find(
+    (e: any) => e.isPostCost
   ) || null;
 
-  // Fetch global tasks linked to this project
-  const globalTasks = await prisma.task.findMany();
-  const linkedTasks = (globalTasks as any[]).filter(
-    (t: any) => t.linkedEntityType === "project" && t.linkedEntityId === project.id
-  );
+  // Fetch global tasks linked to this project or its consultation estimates
+  const estimateIds = allConsultationEstimates.map((e: any) => e.id);
+  const globalTasks = await prisma.task.findMany({
+    where: {
+      OR: [
+        { linkedEntityType: "project", linkedEntityId: project.id },
+        ...(estimateIds.length > 0
+          ? [{ linkedEntityType: "consultation_estimate", linkedEntityId: { in: estimateIds } }]
+          : []),
+      ],
+    },
+  });
+  const linkedTasks = globalTasks;
   const linkedTasksWithNames = linkedTasks.map((t: any) => {
     const worker = (allWorkers as any[]).find((w: any) => w.id === t.assignedTo);
     return { ...t, assigneeName: worker?.name || null };
@@ -249,6 +265,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         allWorkers={allWorkers}
         officeManagerId={officeManager?.id || null}
         linkedConsultationEstimate={linkedConsultationEstimate}
+        linkedPostCostEstimate={linkedPostCostEstimate}
       />
     </div>
   );
