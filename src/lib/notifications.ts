@@ -4,6 +4,16 @@ import { logger } from "./logger";
 import { COMPANY_SHORT, COMPANY_NAME, COMPANY_LOCATION, BRAND_COLOR, APP_NAME } from "./branding";
 import { sendPushToUser, type PushCategory } from "./pushNotifications";
 
+// Base URL for email links — must be a full URL, not a relative path
+const APP_BASE_URL = process.env.NEXTAUTH_URL || "";
+
+/** Convert a relative path like /leads/123 to a full URL */
+function fullUrl(path: string): string {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${APP_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
 // Notification type → NotificationPreference field name mapping
 type NotificationType =
   | "scheduleAssigned"
@@ -90,6 +100,7 @@ export async function sendNotificationToUser(
   type: NotificationType,
   subject: string,
   bodyContent: string,
+  pushUrl?: string,
 ): Promise<boolean> {
   try {
     // Check preference
@@ -122,7 +133,7 @@ export async function sendNotificationToUser(
       sendPushToUser(userId, pushCategory, {
         title: subject,
         body: subject,
-        url: "/",
+        url: pushUrl || "/",
       }).catch(() => {});
     }
 
@@ -348,6 +359,14 @@ export const resolveEntityLabel = async (entityType: string | null, entityId: st
       const w = await prisma.worker.findUnique({ where: { id: entityId }, select: { name: true } });
       return w ? `Worker: ${w.name}` : null;
     }
+    if (entityType === "company") {
+      const c = await prisma.company.findUnique({ where: { id: entityId }, select: { name: true } });
+      return c ? `Company: ${c.name}` : null;
+    }
+    if (entityType === "contact") {
+      const ct = await prisma.contact.findUnique({ where: { id: entityId }, select: { firstName: true, lastName: true } });
+      return ct ? `Contact: ${[ct.firstName, ct.lastName].filter(Boolean).join(" ")}` : null;
+    }
     return null;
   } catch {
     return null;
@@ -365,8 +384,6 @@ export function buildNoteMentionBody(
   const preview = noteContent.length > 200 ? noteContent.slice(0, 200) + "..." : noteContent;
   const action = context === "comment" ? "mentioned you in a note comment" : "mentioned you in a note";
   const onEntity = entityLabel ? ` on <strong>${escapeHtml(entityLabel)}</strong>` : "";
-  const appUrl = process.env.NEXTAUTH_URL || "";
-  const fullLink = link && appUrl ? `${appUrl}${link}` : link || "";
   return `
     <p style="margin:0 0 16px;color:#475569;font-size:14px;line-height:1.7;">
       <strong>${escapeHtml(fromName)}</strong> ${action}${noteTitle ? `: <strong>${escapeHtml(noteTitle)}</strong>` : ""}${onEntity}.
@@ -377,6 +394,6 @@ export function buildNoteMentionBody(
         <p style="margin:0;color:#1e293b;font-size:14px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(preview)}</p>
       </td></tr>
     </table>
-    ${fullLink ? `<a href="${fullLink}" style="display:inline-block;padding:10px 24px;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">View Note</a>` : ""}
+    ${link ? `<a href="${fullUrl(link)}" style="display:inline-block;padding:10px 24px;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">${entityLabel ? `View ${escapeHtml(entityLabel)}` : "View Note"}</a>` : ""}
   `;
 }

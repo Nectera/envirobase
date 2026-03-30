@@ -89,7 +89,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         ? `${fromName} commented on "${note.title}"${onCtx}`
         : `${fromName} commented on your note${onCtx}`;
       const creatorBody = buildNoteMentionBody(fromName, note.title, content, "comment", noteLink, entityLabel);
-      sendNotificationToUser(note.createdById, "noteMention", creatorSubject, creatorBody).catch(() => {});
+      sendNotificationToUser(note.createdById, "noteMention", creatorSubject, creatorBody, noteLink || undefined).catch(() => {});
     }
 
     // Notify mentioned users in the comment
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           ? `${fromName} mentioned you in a comment on "${note.title}"${onCtx}`
           : `${fromName} mentioned you in a comment${onCtx}`;
         const mentionBody = buildNoteMentionBody(fromName, note.title, content, "comment", noteLink, entityLabel);
-        sendNotificationToUser(mentionedUserId, "noteMention", mentionSubject, mentionBody).catch(() => {});
+        sendNotificationToUser(mentionedUserId, "noteMention", mentionSubject, mentionBody, noteLink || undefined).catch(() => {});
       }
     }
 

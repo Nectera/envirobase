@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
           ? `${fromName} mentioned you in "${title}"${onCtx}`
           : `${fromName} mentioned you in a note${onCtx}`;
         const emailBody = buildNoteMentionBody(fromName, title || null, content, "note", link, entityLabel);
-        sendNotificationToUser(mentionedUserId, "noteMention", emailSubject, emailBody).catch(() => {});
+        sendNotificationToUser(mentionedUserId, "noteMention", emailSubject, emailBody, link || undefined).catch(() => {});
       }
     }
 
