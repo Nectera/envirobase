@@ -356,9 +356,12 @@ export default function ProjectTabs({
     ? [
         { group: "overview", label: "Overview", tabs: [
           { key: "dashboard" as const, label: "Dashboard" },
+          { key: "notes" as const, label: "Notes" },
+        ]},
+        { group: "documents", label: "Documents", tabs: [
+          { key: "documents" as const, label: `Files (${projectDocuments.length})` },
           { key: "reports" as const, label: `Reports (${reportsCount})` },
           ...(hasProjectType(project.type, "METH") ? [{ key: "decon_report" as const, label: "Decon Report" }] : []),
-          { key: "notes" as const, label: "Notes" },
         ]},
         { group: "field", label: "Field", tabs: [
           { key: "inventory" as const, label: "Inventory" },
