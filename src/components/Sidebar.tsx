@@ -76,7 +76,7 @@ export default function Sidebar({
     ] : []),
     { href: "/bonus-pool", labelKey: "sidebar.bonusPool", icon: Gift },
     ...(userRole === "ADMIN" ? [
-      { href: "/budget", labelKey: "sidebar.budget", icon: DollarSign },
+      { href: "/budget", labelKey: "sidebar.budget", icon: TrendingUp },
     ] : []),
   ];
 

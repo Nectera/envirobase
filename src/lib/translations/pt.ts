@@ -74,7 +74,7 @@ export const pt: Record<string, string> = {
   "sidebar.schedule": "Agenda",
   "sidebar.calendar": "Calendário",
   "sidebar.compliance": "Conformidade",
-  "sidebar.budget": "Orçamento",
+  "sidebar.budget": "Desempenho do Projeto",
   "sidebar.forms": "Formulários",
   "sidebar.users": "Usuários",
   "sidebar.team": "Equipe",

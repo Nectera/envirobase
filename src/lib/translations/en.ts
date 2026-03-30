@@ -144,7 +144,7 @@ export const en: Record<string, string> = {
   "sidebar.schedule": "Schedule",
   "sidebar.calendar": "Calendar",
   "sidebar.compliance": "Compliance",
-  "sidebar.budget": "Budget",
+  "sidebar.budget": "Project Performance",
   "sidebar.forms": "Forms",
   "sidebar.users": "Users",
   "sidebar.team": "Team",

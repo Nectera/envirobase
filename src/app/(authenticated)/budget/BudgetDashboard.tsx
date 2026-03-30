@@ -1,111 +1,194 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  AlertTriangle,
-  CheckCircle,
   Loader2,
-  ArrowUpRight,
-  ArrowDownRight,
   BarChart3,
+  Clock,
+  Users,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  CheckCircle2,
+  AlertCircle,
+  Download,
 } from "lucide-react";
 
-type CategoryTotals = Record<string, { budget: number; actual: number }>;
-
-type ProjectSummary = {
+type PerformanceRow = {
   id: string;
-  name: string;
+  date: string | null;
+  project: string;
   projectNumber: string | null;
   type: string;
   status: string;
-  totalBudget: number;
-  totalActual: number;
-  variance: number;
-  variancePercent: number;
-  categoryTotals: CategoryTotals;
-  lineCount: number;
+  hasPostCost: boolean;
+  revenue: number;
+  totalCost: number;
+  netIncome: number;
+  grossProfit: number;
+  laborCost: number;
+  opsCost: number;
+  materialCost: number;
+  cogsCost: number;
+  estRevenue: number;
+  estTotalCost: number;
+  estNetIncome: number;
+  estLaborCost: number;
+  estOpsCost: number;
+  estMaterialCost: number;
+  estCogsCost: number;
+  estimatedHours: number;
+  hoursWorked: number;
+  region: string;
+  bonusEarned: number | null;
+  supervisor: string | null;
+  cashSwing: number;
 };
 
-type SummaryData = {
-  projects: ProjectSummary[];
-  grandBudget: number;
-  grandActual: number;
-  grandVariance: number;
-  grandVariancePercent: number;
-  globalCategories: CategoryTotals;
-  overBudgetCount: number;
-  underBudgetCount: number;
-  totalProjects: number;
+type PerformanceData = {
+  year: number;
+  rows: PerformanceRow[];
+  totals: {
+    revenue: number;
+    totalCost: number;
+    netIncome: number;
+    grossProfit: number;
+    laborCost: number;
+    opsCost: number;
+    materialCost: number;
+    cogsCost: number;
+    hoursWorked: number;
+    bonusEarned: number;
+    cashSwing: number;
+    estRevenue: number;
+    estTotalCost: number;
+  };
+  percentages: {
+    totalCostPct: number;
+    netIncomePct: number;
+    grossProfitPct: number;
+    laborCostPct: number;
+    opsCostPct: number;
+    materialCostPct: number;
+    cogsCostPct: number;
+  };
+  projectCount: number;
+  postCostCount: number;
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  labor: "#6366f1",
-  materials: "#f59e0b",
-  equipment: "#10b981",
-  subcontractor: "#8b5cf6",
-  disposal: "#ef4444",
-  permits: "#3b82f6",
-  clearance: "#ec4899",
-  other: "#64748b",
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  labor: "Labor",
-  materials: "Materials",
-  equipment: "Equipment",
-  subcontractor: "Subcontractor",
-  disposal: "Disposal",
-  permits: "Permits",
-  clearance: "Clearance",
-  other: "Other",
-};
+type SortKey = "date" | "project" | "revenue" | "totalCost" | "netIncome" | "grossProfit" | "laborCost" | "opsCost" | "materialCost" | "cogsCost" | "hoursWorked" | "region" | "bonusEarned" | "supervisor" | "cashSwing";
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 
-function BarSegment({ budget, actual, maxValue }: { budget: number; actual: number; maxValue: number }) {
-  const budgetWidth = maxValue > 0 ? (budget / maxValue) * 100 : 0;
-  const actualWidth = maxValue > 0 ? (actual / maxValue) * 100 : 0;
-  return (
-    <div className="space-y-1">
-      <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-blue-200 rounded-full"
-          style={{ width: `${Math.min(budgetWidth, 100)}%` }}
-        />
-      </div>
-      <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full ${actual > budget ? "bg-red-400" : "bg-emerald-400"}`}
-          style={{ width: `${Math.min(actualWidth, 100)}%` }}
-        />
-      </div>
-    </div>
-  );
+function formatPct(value: number): string {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export default function BudgetDashboard() {
-  const [data, setData] = useState<SummaryData | null>(null);
+  const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "over" | "under">("all");
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
-    fetch("/api/project-budget/summary")
+    setLoading(true);
+    fetch(`/api/project-performance?year=${year}`)
       .then((r) => r.json())
       .then((d) => { if (!d.error) setData(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [year]);
+
+  const regions = useMemo(() => {
+    if (!data) return [];
+    const s = new Set(data.rows.map((r) => r.region));
+    return Array.from(s).sort();
+  }, [data]);
+
+  const filteredRows = useMemo(() => {
+    if (!data) return [];
+    let rows = data.rows;
+    if (regionFilter !== "all") rows = rows.filter((r) => r.region === regionFilter);
+    if (statusFilter === "post_costed") rows = rows.filter((r) => r.hasPostCost);
+    else if (statusFilter === "estimated") rows = rows.filter((r) => !r.hasPostCost);
+
+    rows = [...rows].sort((a, b) => {
+      let av: any, bv: any;
+      switch (sortKey) {
+        case "date": av = a.date || ""; bv = b.date || ""; break;
+        case "project": av = a.project.toLowerCase(); bv = b.project.toLowerCase(); break;
+        case "region": av = a.region; bv = b.region; break;
+        case "supervisor": av = a.supervisor || ""; bv = b.supervisor || ""; break;
+        default: av = (a as any)[sortKey] ?? 0; bv = (b as any)[sortKey] ?? 0; break;
+      }
+      if (typeof av === "string") return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      return sortAsc ? av - bv : bv - av;
+    });
+    return rows;
+  }, [data, sortKey, sortAsc, regionFilter, statusFilter]);
+
+  // Recalculate totals for filtered rows
+  const filteredTotals = useMemo(() => {
+    return filteredRows.reduce(
+      (acc, r) => {
+        acc.revenue += r.revenue;
+        acc.totalCost += r.totalCost;
+        acc.netIncome += r.netIncome;
+        acc.grossProfit += r.grossProfit;
+        acc.laborCost += r.laborCost;
+        acc.opsCost += r.opsCost;
+        acc.materialCost += r.materialCost;
+        acc.cogsCost += r.cogsCost;
+        acc.hoursWorked += r.hoursWorked;
+        acc.bonusEarned += r.bonusEarned || 0;
+        acc.cashSwing += r.cashSwing;
+        return acc;
+      },
+      { revenue: 0, totalCost: 0, netIncome: 0, grossProfit: 0, laborCost: 0, opsCost: 0, materialCost: 0, cogsCost: 0, hoursWorked: 0, bonusEarned: 0, cashSwing: 0 }
+    );
+  }, [filteredRows]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else { setSortKey(key); setSortAsc(false); }
+  };
+
+  const handleExportCsv = () => {
+    if (!filteredRows.length) return;
+    const headers = ["Date", "Project", "Revenue", "Total Cost", "Net Income", "Gross Profit", "Labor", "Operating Costs", "Material", "COGS", "Hours Worked", "Region", "Bonus Earned", "Supervisor", "Cash Swing From 15% Net"];
+    const csvRows = filteredRows.map((r) => [
+      r.date || "", r.project, r.revenue.toFixed(2), r.totalCost.toFixed(2), r.netIncome.toFixed(2),
+      r.grossProfit.toFixed(2), r.laborCost.toFixed(2), r.opsCost.toFixed(2), r.materialCost.toFixed(2),
+      r.cogsCost.toFixed(2), r.hoursWorked.toFixed(2), r.region, (r.bonusEarned || 0).toFixed(2),
+      r.supervisor || "", r.cashSwing.toFixed(2),
+    ].map((v) => `"${v}"`).join(","));
+    const csv = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `Project_Performance_${year}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (loading) {
     return (
@@ -115,239 +198,317 @@ export default function BudgetDashboard() {
     );
   }
 
-  if (!data || data.totalProjects === 0) {
+  if (!data || data.projectCount === 0) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-lg font-bold text-slate-900 mb-4">Budget vs Actuals</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-lg font-bold text-slate-900">Project Performance</h1>
+          <YearSelector year={year} onChange={setYear} />
+        </div>
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center">
           <BarChart3 size={48} className="mx-auto text-slate-300 mb-4" />
-          <h2 className="text-sm font-semibold text-slate-700 mb-2">No Budget Data Yet</h2>
+          <h2 className="text-sm font-semibold text-slate-700 mb-2">No Performance Data for {year}</h2>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Start adding budget lines to your projects to see budget vs actuals tracking here.
-            You can add budgets from the project detail page or auto-populate from estimates.
+            Complete projects with consultation estimates will appear here. Post-cost data shows actual figures; pre-cost data shows estimates.
           </p>
         </div>
       </div>
     );
   }
 
-  const filteredProjects = data.projects.filter((p) => {
-    if (filter === "over") return p.variance < 0;
-    if (filter === "under") return p.variance >= 0;
-    return true;
-  });
-
-  const maxProjectBudget = Math.max(
-    ...data.projects.map((p) => Math.max(p.totalBudget, p.totalActual)),
-    1
-  );
+  const t = filteredTotals;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-lg font-bold text-slate-900">Budget vs Actuals</h1>
-        <p className="text-xs text-slate-500 mt-1">
-          Track project spending against budgets across all active projects
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-slate-900">Project Performance</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Revenue tracking and cost analysis across all projects
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            <Download size={14} />
+            Export CSV
+          </button>
+          <YearSelector year={year} onChange={setYear} />
+        </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <DollarSign size={16} className="text-blue-600" />
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">Total Budget</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(data.grandBudget)}</p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <SummaryCard
+          icon={<DollarSign size={16} className="text-blue-600" />}
+          iconBg="bg-blue-50"
+          label="Revenue"
+          value={formatCurrency(t.revenue)}
+        />
+        <SummaryCard
+          icon={<TrendingDown size={16} className="text-amber-600" />}
+          iconBg="bg-amber-50"
+          label="Total Cost"
+          value={formatCurrency(t.totalCost)}
+          sub={t.revenue > 0 ? formatPct(t.totalCost / t.revenue) : undefined}
+        />
+        <SummaryCard
+          icon={<TrendingUp size={16} className={t.netIncome >= 0 ? "text-emerald-600" : "text-red-600"} />}
+          iconBg={t.netIncome >= 0 ? "bg-emerald-50" : "bg-red-50"}
+          label="Net Income"
+          value={formatCurrency(t.netIncome)}
+          valueColor={t.netIncome >= 0 ? "text-emerald-600" : "text-red-600"}
+          sub={t.revenue > 0 ? formatPct(t.netIncome / t.revenue) : undefined}
+        />
+        <SummaryCard
+          icon={<Clock size={16} className="text-indigo-600" />}
+          iconBg="bg-indigo-50"
+          label="Hours Worked"
+          value={t.hoursWorked.toLocaleString()}
+        />
+        <SummaryCard
+          icon={<Users size={16} className="text-purple-600" />}
+          iconBg="bg-purple-50"
+          label="Projects"
+          value={String(filteredRows.length)}
+          sub={`${filteredRows.filter((r) => r.hasPostCost).length} post-costed`}
+        />
+      </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <TrendingUp size={16} className="text-emerald-600" />
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">Total Actual</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(data.grandActual)}</p>
+      {/* Cost Breakdown Bar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <h2 className="text-xs font-semibold text-slate-700 mb-3">Cost Breakdown</h2>
+        <div className="flex h-6 rounded-lg overflow-hidden">
+          {[
+            { label: "Labor", value: t.laborCost, color: "bg-indigo-400" },
+            { label: "Operating", value: t.opsCost, color: "bg-amber-400" },
+            { label: "Material", value: t.materialCost, color: "bg-emerald-400" },
+            { label: "COGS", value: t.cogsCost, color: "bg-rose-400" },
+          ].map((seg) => {
+            const pct = t.totalCost > 0 ? (seg.value / t.totalCost) * 100 : 0;
+            if (pct < 1) return null;
+            return (
+              <div
+                key={seg.label}
+                className={`${seg.color} relative group`}
+                style={{ width: `${pct}%` }}
+                title={`${seg.label}: ${formatCurrency(seg.value)} (${pct.toFixed(1)}%)`}
+              />
+            );
+          })}
         </div>
-
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              data.grandVariance >= 0 ? "bg-emerald-50" : "bg-red-50"
-            }`}>
-              {data.grandVariance >= 0 ? (
-                <ArrowUpRight size={16} className="text-emerald-600" />
-              ) : (
-                <ArrowDownRight size={16} className="text-red-600" />
-              )}
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">Variance</p>
-          <p className={`text-lg font-bold ${data.grandVariance >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-            {formatCurrency(Math.abs(data.grandVariance))}
-            <span className="text-xs font-normal ml-1">
-              {data.grandVariance >= 0 ? "under" : "over"}
+        <div className="flex items-center gap-4 mt-2 flex-wrap">
+          {[
+            { label: "Labor", value: t.laborCost, color: "bg-indigo-400" },
+            { label: "Operating", value: t.opsCost, color: "bg-amber-400" },
+            { label: "Material", value: t.materialCost, color: "bg-emerald-400" },
+            { label: "COGS", value: t.cogsCost, color: "bg-rose-400" },
+          ].map((seg) => (
+            <span key={seg.label} className="flex items-center gap-1.5 text-[10px] text-slate-500">
+              <span className={`w-2.5 h-2.5 rounded-sm ${seg.color}`} />
+              {seg.label}: {formatCurrency(seg.value)} ({t.totalCost > 0 ? ((seg.value / t.totalCost) * 100).toFixed(1) : 0}%)
             </span>
-          </p>
+          ))}
         </div>
+      </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              data.overBudgetCount > 0 ? "bg-amber-50" : "bg-emerald-50"
-            }`}>
-              {data.overBudgetCount > 0 ? (
-                <AlertTriangle size={16} className="text-amber-600" />
-              ) : (
-                <CheckCircle size={16} className="text-emerald-600" />
+      {/* Filters */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <select
+          value={regionFilter}
+          onChange={(e) => setRegionFilter(e.target.value)}
+          className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+        >
+          <option value="all">All Regions</option>
+          {regions.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+        >
+          <option value="all">All Projects</option>
+          <option value="post_costed">Post-Costed Only</option>
+          <option value="estimated">Estimated Only</option>
+        </select>
+        <span className="text-[10px] text-slate-400 ml-2">
+          {filteredRows.length} project{filteredRows.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Data Table */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <SortHeader label="Date" sortKey="date" current={sortKey} asc={sortAsc} onClick={handleSort} className="sticky left-0 bg-slate-50 z-10" />
+                <SortHeader label="Project" sortKey="project" current={sortKey} asc={sortAsc} onClick={handleSort} className="sticky left-[72px] bg-slate-50 z-10" />
+                <SortHeader label="Revenue" sortKey="revenue" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Total Cost" sortKey="totalCost" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Net Income" sortKey="netIncome" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Gross Profit" sortKey="grossProfit" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Labor" sortKey="laborCost" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Operating" sortKey="opsCost" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Material" sortKey="materialCost" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="COGS" sortKey="cogsCost" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Hours" sortKey="hoursWorked" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Region" sortKey="region" current={sortKey} asc={sortAsc} onClick={handleSort} />
+                <SortHeader label="Bonus" sortKey="bonusEarned" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+                <SortHeader label="Supervisor" sortKey="supervisor" current={sortKey} asc={sortAsc} onClick={handleSort} />
+                <SortHeader label="Cash Swing" sortKey="cashSwing" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
+              </tr>
+            </thead>
+            <tbody>
+              {/* Totals Row */}
+              <tr className="bg-slate-50/70 border-b border-slate-300 font-semibold">
+                <td className="px-3 py-2 sticky left-0 bg-slate-50/70 z-10" colSpan={2}>
+                  <span className="text-slate-600">Totals</span>
+                </td>
+                <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.revenue)}</td>
+                <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.totalCost)}</td>
+                <td className={`px-3 py-2 text-right ${t.netIncome >= 0 ? "text-emerald-700" : "text-red-600"}`}>{formatCurrency(t.netIncome)}</td>
+                <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.grossProfit)}</td>
+                <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.laborCost)}</td>
+                <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.opsCost)}</td>
+                <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.materialCost)}</td>
+                <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.cogsCost)}</td>
+                <td className="px-3 py-2 text-right text-slate-900">{t.hoursWorked.toLocaleString()}</td>
+                <td className="px-3 py-2 text-slate-400">—</td>
+                <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.bonusEarned)}</td>
+                <td className="px-3 py-2 text-slate-400">—</td>
+                <td className={`px-3 py-2 text-right ${t.cashSwing >= 0 ? "text-emerald-700" : "text-red-600"}`}>{formatCurrency(t.cashSwing)}</td>
+              </tr>
+              {/* Percentage Row */}
+              {t.revenue > 0 && (
+                <tr className="bg-slate-50/40 border-b border-slate-200 text-[10px] text-slate-400">
+                  <td className="px-3 py-1 sticky left-0 bg-slate-50/40 z-10" colSpan={2}>% of Revenue</td>
+                  <td className="px-3 py-1 text-right">—</td>
+                  <td className="px-3 py-1 text-right">{formatPct(t.totalCost / t.revenue)}</td>
+                  <td className="px-3 py-1 text-right">{formatPct(t.netIncome / t.revenue)}</td>
+                  <td className="px-3 py-1 text-right">{formatPct(t.grossProfit / t.revenue)}</td>
+                  <td className="px-3 py-1 text-right">{formatPct(t.laborCost / t.revenue)}</td>
+                  <td className="px-3 py-1 text-right">{formatPct(t.opsCost / t.revenue)}</td>
+                  <td className="px-3 py-1 text-right">{formatPct(t.materialCost / t.revenue)}</td>
+                  <td className="px-3 py-1 text-right">{formatPct(t.cogsCost / t.revenue)}</td>
+                  <td className="px-3 py-1" colSpan={5}>—</td>
+                </tr>
               )}
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">Projects</p>
-          <p className="text-lg font-bold text-slate-900">
-            {data.totalProjects}
-            {data.overBudgetCount > 0 && (
-              <span className="text-xs font-normal text-red-600 ml-1">
-                ({data.overBudgetCount} over)
-              </span>
-            )}
-          </p>
-        </div>
-      </div>
-
-      {/* Category Breakdown */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-4">Spend by Category</h2>
-        <div className="space-y-3">
-          {Object.entries(data.globalCategories)
-            .sort(([, a], [, b]) => b.budget - a.budget)
-            .map(([category, totals]) => {
-              const maxCat = Math.max(
-                ...Object.values(data.globalCategories).map((t) => Math.max(t.budget, t.actual)),
-                1
-              );
-              const variance = totals.budget - totals.actual;
-              return (
-                <div key={category} className="flex items-center gap-4">
-                  <div className="w-24 flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-sm flex-shrink-0"
-                      style={{ backgroundColor: CATEGORY_COLORS[category] || "#94a3b8" }}
-                    />
-                    <span className="text-xs font-medium text-slate-700 truncate">
-                      {CATEGORY_LABELS[category] || category}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <BarSegment budget={totals.budget} actual={totals.actual} maxValue={maxCat} />
-                  </div>
-                  <div className="w-40 text-right text-xs">
-                    <span className="text-slate-500">{formatCurrency(totals.actual)}</span>
-                    <span className="text-slate-400"> / </span>
-                    <span className="text-slate-700 font-medium">{formatCurrency(totals.budget)}</span>
-                    <span className={`ml-2 ${variance >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                      ({variance >= 0 ? "+" : ""}{formatCurrency(variance)})
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          <div className="flex items-center gap-3 pt-2 text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><span className="w-3 h-1.5 bg-blue-200 rounded" /> Budget</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-1.5 bg-emerald-400 rounded" /> Actual (under)</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-1.5 bg-red-400 rounded" /> Actual (over)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Project List */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-slate-900">Projects</h2>
-          <div className="flex gap-1">
-            {(["all", "over", "under"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
-                  filter === f
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-500 hover:bg-slate-100"
-                }`}
-              >
-                {f === "all" ? "All" : f === "over" ? "Over Budget" : "Under Budget"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {filteredProjects.length === 0 ? (
-          <p className="text-xs text-slate-400 text-center py-6">No projects match this filter</p>
-        ) : (
-          <div className="space-y-2">
-            {filteredProjects
-              .sort((a, b) => a.variance - b.variance) // worst first
-              .map((project) => {
-                const pct = project.totalBudget > 0
-                  ? (project.totalActual / project.totalBudget) * 100
-                  : 0;
-                const over = project.variance < 0;
-                return (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors"
-                  >
-                    {/* Status indicator */}
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      over ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-emerald-500"
-                    }`} />
-
-                    {/* Project info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-slate-800 truncate">{project.name}</span>
-                        {project.projectNumber && (
-                          <span className="text-[10px] text-slate-400">#{project.projectNumber}</span>
-                        )}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 uppercase">
-                          {project.type}
+              {/* Data Rows */}
+              {filteredRows.map((row) => (
+                <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <td className="px-3 py-2.5 whitespace-nowrap sticky left-0 bg-white z-10">
+                    {formatDate(row.date)}
+                  </td>
+                  <td className="px-3 py-2.5 sticky left-[72px] bg-white z-10">
+                    <Link href={`/projects/${row.id}`} className="text-green-700 hover:underline font-medium truncate block max-w-[180px]">
+                      {row.project}
+                    </Link>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {row.hasPostCost ? (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                          <CheckCircle2 size={9} /> Post-Costed
                         </span>
-                      </div>
-                      {/* Progress bar */}
-                      <div className="mt-1.5 h-1.5 bg-slate-100 rounded-full overflow-hidden w-full max-w-xs">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            over ? "bg-red-400" : pct > 80 ? "bg-amber-400" : "bg-emerald-400"
-                          }`}
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
-                      </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                          <AlertCircle size={9} /> Estimated
+                        </span>
+                      )}
                     </div>
-
-                    {/* Numbers */}
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-xs text-slate-500">
-                        {formatCurrency(project.totalActual)} / {formatCurrency(project.totalBudget)}
-                      </div>
-                      <div className={`text-xs font-medium ${over ? "text-red-600" : "text-emerald-600"}`}>
-                        {over ? (
-                          <>{formatCurrency(Math.abs(project.variance))} over</>
-                        ) : (
-                          <>{formatCurrency(project.variance)} remaining</>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+                  </td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">{formatCurrency(row.revenue)}</td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">{formatCurrency(row.totalCost)}</td>
+                  <td className={`px-3 py-2.5 text-right whitespace-nowrap ${row.netIncome >= 0 ? "text-slate-800" : "text-red-600"}`}>
+                    {formatCurrency(row.netIncome)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">{formatCurrency(row.grossProfit)}</td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">{formatCurrency(row.laborCost)}</td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">{formatCurrency(row.opsCost)}</td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">{formatCurrency(row.materialCost)}</td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">{formatCurrency(row.cogsCost)}</td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">{row.hoursWorked || "—"}</td>
+                  <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">{row.region}</td>
+                  <td className={`px-3 py-2.5 text-right whitespace-nowrap ${(row.bonusEarned ?? 0) < 0 ? "text-red-600" : ""}`}>
+                    {row.bonusEarned != null ? formatCurrency(row.bonusEarned) : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap text-slate-600 max-w-[120px] truncate">
+                    {row.supervisor || "—"}
+                  </td>
+                  <td className={`px-3 py-2.5 text-right whitespace-nowrap ${row.cashSwing >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                    {formatCurrency(row.cashSwing)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filteredRows.length === 0 && (
+          <div className="py-12 text-center text-xs text-slate-400">
+            No projects match the current filters for {year}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+/* ─── Sub-components ──────────────────────────────────────────────── */
+
+function YearSelector({ year, onChange }: { year: number; onChange: (y: number) => void }) {
+  return (
+    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1">
+      <button onClick={() => onChange(year - 1)} className="p-1 text-slate-400 hover:text-slate-700">
+        <ChevronLeft size={14} />
+      </button>
+      <span className="text-xs font-semibold text-slate-800 w-10 text-center">{year}</span>
+      <button onClick={() => onChange(year + 1)} className="p-1 text-slate-400 hover:text-slate-700">
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  );
+}
+
+function SummaryCard({
+  icon, iconBg, label, value, sub, valueColor,
+}: {
+  icon: React.ReactNode; iconBg: string; label: string; value: string; sub?: string; valueColor?: string;
+}) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
+          {icon}
+        </div>
+      </div>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className={`text-lg font-bold ${valueColor || "text-slate-900"}`}>{value}</p>
+      {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function SortHeader({
+  label, sortKey, current, asc, onClick, align, className,
+}: {
+  label: string; sortKey: SortKey; current: SortKey; asc: boolean; onClick: (k: SortKey) => void; align?: "right"; className?: string;
+}) {
+  const active = current === sortKey;
+  return (
+    <th
+      className={`px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 cursor-pointer select-none whitespace-nowrap hover:text-slate-700 ${align === "right" ? "text-right" : "text-left"} ${className || ""}`}
+      onClick={() => onClick(sortKey)}
+    >
+      <span className="inline-flex items-center gap-0.5">
+        {label}
+        {active && (
+          <ArrowUpDown size={10} className="text-green-600" />
+        )}
+      </span>
+    </th>
   );
 }
