@@ -16,6 +16,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Download,
+  Link2,
+  X,
+  Search,
 } from "lucide-react";
 
 type PerformanceRow = {
@@ -109,6 +112,10 @@ export default function BudgetDashboard() {
   const [sortAsc, setSortAsc] = useState(false);
   const [regionFilter, setRegionFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showLinkPanel, setShowLinkPanel] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshData = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
     setLoading(true);
@@ -117,7 +124,7 @@ export default function BudgetDashboard() {
       .then((d) => { if (!d.error) setData(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [year]);
+  }, [year, refreshKey]);
 
   const regions = useMemo(() => {
     if (!data) return [];
@@ -230,6 +237,17 @@ export default function BudgetDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setShowLinkPanel(!showLinkPanel)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+              showLinkPanel
+                ? "text-green-700 bg-green-50 border-green-200"
+                : "text-slate-600 bg-white border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            <Link2 size={14} />
+            Link Estimates
+          </button>
+          <button
             onClick={handleExportCsv}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
           >
@@ -239,6 +257,14 @@ export default function BudgetDashboard() {
           <YearSelector year={year} onChange={setYear} />
         </div>
       </div>
+
+      {/* Link Estimates Panel */}
+      {showLinkPanel && (
+        <LinkEstimatesPanel
+          onLinked={() => { refreshData(); }}
+          onClose={() => setShowLinkPanel(false)}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -510,5 +536,220 @@ function SortHeader({
         )}
       </span>
     </th>
+  );
+}
+
+/* ─── Link Estimates Panel ───────────────────────────────────────── */
+
+type UnlinkedEstimate = {
+  id: string;
+  customerName: string | null;
+  address: string | null;
+  customerPrice: number | null;
+  projectNumber: string | null;
+  createdAt: string;
+  status: string;
+};
+
+type ProjectOption = {
+  id: string;
+  name: string;
+  projectNumber: string | null;
+  status: string;
+  hasEstimate: boolean;
+};
+
+function LinkEstimatesPanel({ onLinked, onClose }: { onLinked: () => void; onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [estimates, setEstimates] = useState<UnlinkedEstimate[]>([]);
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [selectedEstimate, setSelectedEstimate] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
+  const [searchProject, setSearchProject] = useState("");
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const loadData = () => {
+    setLoading(true);
+    fetch("/api/project-performance/link")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.error) {
+          setEstimates(d.unlinkedEstimates || []);
+          setProjects(d.projects || []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  const filteredProjects = projects.filter((p) => {
+    if (!searchProject) return true;
+    const q = searchProject.toLowerCase();
+    return p.name.toLowerCase().includes(q) || (p.projectNumber || "").toLowerCase().includes(q);
+  });
+
+  const handleLink = async () => {
+    if (!selectedEstimate || !selectedProject) return;
+    setLinking(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/project-performance/link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estimateId: selectedEstimate, projectId: selectedProject }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ text: "Estimate linked successfully!", type: "success" });
+        setSelectedEstimate(null);
+        setSelectedProject(null);
+        setSearchProject("");
+        loadData();
+        onLinked();
+      } else {
+        setMessage({ text: data.error || "Failed to link", type: "error" });
+      }
+    } catch {
+      setMessage({ text: "Network error", type: "error" });
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="animate-spin text-slate-400" size={20} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-green-200 rounded-xl p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Link2 size={16} className="text-green-600" />
+          <h2 className="text-sm font-semibold text-slate-900">Link Estimates to Projects</h2>
+          {estimates.length > 0 && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+              {estimates.length} unlinked
+            </span>
+          )}
+        </div>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <X size={16} />
+        </button>
+      </div>
+
+      {message && (
+        <div className={`mb-3 px-3 py-2 rounded-lg text-xs font-medium ${
+          message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+        }`}>
+          {message.text}
+        </div>
+      )}
+
+      {estimates.length === 0 ? (
+        <p className="text-xs text-slate-500 py-2">
+          All consultation estimates are already linked to projects. If a project is still missing from the Performance page, make sure it has a status of &quot;in_progress&quot; or &quot;completed&quot;.
+        </p>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Select Estimate */}
+          <div>
+            <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
+              1. Select an Unlinked Estimate
+            </label>
+            <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
+              {estimates.map((est) => (
+                <button
+                  key={est.id}
+                  onClick={() => setSelectedEstimate(est.id)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs transition-colors ${
+                    selectedEstimate === est.id
+                      ? "border-green-300 bg-green-50 ring-1 ring-green-200"
+                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="font-medium text-slate-800">{est.customerName || "Unnamed Estimate"}</div>
+                  <div className="text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                    {est.address && <span>{est.address}</span>}
+                    {est.customerPrice != null && (
+                      <span className="font-medium text-slate-700">{formatCurrency(est.customerPrice)}</span>
+                    )}
+                    <span className="text-slate-400">{new Date(est.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Select Project */}
+          <div>
+            <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
+              2. Link to Project
+            </label>
+            <div className="relative mb-2">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={searchProject}
+                onChange={(e) => setSearchProject(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500"
+              />
+            </div>
+            <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+              {filteredProjects.map((proj) => (
+                <button
+                  key={proj.id}
+                  onClick={() => setSelectedProject(proj.id)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs transition-colors ${
+                    selectedProject === proj.id
+                      ? "border-green-300 bg-green-50 ring-1 ring-green-200"
+                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-800">{proj.name}</span>
+                    {proj.projectNumber && (
+                      <span className="text-slate-400">#{proj.projectNumber}</span>
+                    )}
+                  </div>
+                  <div className="text-slate-500 mt-0.5 flex items-center gap-2">
+                    <span className="capitalize">{proj.status.replace("_", " ")}</span>
+                    {proj.hasEstimate && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">Has estimate</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+              {filteredProjects.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-3">No projects match your search</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Link Button */}
+      {estimates.length > 0 && (
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={handleLink}
+            disabled={!selectedEstimate || !selectedProject || linking}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {linking ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+            Link Estimate to Project
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
