@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, CheckCircle, Clock, AlertTriangle, User, Calendar, Flag, FileText, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { X, CheckCircle, Clock, AlertTriangle, User, Calendar, Flag, FileText, Loader2, ExternalLink } from "lucide-react";
 
 interface TaskDetailModalProps {
   task: any;
@@ -24,12 +25,93 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string; lab
 };
 
 function formatDate(d: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [y, m, day] = d.split("-").map(Number);
+    return new Date(y, m - 1, day).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
   return new Date(d).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+}
+
+/** Build the URL for a linked entity so task modals can link directly to the relevant page */
+function getLinkedEntityUrl(task: any): string | null {
+  const { linkedEntityType, linkedEntityId } = task;
+  if (!linkedEntityType || !linkedEntityId) return null;
+  switch (linkedEntityType) {
+    case "consultation_estimate":
+      return `/estimates/consultation/${linkedEntityId}/edit`;
+    case "lead":
+      return `/leads/${linkedEntityId}`;
+    case "project":
+      return `/projects/${linkedEntityId}`;
+    case "estimate":
+      return `/estimates/${linkedEntityId}`;
+    case "contact":
+      return `/contacts/${linkedEntityId}`;
+    case "company":
+      return `/companies/${linkedEntityId}`;
+    default:
+      return null;
+  }
+}
+
+/** Human-readable label for a linked entity type */
+function getLinkedEntityLabel(task: any): string {
+  switch (task.linkedEntityType) {
+    case "consultation_estimate":
+      return task.title?.toLowerCase().includes("post-cost") ? "Open Post-Cost Form" : "Open Estimate";
+    case "lead":
+      return "View Lead";
+    case "project":
+      return "View Project";
+    case "estimate":
+      return "View Estimate";
+    case "contact":
+      return "View Contact";
+    case "company":
+      return "View Company";
+    default:
+      return "View";
+  }
+}
+
+/** Render description text with inline URLs converted to clickable links */
+function RenderDescription({ text }: { text: string }) {
+  const urlRegex = /((?:https?:\/\/[^\s]+)|(?:\/[a-zA-Z0-9/_-]+(?:\/[a-zA-Z0-9/_-]+)*))/g;
+  const parts = text.split(urlRegex);
+  return (
+    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+      {parts.map((part, i) => {
+        if (urlRegex.test(part)) {
+          urlRegex.lastIndex = 0;
+          const isAbsolute = part.startsWith("http");
+          if (isAbsolute) {
+            return (
+              <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+                className="text-indigo-600 hover:text-indigo-800 underline break-all">
+                {part}
+              </a>
+            );
+          }
+          return (
+            <Link key={i} href={part} className="text-indigo-600 hover:text-indigo-800 underline break-all">
+              {part}
+            </Link>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </p>
+  );
 }
 
 export default function TaskDetailModal({ task, onClose, onComplete, onStatusChange }: TaskDetailModalProps) {
@@ -93,6 +175,22 @@ export default function TaskDetailModal({ task, onClose, onComplete, onStatusCha
 
         {/* Body */}
         <div className="px-6 py-4 space-y-4">
+          {/* Linked entity action button */}
+          {(() => {
+            const entityUrl = getLinkedEntityUrl(task);
+            if (!entityUrl) return null;
+            return (
+              <Link
+                href={entityUrl}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                onClick={onClose}
+              >
+                <ExternalLink size={14} />
+                {getLinkedEntityLabel(task)}
+              </Link>
+            );
+          })()}
+
           {/* Description */}
           {task.description && (
             <div>
@@ -100,7 +198,7 @@ export default function TaskDetailModal({ task, onClose, onComplete, onStatusCha
                 <FileText size={12} />
                 <span className="font-semibold">Description</span>
               </div>
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{task.description}</p>
+              <RenderDescription text={task.description} />
             </div>
           )}
 
