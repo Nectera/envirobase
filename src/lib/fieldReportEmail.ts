@@ -411,6 +411,56 @@ export async function sendFieldReportEmail(
       console.error("[DFR-EMAIL] Company copy error:", companyErr.message);
     }
 
+    // Send the full report email to project PM + all admins in this org
+    try {
+      const pmAndAdminEmails = new Set<string>();
+      const orgId = (project as any).organizationId;
+
+      // 1. Project's assigned PM — look up Worker → email / linked User email
+      if (project.projectManagerId) {
+        const pmWorker = await prisma.worker.findUnique({
+          where: { id: project.projectManagerId },
+          select: { email: true, userId: true },
+        });
+        if (pmWorker) {
+          if (pmWorker.email) pmAndAdminEmails.add(pmWorker.email);
+          if (pmWorker.userId) {
+            const pmUser = await prisma.user.findUnique({
+              where: { id: pmWorker.userId },
+              select: { email: true },
+            });
+            if (pmUser?.email) pmAndAdminEmails.add(pmUser.email);
+          }
+        }
+      }
+
+      // 2. All admin users in this org
+      const adminUsers = await prisma.user.findMany({
+        where: { role: "ADMIN", ...(orgId ? { organizationId: orgId } : {}) },
+        select: { email: true },
+      });
+      for (const admin of adminUsers) {
+        if (admin.email) pmAndAdminEmails.add(admin.email);
+      }
+
+      // Remove customer email and company email to avoid duplicates
+      pmAndAdminEmails.delete(customer.email);
+      pmAndAdminEmails.delete(COMPANY_EMAIL);
+
+      const internalSubject = `[Field Report] ${project.name} — ${reportDate}`;
+      for (const email of Array.from(pmAndAdminEmails)) {
+        console.log("[DFR-EMAIL] Sending internal copy to:", email);
+        sendHtmlEmail({ to: email, subject: internalSubject, html, text: plainText })
+          .then((r) => {
+            if (r.success) console.log("[DFR-EMAIL] Internal copy sent to", email);
+            else console.error("[DFR-EMAIL] Internal copy FAILED for", email, r.error);
+          })
+          .catch((err) => console.error("[DFR-EMAIL] Internal copy error for", email, err.message));
+      }
+    } catch (internalErr: any) {
+      console.error("[DFR-EMAIL] Internal distribution error:", internalErr.message);
+    }
+
     // Also notify office/PM users that a field report was submitted
     try {
       const notifBody = buildFieldReportBody(
