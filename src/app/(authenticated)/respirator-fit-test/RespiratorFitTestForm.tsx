@@ -44,12 +44,12 @@ export default function RespiratorFitTestForm({
   // Load workers and projects
   useEffect(() => {
     Promise.all([
-      fetch("/api/workers").then((r) => r.json()),
-      fetch("/api/projects").then((r) => r.json())
+      fetch("/api/workers").then((r) => r.ok ? r.json() : []),
+      fetch("/api/projects").then((r) => r.ok ? r.json() : [])
     ]).then(([w, p]) => {
-      setWorkers(w);
-      setProjects(p);
-    });
+      setWorkers(Array.isArray(w) ? w : []);
+      setProjects(Array.isArray(p) ? p : []);
+    }).catch(() => {});
   }, []);
 
   // Auto-fill employee name when worker is selected

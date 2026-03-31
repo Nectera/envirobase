@@ -34,9 +34,10 @@ export default async function WorkerDetailPage({ params }: { params: { id: strin
   // Fetch fit tests for this worker
   const fitTests = await prisma.respiratorFitTest.findMany({
     where: { workerId: worker.id },
+    orderBy: { testDate: "desc" },
   });
 
-  const types = worker.types.split(",").filter(Boolean);
+  const types = (worker.types || "").split(",").filter(Boolean);
   const latestMed = worker.medicalRecords[0];
 
   // Determine fit test status

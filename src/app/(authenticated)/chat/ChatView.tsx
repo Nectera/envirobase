@@ -4,93 +4,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   MessageSquare, Hash, Send, Paperclip, X, Plus, Search,
   Users, ChevronLeft, Loader2, Image as ImageIcon, FileText,
-  AtSign, User as UserIcon, RefreshCw, Lock, Globe, Check,
+  AtSign, User as UserIcon, Lock, Globe, Check,
   Pencil, Trash2, UserPlus, UserMinus, SmilePlus, Video,
 } from "lucide-react";
 import EmojiReactions from "@/components/EmojiReactions";
 
-// ─── Pull-to-refresh hook ──────────────────────────────────────
-function usePullToRefresh(onRefresh: () => Promise<void>, scrollRef: React.RefObject<HTMLElement | null>) {
-  const [pulling, setPulling] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const startY = useRef(0);
-  const isPulling = useRef(false);
-  const pullDistanceRef = useRef(0);
-  const onRefreshRef = useRef(onRefresh);
-  const threshold = 60;
-
-  // Keep callback ref fresh to avoid stale closures
-  onRefreshRef.current = onRefresh;
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (el.scrollTop <= 0) {
-        startY.current = e.touches[0].clientY;
-        isPulling.current = true;
-      }
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isPulling.current) return;
-      const diff = e.touches[0].clientY - startY.current;
-      if (diff > 0 && el.scrollTop <= 0) {
-        const distance = Math.min(diff * 0.5, 100);
-        pullDistanceRef.current = distance;
-        setPullDistance(distance);
-        setPulling(true);
-        if (distance > 10) e.preventDefault();
-      } else {
-        isPulling.current = false;
-        pullDistanceRef.current = 0;
-        setPulling(false);
-        setPullDistance(0);
-      }
-    };
-
-    const onTouchEnd = async () => {
-      if (!isPulling.current) return;
-      isPulling.current = false;
-      const dist = pullDistanceRef.current;
-      if (dist >= threshold) {
-        setRefreshing(true);
-        setPullDistance(threshold);
-        try { await onRefreshRef.current(); } catch {}
-        setRefreshing(false);
-      }
-      pullDistanceRef.current = 0;
-      setPulling(false);
-      setPullDistance(0);
-    };
-
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-    return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-    };
-  }, [scrollRef, threshold]);
-
-  const indicator = (pulling || refreshing) ? (
-    <div
-      className="flex items-center justify-center overflow-hidden transition-all duration-200"
-      style={{ height: refreshing ? threshold : pullDistance }}
-    >
-      <RefreshCw
-        size={18}
-        className={`text-green-500 transition-transform ${refreshing ? "animate-spin" : ""}`}
-        style={{ transform: `rotate(${pullDistance * 3}deg)`, opacity: Math.min(pullDistance / threshold, 1) }}
-      />
-    </div>
-  ) : null;
-
-  return { indicator, refreshing };
-}
+// Pull-to-refresh removed from chat — chat polls every few seconds so PTR
+// was unnecessary and its touch handlers conflicted with normal scrolling
+// and the global PullToRefresh component.
 
 interface ChatUser {
   id: string;
@@ -230,7 +151,11 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
         const data = await res.json();
         if (isPolling && lastMessageTime.current) {
           if (data.messages.length > 0) {
-            setMessages((prev) => [...prev, ...data.messages]);
+            setMessages((prev) => {
+              const existingIds = new Set(prev.map((m) => m.id));
+              const newOnly = data.messages.filter((m: Message) => !existingIds.has(m.id));
+              return newOnly.length > 0 ? [...prev, ...newOnly] : prev;
+            });
           }
         } else {
           setMessages(data.messages);
@@ -670,22 +595,9 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
       .toUpperCase()
       .slice(0, 2);
 
-  // ─── Pull-to-refresh ─────────────────────────────────────────
-  const handleRefreshChannels = useCallback(async () => {
-    await fetchChannels();
-  }, [fetchChannels]);
-
-  const handleRefreshMessages = useCallback(async () => {
-    if (selectedChannelId) {
-      lastMessageTime.current = null;
-      await fetchMessages(selectedChannelId);
-      // Re-mark as read
-      fetch(`/api/chat/channels/${selectedChannelId}/read`, { method: "PUT" }).catch(() => {});
-    }
-  }, [selectedChannelId, fetchMessages]);
-
-  const { indicator: channelPullIndicator } = usePullToRefresh(handleRefreshChannels, channelListRef);
-  const { indicator: messagesPullIndicator } = usePullToRefresh(handleRefreshMessages, messagesScrollRef);
+  // Pull-to-refresh removed from chat — it already polls every few seconds.
+  // The PTR touch handlers were fighting with normal scroll and the global
+  // PullToRefresh component, causing buggy scroll behavior on mobile.
 
   const selectedChannel = channels.find((c) => c.id === selectedChannelId);
   const filteredChannels = channels.filter((c) =>
@@ -703,7 +615,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] bg-white rounded-2xl border border-slate-100 overflow-hidden relative" style={{ overscrollBehavior: "none" }}>
+    <div data-chat-view className="flex h-[calc(100vh-8rem)] bg-white rounded-2xl border border-slate-100 overflow-hidden relative" style={{ overscrollBehavior: "contain" }}>
       {/* ─── Channel Sidebar ──────────────────────────────────── */}
       <div
         className={`${
@@ -747,8 +659,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
         </div>
 
         {/* Channel List */}
-        <div ref={channelListRef} className="flex-1 overflow-y-auto" style={{ overscrollBehavior: "none", WebkitOverflowScrolling: "touch" }}>
-          {channelPullIndicator}
+        <div ref={channelListRef} className="flex-1 overflow-y-auto" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
           {groupChannels.length > 0 && (
             <div className="px-3 pt-3">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1">Channels</p>
@@ -888,8 +799,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
             </div>
 
             {/* Messages */}
-            <div ref={messagesScrollRef} className="flex-1 overflow-y-auto p-4 space-y-1" style={{ overscrollBehavior: "none", WebkitOverflowScrolling: "touch" }}>
-              {messagesPullIndicator}
+            <div ref={messagesScrollRef} className="flex-1 overflow-y-auto p-4 space-y-1" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
               {messages.length === 0 && (
                 <div className="flex items-center justify-center h-full text-slate-400 text-sm">
                   <div className="text-center">
@@ -1104,7 +1014,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                 <X size={18} />
               </button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1" style={{ overscrollBehavior: "contain" }}>
               <div>
                 <label className="text-sm font-medium text-slate-700">Channel Name</label>
                 <input
@@ -1295,7 +1205,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                 </div>
               )}
             </div>
-            <div className="flex-1 overflow-y-auto p-4 pt-2 space-y-0.5">
+            <div className="flex-1 overflow-y-auto p-4 pt-2 space-y-0.5" style={{ overscrollBehavior: "contain" }}>
               {allUsers
                 .filter((u) => u.id !== currentUserId && u.name.toLowerCase().includes(dmSearchQuery.toLowerCase()))
                 .map((user) => {
@@ -1397,7 +1307,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
             </div>
 
             {/* Current members */}
-            <div className="flex-1 overflow-y-auto px-6 py-3">
+            <div className="flex-1 overflow-y-auto px-6 py-3" style={{ overscrollBehavior: "contain" }}>
               {loadingMembers ? (
                 <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-slate-400" /></div>
               ) : (

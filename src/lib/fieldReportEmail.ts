@@ -447,10 +447,13 @@ export async function sendFieldReportEmail(
       pmAndAdminEmails.delete(customer.email);
       pmAndAdminEmails.delete(COMPANY_EMAIL);
 
+      // Build the raw field report email (not AI summary)
+      const internalHtml = buildInternalFieldReportHtml(project.name, reportDate, reportData, photos);
+      const internalPlain = buildInternalFieldReportPlainText(project.name, reportDate, reportData);
       const internalSubject = `[Field Report] ${project.name} — ${reportDate}`;
       for (const email of Array.from(pmAndAdminEmails)) {
         console.log("[DFR-EMAIL] Sending internal copy to:", email);
-        sendHtmlEmail({ to: email, subject: internalSubject, html, text: plainText })
+        sendHtmlEmail({ to: email, subject: internalSubject, html: internalHtml, text: internalPlain })
           .then((r) => {
             if (r.success) console.log("[DFR-EMAIL] Internal copy sent to", email);
             else console.error("[DFR-EMAIL] Internal copy FAILED for", email, r.error);
@@ -474,4 +477,193 @@ export async function sendFieldReportEmail(
   } catch (error: any) {
     console.error("[DFR-EMAIL] UNCAUGHT ERROR:", error.message, error.stack);
   }
+}
+
+/* ─── Internal (Raw) Field Report Email ──────────────────────────── */
+
+function fieldRow(label: string, value: string | undefined | null): string {
+  if (!value || !value.trim()) return "";
+  return `<tr>
+    <td style="padding:6px 12px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;vertical-align:top;width:160px;">${escapeHtml(label)}</td>
+    <td style="padding:6px 12px;color:#1e293b;font-size:13px;line-height:1.6;">${escapeHtml(value.trim()).replace(/\n/g, "<br>")}</td>
+  </tr>`;
+}
+
+function sectionHeader(title: string): string {
+  return `<tr><td colspan="2" style="padding:20px 12px 8px;border-bottom:2px solid #e2e8f0;">
+    <h3 style="margin:0;color:#1B3A2D;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">${escapeHtml(title)}</h3>
+  </td></tr>`;
+}
+
+function buildInternalFieldReportHtml(
+  projectName: string,
+  reportDate: string,
+  data: any,
+  photos: Array<{ url?: string; caption?: string; filename?: string }>,
+): string {
+  const rows: string[] = [];
+
+  // Job Info
+  rows.push(sectionHeader("Job Information"));
+  rows.push(fieldRow("Project", projectName));
+  rows.push(fieldRow("Date", reportDate));
+  rows.push(fieldRow("Supervisor", data.supervisorName));
+  rows.push(fieldRow("Project Manager", data.projectManagerName));
+
+  // Weather
+  const weatherParts = [
+    data.currentTemp ? `${data.currentTemp}°F` : "",
+    data.currentCondition || "",
+    data.currentWind ? `Wind: ${data.currentWind}` : "",
+    data.currentHumidity ? `Humidity: ${data.currentHumidity}` : "",
+    data.currentHeatIndex ? `Heat Index: ${data.currentHeatIndex}` : "",
+  ].filter(Boolean).join(" · ");
+  if (weatherParts) {
+    rows.push(sectionHeader("Weather"));
+    rows.push(fieldRow("Conditions", weatherParts));
+  }
+
+  // Scope
+  if (data.scopeReceived || data.scopeDescription || data.workAreaLocations) {
+    rows.push(sectionHeader("Scope of Work"));
+    rows.push(fieldRow("Scope Received", data.scopeReceived));
+    rows.push(fieldRow("Scope Date", data.scopeDate));
+    rows.push(fieldRow("Description", data.scopeDescription));
+    rows.push(fieldRow("Work Area Locations", data.workAreaLocations));
+  }
+
+  // Timeline
+  if (data.estimatedCompletionDate || data.daysRemaining || data.estimatedHoursTotal) {
+    rows.push(sectionHeader("Timeline"));
+    rows.push(fieldRow("Est. Completion", data.estimatedCompletionDate));
+    rows.push(fieldRow("Days Remaining", data.daysRemaining != null ? String(data.daysRemaining) : null));
+    rows.push(fieldRow("Est. Total Hours", data.estimatedHoursTotal != null ? String(data.estimatedHoursTotal) : null));
+  }
+
+  // Work Completed
+  if (data.completedToday || data.workflow) {
+    rows.push(sectionHeader("Work Completed Today"));
+    rows.push(fieldRow("Completed", data.completedToday));
+    rows.push(fieldRow("Workflow", data.workflow));
+  }
+
+  // Shift Review
+  if (data.review || data.incident || data.stopWork) {
+    rows.push(sectionHeader("Shift Review"));
+    rows.push(fieldRow("Review", data.review));
+    if (data.incident) {
+      rows.push(fieldRow("Incident", "Yes"));
+      rows.push(fieldRow("Incident Details", data.incidentDetails));
+    }
+    if (data.stopWork) {
+      rows.push(fieldRow("Stop Work", "Yes"));
+      rows.push(fieldRow("Stop Work Details", data.stopWorkDetails));
+    }
+  }
+
+  // Goals
+  if (data.goalsForTomorrow || data.goalsForWeek) {
+    rows.push(sectionHeader("Goals"));
+    rows.push(fieldRow("Tomorrow", data.goalsForTomorrow));
+    rows.push(fieldRow("This Week", data.goalsForWeek));
+  }
+
+  // Notes
+  if (data.projectNotes || data.meetingLog || data.visitors) {
+    rows.push(sectionHeader("Notes"));
+    rows.push(fieldRow("Project Notes", data.projectNotes));
+    rows.push(fieldRow("Meeting Log", data.meetingLog));
+    rows.push(fieldRow("Visitors", data.visitors));
+  }
+
+  // Equipment
+  if (data.negativeAirMachineCount || data.equipmentMalfunctions || data.negativeAirEstablished != null) {
+    rows.push(sectionHeader("Equipment"));
+    rows.push(fieldRow("Neg Air Machines", data.negativeAirMachineCount != null ? String(data.negativeAirMachineCount) : null));
+    rows.push(fieldRow("Neg Air Established", data.negativeAirEstablished ? "Yes" : data.negativeAirEstablished === false ? "No" : null));
+    rows.push(fieldRow("Malfunctions", data.equipmentMalfunctions));
+  }
+
+  // Asbestos
+  if (data.asbestosInWorkArea) {
+    rows.push(sectionHeader("Asbestos"));
+    rows.push(fieldRow("In Work Area", data.asbestosInWorkArea));
+  }
+
+  // Photos
+  const validPhotos = photos.filter((p) => p.url);
+  let photosHtml = "";
+  if (validPhotos.length > 0) {
+    const items = validPhotos.map((p) => {
+      const cap = p.caption || p.filename || "Site photo";
+      return `<tr><td colspan="2" style="padding:8px 12px;">
+        <img src="${p.url}" alt="${escapeHtml(cap)}" style="max-width:100%;border-radius:6px;border:1px solid #e2e8f0;" />
+        <p style="margin:4px 0 0;color:#64748b;font-size:11px;">${escapeHtml(cap)}</p>
+      </td></tr>`;
+    }).join("");
+    photosHtml = sectionHeader("Site Photos") + items;
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <tr><td style="background:#1B3A2D;padding:24px 32px;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">${COMPANY_SHORT}</h1>
+          <p style="margin:4px 0 0;color:${BRAND_COLOR};font-size:13px;">Daily Field Report</p>
+        </td></tr>
+        <tr><td style="padding:24px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${rows.filter(Boolean).join("")}
+            ${photosHtml}
+          </table>
+        </td></tr>
+        <tr><td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
+          <p style="margin:0;color:#94a3b8;font-size:11px;text-align:center;">
+            ${COMPANY_NAME} &bull; Internal Field Report
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildInternalFieldReportPlainText(
+  projectName: string,
+  reportDate: string,
+  data: any,
+): string {
+  const lines: string[] = [];
+  lines.push(`DAILY FIELD REPORT — ${projectName}`);
+  lines.push(`Date: ${reportDate}`);
+  lines.push(`Supervisor: ${data.supervisorName || "N/A"}`);
+  lines.push(`Project Manager: ${data.projectManagerName || "N/A"}`);
+  lines.push("");
+
+  if (data.currentTemp || data.currentCondition) {
+    lines.push("WEATHER");
+    const parts = [data.currentTemp ? `${data.currentTemp}°F` : "", data.currentCondition || "", data.currentWind ? `Wind: ${data.currentWind}` : ""].filter(Boolean);
+    lines.push(parts.join(" · "));
+    lines.push("");
+  }
+
+  if (data.scopeDescription) { lines.push("SCOPE OF WORK"); lines.push(data.scopeDescription); lines.push(""); }
+  if (data.workAreaLocations) { lines.push("WORK AREAS: " + data.workAreaLocations); lines.push(""); }
+  if (data.completedToday) { lines.push("WORK COMPLETED TODAY"); lines.push(data.completedToday); lines.push(""); }
+  if (data.workflow) { lines.push("WORKFLOW: " + data.workflow); lines.push(""); }
+  if (data.review) { lines.push("SHIFT REVIEW"); lines.push(data.review); lines.push(""); }
+  if (data.incident) { lines.push("INCIDENT: " + (data.incidentDetails || "Yes")); lines.push(""); }
+  if (data.stopWork) { lines.push("STOP WORK: " + (data.stopWorkDetails || "Yes")); lines.push(""); }
+  if (data.goalsForTomorrow) { lines.push("GOALS FOR TOMORROW: " + data.goalsForTomorrow); lines.push(""); }
+  if (data.goalsForWeek) { lines.push("GOALS FOR WEEK: " + data.goalsForWeek); lines.push(""); }
+  if (data.projectNotes) { lines.push("NOTES: " + data.projectNotes); lines.push(""); }
+  if (data.estimatedCompletionDate) lines.push("Est. Completion: " + data.estimatedCompletionDate);
+  if (data.daysRemaining != null) lines.push("Days Remaining: " + data.daysRemaining);
+
+  return lines.join("\n");
 }
