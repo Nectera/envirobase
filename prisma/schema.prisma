@@ -1223,12 +1223,15 @@ model ChatMessage {
   senderName   String   // Denormalized for display
   content      String
   mentions     String?  // JSON array of mentioned user IDs
-  fileUrl      String?
-  fileName     String?
-  fileSize     Int?
-  fileMimeType String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  fileUrl        String?
+  fileName       String?
+  fileSize       Int?
+  fileMimeType   String?
+  replyToId      String?  // ID of the message being replied to
+  replyToName    String?  // Sender name of the replied message (denormalized)
+  replyToContent String?  // Snippet of the replied message (denormalized)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([channelId])
   @@index([senderId])

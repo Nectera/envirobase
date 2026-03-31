@@ -84,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const body = await req.json();
-    const { content, mentions, fileUrl, fileName, fileSize, fileMimeType } = body;
+    const { content, mentions, fileUrl, fileName, fileSize, fileMimeType, replyToId, replyToName, replyToContent } = body;
 
     if (!content?.trim() && !fileUrl) {
       return NextResponse.json({ error: "Message content or file is required" }, { status: 400 });
@@ -102,6 +102,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         fileName: fileName || null,
         fileSize: fileSize || null,
         fileMimeType: fileMimeType || null,
+        replyToId: replyToId || null,
+        replyToName: replyToName || null,
+        replyToContent: replyToContent ? replyToContent.slice(0, 120) : null,
       },
     });
 

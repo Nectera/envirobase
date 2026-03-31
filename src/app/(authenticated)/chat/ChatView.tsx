@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   MessageSquare, Hash, Send, Paperclip, X, Plus, Search,
   Users, ChevronLeft, Loader2, Image as ImageIcon, FileText,
-  AtSign, User as UserIcon, Lock, Globe, Check,
+  AtSign, User as UserIcon, Lock, Globe, Check, Reply,
   Pencil, Trash2, UserPlus, UserMinus, SmilePlus, Video,
 } from "lucide-react";
 import EmojiReactions from "@/components/EmojiReactions";
@@ -46,7 +46,11 @@ interface Message {
   fileName?: string;
   fileSize?: number;
   fileMimeType?: string;
+  replyToId?: string;
+  replyToName?: string;
+  replyToContent?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface ChatViewProps {
@@ -63,6 +67,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
   const [messageInput, setMessageInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showNewDm, setShowNewDm] = useState(false);
@@ -230,9 +235,14 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
     setSendingMessage(true);
     try {
       const payload: any = {
-        content: messageInput.trim(),
+        content: messageInput,
         mentions: pendingMentions.length > 0 ? pendingMentions : undefined,
       };
+      if (replyingTo) {
+        payload.replyToId = replyingTo.id;
+        payload.replyToName = replyingTo.senderName;
+        payload.replyToContent = (replyingTo.content || "").slice(0, 120);
+      }
       if (pendingFile) {
         payload.fileUrl = pendingFile.fileUrl;
         payload.fileName = pendingFile.fileName;
@@ -253,6 +263,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
         setMessageInput("");
         setPendingMentions([]);
         setPendingFile(null);
+        setReplyingTo(null);
         inputRef.current?.focus();
       }
     } catch { } finally {
@@ -615,7 +626,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
   }
 
   return (
-    <div data-chat-view className="flex h-[calc(100vh-8rem)] bg-white rounded-2xl border border-slate-100 overflow-hidden relative" style={{ overscrollBehavior: "contain" }}>
+    <div data-chat-view className="flex h-[calc(100vh-8rem)] max-w-full bg-white rounded-2xl border border-slate-100 overflow-hidden relative" style={{ overscrollBehavior: "contain" }}>
       {/* ─── Channel Sidebar ──────────────────────────────────── */}
       <div
         className={`${
@@ -799,7 +810,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
             </div>
 
             {/* Messages */}
-            <div ref={messagesScrollRef} className="flex-1 overflow-y-auto p-4 space-y-1" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
+            <div ref={messagesScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
               {messages.length === 0 && (
                 <div className="flex items-center justify-center h-full text-slate-400 text-sm">
                   <div className="text-center">
@@ -834,12 +845,44 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                         <div className="flex items-baseline gap-2 mb-0.5">
                           <span className="text-sm font-semibold text-slate-800">{msg.senderName}</span>
                           <span className="text-[10px] text-slate-400">{formatTime(msg.createdAt)}</span>
+                          {msg.updatedAt && new Date(msg.updatedAt).getTime() - new Date(msg.createdAt).getTime() > 1000 && (
+                            <span className="text-[10px] text-slate-400 italic">(edited)</span>
+                          )}
+                        </div>
+                      )}
+                      {/* Reply quote */}
+                      {msg.replyToName && msg.replyToContent && (
+                        <div className="mb-1 pl-2.5 border-l-2 border-green-300 rounded-sm">
+                          <span className="text-[11px] font-semibold text-green-700">{msg.replyToName}</span>
+                          <p className="text-[11px] text-slate-500 truncate max-w-[260px]">{msg.replyToContent}</p>
                         </div>
                       )}
                       {msg.content && (
-                        <p className="text-sm text-slate-700 leading-relaxed break-words">
-                          {renderContent(msg)}
-                        </p>
+                        <div className="relative group/msg">
+                          <p className="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap">
+                            {renderContent(msg)}
+                          </p>
+                          {/* Action buttons — reply */}
+                          <div className="absolute -right-2 -top-3 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-all bg-white border border-slate-200 rounded-lg shadow-sm px-1 py-0.5">
+                            <button
+                              onClick={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
+                              className="p-1.5 rounded-md text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                              title="Reply"
+                            >
+                              <Reply size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {/* Reply button for file-only messages (no content) */}
+                      {!msg.content && msg.fileUrl && (
+                        <button
+                          onClick={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
+                          className="mt-1 p-1.5 rounded-md text-slate-400 hover:text-green-600 hover:bg-green-50 opacity-0 group-hover:opacity-100 transition-all"
+                          title="Reply"
+                        >
+                          <Reply size={14} />
+                        </button>
                       )}
                       {msg.fileUrl && isImage && (
                         <img
@@ -879,6 +922,19 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
 
             {/* Composer */}
             <div className="px-4 py-3 pb-16 md:pb-3 border-t border-slate-100 bg-white relative z-20">
+              {/* Reply preview banner */}
+              {replyingTo && (
+                <div className="mb-2 flex items-center gap-2 p-2 rounded-lg bg-green-50 border border-green-200">
+                  <Reply size={14} className="text-green-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[11px] font-semibold text-green-700">{replyingTo.senderName}</span>
+                    <p className="text-xs text-slate-500 truncate">{replyingTo.content || replyingTo.fileName || "File"}</p>
+                  </div>
+                  <button onClick={() => setReplyingTo(null)} className="text-slate-400 hover:text-red-500 flex-shrink-0">
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
               {/* Pending file preview */}
               {pendingFile && (
                 <div className="mb-2 flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
