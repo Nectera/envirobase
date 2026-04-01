@@ -6,7 +6,7 @@ import { sendFieldReportEmail } from "@/lib/fieldReportEmail";
 
 export const dynamic = "force-dynamic";
 
-export const maxDuration = 30; // Allow time for AI summary + email on submission
+export const maxDuration = 60; // Allow time for AI summary + email on submission
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {

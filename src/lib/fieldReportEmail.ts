@@ -451,15 +451,13 @@ export async function sendFieldReportEmail(
       const internalHtml = buildInternalFieldReportHtml(project.name, reportDate, reportData, photos);
       const internalPlain = buildInternalFieldReportPlainText(project.name, reportDate, reportData);
       const internalSubject = `[Field Report] ${project.name} — ${reportDate}`;
-      for (const email of Array.from(pmAndAdminEmails)) {
+      const internalPromises = Array.from(pmAndAdminEmails).map(async (email) => {
         console.log("[DFR-EMAIL] Sending internal copy to:", email);
-        sendHtmlEmail({ to: email, subject: internalSubject, html: internalHtml, text: internalPlain })
-          .then((r) => {
-            if (r.success) console.log("[DFR-EMAIL] Internal copy sent to", email);
-            else console.error("[DFR-EMAIL] Internal copy FAILED for", email, r.error);
-          })
-          .catch((err) => console.error("[DFR-EMAIL] Internal copy error for", email, err.message));
-      }
+        const r = await sendHtmlEmail({ to: email, subject: internalSubject, html: internalHtml, text: internalPlain });
+        if (r.success) console.log("[DFR-EMAIL] Internal copy sent to", email);
+        else console.error("[DFR-EMAIL] Internal copy FAILED for", email, r.error);
+      });
+      await Promise.allSettled(internalPromises);
     } catch (internalErr: any) {
       console.error("[DFR-EMAIL] Internal distribution error:", internalErr.message);
     }
