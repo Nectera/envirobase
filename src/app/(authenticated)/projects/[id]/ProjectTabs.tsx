@@ -1951,6 +1951,7 @@ export default function ProjectTabs({
             <ChangeOrderForm
               projectId={project.id}
               projectName={project.name}
+              officeKey={project.office}
               onClose={() => setCoShowCreate(false)}
               onCreated={handleCOCreated}
             />

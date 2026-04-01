@@ -126,7 +126,7 @@ export const DEFAULT_OFFICE = OFFICES.greeley;
 
 // Default COGS line items with readable notes
 export const DEFAULT_COGS = [
-  { item: "Waste", notes: "Rate: $30.50/cubic yard. Hauling varies — $35/yd for western slope." },
+  { item: "Waste", notes: "Per-office rate from Pricing Settings. Hauling varies — see hauling rates." },
   { item: "Permit", notes: "30-day permit: $181 (under 260 lf/160 sf) or $401 (over). 90-day: $800." },
   { item: "Clearance", notes: "$425 standard. $600 weekend. $1,200 if 45-75 miles. Farther needs AMS estimate." },
   { item: "Per Diem 45+ Miles", notes: "$35/person/day. From residence to job site — only if 45+ miles." },
@@ -182,9 +182,22 @@ export const DEFAULT_COGS_RATES = {
   technicianTaxBurden: 2.781,
   opsPerHourRate: 48.85,
   wasteRatePerYard: 30.50,
+  wasteRatePerYardGreeley: 30.50,
+  wasteRatePerYardGrandJunction: 30.50,
   haulingRateStandard: 30.50,
   haulingRateWest: 35.0,
   fuelSurchargePercent: 2.56,
 };
 
 export type COGSRates = typeof DEFAULT_COGS_RATES;
+
+/**
+ * Get the waste rate for a given office key.
+ * Falls back to the legacy wasteRatePerYard if no office match.
+ */
+export function getWasteRateForOffice(rates: COGSRates, officeKey?: string | null): number {
+  if (officeKey === "grand_junction") return rates.wasteRatePerYardGrandJunction;
+  if (officeKey === "greeley") return rates.wasteRatePerYardGreeley;
+  // fallback: legacy single rate
+  return rates.wasteRatePerYard;
+}

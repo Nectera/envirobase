@@ -11,6 +11,7 @@ import {
   calcFuelSurcharge,
   DEFAULT_COGS_RATES,
   type COGSRates,
+  getWasteRateForOffice,
 } from "@/lib/materials";
 import {
   ChevronDown,
@@ -92,6 +93,7 @@ interface ChangeOrderFormProps {
   onClose: () => void;
   onCreated: (co: any) => void;
   cogsRates?: Partial<COGSRates>;
+  officeKey?: string | null;
   settingsOpsRate?: number;
 }
 
@@ -120,6 +122,7 @@ export default function ChangeOrderForm({
   onClose,
   onCreated,
   cogsRates: propCogsRates,
+  officeKey,
   settingsOpsRate,
 }: ChangeOrderFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -227,7 +230,7 @@ export default function ChangeOrderForm({
       switch (cog.item) {
         case "Waste":
           qty = formData.wasteYards;
-          cost = formData.wasteYards * rates.wasteRatePerYard;
+          cost = formData.wasteYards * getWasteRateForOffice(rates, officeKey);
           break;
         case "Permit":
           if (formData.permitRequired === "Yes") { qty = 1; cost = rates.permitCost; }

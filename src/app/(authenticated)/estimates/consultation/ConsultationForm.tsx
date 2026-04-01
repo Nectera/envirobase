@@ -19,6 +19,7 @@ import {
   calcTrailerTripCost,
   DEFAULT_COGS_RATES,
   type COGSRates,
+  getWasteRateForOffice,
 } from "@/lib/materials";
 import {
   DEFAULT_CONSULTATION_FIELDS,
@@ -260,6 +261,9 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
   const [leadSearch, setLeadSearch] = useState("");
   const [showLeadDropdown, setShowLeadDropdown] = useState(false);
   const leadSearchRef = useRef<HTMLDivElement>(null);
+
+  // Determine which office the lead belongs to (used for per-office waste rate)
+  const activeOfficeKey = selectedLead?.office || (lead as any)?.office || (initialData as any)?.leadOffice || null;
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -565,7 +569,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
       switch (cog.item) {
         case "Waste":
           qty = formData.wasteYards;
-          cost = formData.wasteYards * rates.wasteRatePerYard;
+          cost = formData.wasteYards * getWasteRateForOffice(rates, activeOfficeKey);
           break;
 
         case "Permit":
@@ -649,6 +653,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
     formData.markupPercent,
     formData.customerPriceOverride,
     rates,
+    activeOfficeKey,
     lead,
     selectedLead,
   ]);
@@ -786,8 +791,6 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
   const [estimatingMiles, setEstimatingMiles] = useState(false);
 
-  // Determine which office to calculate miles from (based on selected lead's office)
-  const activeOfficeKey = selectedLead?.office || (lead as any)?.office || (initialData as any)?.leadOffice || null;
   const activeOffice = getOfficeCoords(activeOfficeKey);
 
   const handleEstimateMiles = useCallback(async () => {

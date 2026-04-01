@@ -332,22 +332,44 @@ export default function PricingSettings({ open, onClose }: PricingSettingsProps)
             </div>
           ) : (
             <div className="space-y-5">
-              {/* Waste & Ops */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.wasteRateLabel")}</label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-400 text-sm">$</span>
-                    <input
-                      type="number"
-                      step="0.50"
-                      min="0"
-                      value={cogsRates.wasteRatePerYard}
-                      onChange={(e) => setCogsRates((p) => ({ ...p, wasteRatePerYard: parseFloat(e.target.value) || 0 }))}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
-                    />
+              {/* Waste Rates (per office) & Ops */}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-2">{t("estimates.wasteRateLabel")}</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1">Greeley</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-400 text-sm">$</span>
+                      <input
+                        type="number"
+                        step="0.50"
+                        min="0"
+                        value={cogsRates.wasteRatePerYardGreeley}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value) || 0;
+                          setCogsRates((p) => ({ ...p, wasteRatePerYardGreeley: v, wasteRatePerYard: v }));
+                        }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1">Grand Junction</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-400 text-sm">$</span>
+                      <input
+                        type="number"
+                        step="0.50"
+                        min="0"
+                        value={cogsRates.wasteRatePerYardGrandJunction}
+                        onChange={(e) => setCogsRates((p) => ({ ...p, wasteRatePerYardGrandJunction: parseFloat(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
                   </div>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">{t("estimates.operatingCostLabel")}</label>
                   <div className="flex items-center gap-1">
