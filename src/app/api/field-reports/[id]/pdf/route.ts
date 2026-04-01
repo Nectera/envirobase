@@ -142,8 +142,19 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
     // === JOB INFO ===
     sectionHeader("Job Information");
-    fieldRowDouble("Job Name:", report.project?.name, "Supervisor:", report.supervisorName);
-    fieldRowDouble("Date:", new Date(report.date).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }), "Project Manager:", report.projectManagerName);
+    // Job Name on its own full-width row with wrapping (long names overflow fieldRowDouble)
+    const jobNameText = sanitize(report.project?.name || "N/A");
+    const jobNameLines = wrapText(jobNameText, COL_W - 120, 9);
+    checkPage(14 + jobNameLines.length * 13);
+    y -= 14;
+    drawText("Job Name:", MARGIN, y, 8, fontBold, gray);
+    for (const line of jobNameLines) {
+      drawText(line, MARGIN + 120, y, 9);
+      y -= 13;
+    }
+    y += 13; // undo last extra line break
+    fieldRowDouble("Date:", new Date(report.date).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }), "Supervisor:", report.supervisorName);
+    fieldRow("Project Manager:", report.projectManagerName, 120);
 
     // === WEATHER ===
     if (report.weatherCurrentTemp) {
