@@ -4,6 +4,7 @@ import { prisma } from "./prisma";
 import { logger } from "./logger";
 import { sendNotificationToRole, buildFieldReportBody } from "./notifications";
 import { COMPANY_SHORT, COMPANY_NAME, COMPANY_LOCATION, BRAND_COLOR } from "./branding";
+import { generateFieldReportPdf } from "./fieldReportPdf";
 import { supabase, DFR_PHOTOS_BUCKET } from "./supabase";
 
 /**
@@ -451,9 +452,21 @@ export async function sendFieldReportEmail(
       const internalHtml = buildInternalFieldReportHtml(project.name, reportDate, reportData, photos);
       const internalPlain = buildInternalFieldReportPlainText(project.name, reportDate, reportData);
       const internalSubject = `[Field Report] ${project.name} — ${reportDate}`;
+
+      // Generate PDF attachment (graceful fallback if it fails)
+      let pdfAttachment: Array<{ filename: string; content: Buffer }> | undefined;
+      try {
+        console.log("[DFR-EMAIL] Generating PDF attachment...");
+        const { buffer, filename } = await generateFieldReportPdf(reportData, { name: project.name });
+        pdfAttachment = [{ filename, content: buffer }];
+        console.log("[DFR-EMAIL] PDF generated:", filename, `(${buffer.length} bytes)`);
+      } catch (pdfErr: any) {
+        console.error("[DFR-EMAIL] PDF generation failed, sending without attachment:", pdfErr.message);
+      }
+
       const internalPromises = Array.from(pmAndAdminEmails).map(async (email) => {
         console.log("[DFR-EMAIL] Sending internal copy to:", email);
-        const r = await sendHtmlEmail({ to: email, subject: internalSubject, html: internalHtml, text: internalPlain });
+        const r = await sendHtmlEmail({ to: email, subject: internalSubject, html: internalHtml, text: internalPlain, attachments: pdfAttachment });
         if (r.success) console.log("[DFR-EMAIL] Internal copy sent to", email);
         else console.error("[DFR-EMAIL] Internal copy FAILED for", email, r.error);
       });

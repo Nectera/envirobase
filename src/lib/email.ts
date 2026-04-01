@@ -205,12 +205,14 @@ export async function sendHtmlEmail({
   html,
   text,
   organizationId,
+  attachments,
 }: {
   to: string;
   subject: string;
   html: string;
   text: string;
   organizationId?: string | null;
+  attachments?: Array<{ filename: string; content: Buffer }>;
 }): Promise<SendEmailResult> {
   const config = await getSmtpConfig(organizationId);
 
@@ -226,6 +228,7 @@ export async function sendHtmlEmail({
         subject,
         text,
         html,
+        attachments: attachments?.map((a) => ({ filename: a.filename, content: a.content })),
       });
       return { success: true, messageId: info.messageId };
     } catch (error: any) {
@@ -235,7 +238,7 @@ export async function sendHtmlEmail({
   }
 
   // Fallback: use Resend API
-  return sendViaResend({ to, subject, text, html });
+  return sendViaResend({ to, subject, text, html, attachments });
 }
 
 /**
@@ -384,6 +387,7 @@ async function sendViaResend({
   html,
   replyTo,
   cc,
+  attachments,
 }: {
   to: string;
   subject: string;
@@ -391,6 +395,7 @@ async function sendViaResend({
   html: string;
   replyTo?: string;
   cc?: string;
+  attachments?: Array<{ filename: string; content: Buffer }>;
 }): Promise<SendEmailResult> {
   const resend = getResendClient();
   if (!resend) {
@@ -409,6 +414,7 @@ async function sendViaResend({
       subject,
       text,
       html,
+      attachments: attachments?.map((a) => ({ filename: a.filename, content: a.content })),
     });
 
     if (error) {
