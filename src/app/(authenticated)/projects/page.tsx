@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage() {
   try {
     const projects = await prisma.project.findMany({
-      include: { tasks: true, contentInventory: { select: { id: true } } },
+      include: { tasks: true, contentInventory: { select: { id: true } }, timeEntries: { select: { hours: true } } },
     });
 
     // Sort oldest startDate first (nulls go to end)
