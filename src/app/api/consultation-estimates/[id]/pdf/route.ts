@@ -25,6 +25,15 @@ function hexToRgb(hex: string) {
   return rgb(r, g, b);
 }
 
+/** Darken a hex color by a factor (0-1, where 0 = black) */
+function darkenHex(hex: string, factor: number) {
+  const h = hex.replace("#", "");
+  const r = Math.round(parseInt(h.substring(0, 2), 16) * factor) / 255;
+  const g = Math.round(parseInt(h.substring(2, 4), 16) * factor) / 255;
+  const b = Math.round(parseInt(h.substring(4, 6), 16) * factor) / 255;
+  return rgb(r, g, b);
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: { id: string } },
@@ -42,27 +51,30 @@ export async function GET(
 
   const d: any = est;
 
-  const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const PAGE_W = 612;
   const PAGE_H = 792;
   const MARGIN = 50;
   const COL_W = PAGE_W - MARGIN * 2;
 
-  let page = pdf.addPage([PAGE_W, PAGE_H]);
+  let page = pdfDoc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H - MARGIN;
 
   const black = rgb(0, 0, 0);
+  const darkGray = rgb(0.3, 0.3, 0.3);
   const gray = rgb(0.4, 0.4, 0.4);
-  const lightGray = rgb(0.85, 0.85, 0.85);
+  const lightGray = rgb(0.92, 0.92, 0.92);
+  const veryLightGray = rgb(0.96, 0.96, 0.96);
   const white = rgb(1, 1, 1);
   const brand = hexToRgb(BRAND_COLOR);
+  const brandDark = darkenHex(BRAND_COLOR, 0.7);
 
   const checkPage = (needed: number) => {
-    if (y - needed < MARGIN) {
-      page = pdf.addPage([PAGE_W, PAGE_H]);
+    if (y - needed < MARGIN + 20) {
+      page = pdfDoc.addPage([PAGE_W, PAGE_H]);
       y = PAGE_H - MARGIN;
     }
   };
@@ -75,7 +87,9 @@ export async function GET(
         : typeof val === "object"
           ? JSON.stringify(val)
           : String(val);
-    return str.replace(/[\n\r\t]/g, " ").replace(/[^\x20-\x7E\xA0-\xFF]/g, "");
+    return str
+      .replace(/[\n\r\t]/g, " ")
+      .replace(/[^\x20-\x7E\xA0-\xFF]/g, "");
   };
 
   const drawText = (
@@ -89,7 +103,11 @@ export async function GET(
     page.drawText(sanitize(text), { x, y: yPos, size, font: f, color });
   };
 
-  const wrapText = (text: string, maxWidth: number, size: number): string[] => {
+  const wrapText = (
+    text: string,
+    maxWidth: number,
+    size: number,
+  ): string[] => {
     if (!text) return ["N/A"];
     const words = text.split(" ");
     const lines: string[] = [];
@@ -107,35 +125,37 @@ export async function GET(
     return lines.length ? lines : ["N/A"];
   };
 
+  // Section header with green left-accent bar
   const sectionHeader = (title: string) => {
     checkPage(30);
-    y -= 8;
-    page.drawLine({
-      start: { x: MARGIN, y: y + 4 },
-      end: { x: PAGE_W - MARGIN, y: y + 4 },
-      thickness: 1,
-      color: lightGray,
+    y -= 14;
+    // Green accent bar on left
+    page.drawRectangle({
+      x: MARGIN,
+      y: y - 2,
+      width: 3,
+      height: 14,
+      color: brand,
     });
-    y -= 16;
-    drawText(title, MARGIN, y, 11, fontBold, brand);
-    y -= 6;
+    drawText(title, MARGIN + 10, y, 11, fontBold, brandDark);
+    y -= 8;
   };
 
-  const fieldRow = (label: string, value: any, labelWidth = 160) => {
+  const fieldRow = (label: string, value: any, labelWidth = 140) => {
     checkPage(16);
     y -= 14;
-    drawText(label, MARGIN, y, 8, fontBold, gray);
+    drawText(label, MARGIN + 10, y, 8, fontBold, gray);
     drawText(value || "N/A", MARGIN + labelWidth, y, 9, font, black);
   };
 
   const fieldRowDouble = (l1: string, v1: any, l2: string, v2: any) => {
     checkPage(16);
     y -= 14;
-    drawText(l1, MARGIN, y, 8, fontBold, gray);
+    drawText(l1, MARGIN + 10, y, 8, fontBold, gray);
     drawText(v1 || "N/A", MARGIN + 120, y, 9);
     const midX = PAGE_W / 2 + 20;
     drawText(l2, midX, y, 8, fontBold, gray);
-    drawText(v2 || "N/A", midX + 120, y, 9);
+    drawText(v2 || "N/A", midX + 110, y, 9);
   };
 
   const longField = (label: string, value: any) => {
@@ -144,14 +164,14 @@ export async function GET(
     const rawLines = text ? text.split("\n") : ["N/A"];
     const allLines: string[] = [];
     for (const raw of rawLines) {
-      allLines.push(...wrapText(raw || " ", COL_W - 10, 9));
+      allLines.push(...wrapText(raw || " ", COL_W - 20, 9));
     }
     checkPage(14 + allLines.length * 13);
     y -= 14;
-    if (label) drawText(label, MARGIN, y, 8, fontBold, gray);
+    if (label) drawText(label, MARGIN + 10, y, 8, fontBold, gray);
     for (const line of allLines) {
       y -= 13;
-      drawText(line, MARGIN, y, 9);
+      drawText(line, MARGIN + 10, y, 9);
     }
   };
 
@@ -161,91 +181,92 @@ export async function GET(
       currency: "USD",
     }).format(v);
 
-  // === BRANDED HEADER BAR ===
-  const headerBarH = 50;
-  page.drawRectangle({
-    x: 0,
-    y: PAGE_H - headerBarH,
-    width: PAGE_W,
-    height: headerBarH,
-    color: brand,
-  });
-
+  // === WHITE HEADER WITH LOGO ===
   // Try to embed the logo
-  let logoImage: Awaited<ReturnType<typeof pdf.embedPng>> | null = null;
+  let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
   try {
-    const logoPath = path.join(process.cwd(), "public", LOGO_URL.replace(/^\//, ""));
+    const logoPath = path.join(
+      process.cwd(),
+      "public",
+      LOGO_URL.replace(/^\//, ""),
+    );
     const logoBytes = await readFile(logoPath);
-    logoImage = await pdf.embedPng(logoBytes);
+    logoImage = await pdfDoc.embedPng(logoBytes);
   } catch {
     // Logo not found or not a valid PNG — skip silently
   }
 
   if (logoImage) {
-    const logoH = 30;
+    const logoH = 36;
     const logoW = logoH * (logoImage.width / logoImage.height);
     page.drawImage(logoImage, {
       x: MARGIN,
-      y: PAGE_H - headerBarH + (headerBarH - logoH) / 2,
+      y: y - logoH + 10,
       width: logoW,
       height: logoH,
     });
-    drawText(
-      COMPANY_NAME,
-      MARGIN + logoW + 10,
-      PAGE_H - headerBarH + 18,
-      14,
-      fontBold,
-      white,
-    );
+    drawText(COMPANY_NAME, MARGIN + logoW + 12, y - 8, 14, fontBold, brandDark);
+    drawText(COMPANY_LOCATION, MARGIN + logoW + 12, y - 22, 9, font, gray);
+    y -= logoH + 6;
   } else {
-    drawText(COMPANY_NAME, MARGIN, PAGE_H - headerBarH + 18, 14, fontBold, white);
+    drawText(COMPANY_NAME, MARGIN, y, 14, fontBold, brandDark);
+    y -= 14;
+    drawText(COMPANY_LOCATION, MARGIN, y, 9, font, gray);
+    y -= 16;
   }
 
-  // Right-align location in header
-  const locText = sanitize(COMPANY_LOCATION);
-  const locW = font.widthOfTextAtSize(locText, 9);
-  drawText(locText, PAGE_W - MARGIN - locW, PAGE_H - headerBarH + 20, 9, font, white);
-
-  y = PAGE_H - headerBarH - 20;
+  // Green accent bar under header
+  y -= 4;
+  page.drawRectangle({
+    x: MARGIN,
+    y,
+    width: COL_W,
+    height: 3,
+    color: brand,
+  });
+  y -= 16;
 
   // "Consultation Estimate" title
-  drawText("Consultation Estimate", MARGIN, y, 18, fontBold, brand);
-  y -= 6;
-  page.drawLine({
-    start: { x: MARGIN, y },
-    end: { x: PAGE_W - MARGIN, y },
-    thickness: 2,
+  drawText("Consultation Estimate", MARGIN, y, 18, fontBold, brandDark);
+  y -= 4;
+
+  // === CLIENT INFO CARD ===
+  sectionHeader("Client Information");
+
+  // Light background card
+  const cardTop = y;
+  const cardPadding = 8;
+  // Draw card after we know the height — for now gather fields
+  const customerName = sanitize(d.customerName);
+  const addressLine = `${d.address || ""}, ${d.city || ""}, ${d.state || "CO"} ${d.zip || ""}`;
+  const dateLine = d.projectDate
+    ? new Date(d.projectDate).toLocaleDateString("en-US")
+    : "N/A";
+
+  // Card background
+  checkPage(70);
+  page.drawRectangle({
+    x: MARGIN,
+    y: y - 58,
+    width: COL_W,
+    height: 60,
+    color: veryLightGray,
+  });
+  // Card left accent
+  page.drawRectangle({
+    x: MARGIN,
+    y: y - 58,
+    width: 3,
+    height: 60,
     color: brand,
   });
 
-  // === PROJECT INFO ===
-  sectionHeader("Project Information");
-  const customerName = sanitize(d.customerName);
-  const nameLines = wrapText(customerName, COL_W - 120, 9);
-  checkPage(14 + nameLines.length * 13);
-  y -= 14;
-  drawText("Customer:", MARGIN, y, 8, fontBold, gray);
-  for (const line of nameLines) {
-    drawText(line, MARGIN + 120, y, 9);
-    y -= 13;
-  }
-  y += 13;
-
-  fieldRow(
-    "Address:",
-    `${d.address || ""}, ${d.city || ""}, ${d.state || "CO"} ${d.zip || ""}`,
-    120,
-  );
-  fieldRowDouble(
-    "Date:",
-    d.projectDate
-      ? new Date(d.projectDate).toLocaleDateString("en-US")
-      : "N/A",
-    "Payment Type:",
-    d.paymentType || "N/A",
-  );
+  y -= 4;
+  fieldRow("Customer:", customerName, 120);
+  fieldRow("Address:", addressLine, 120);
+  fieldRowDouble("Date:", dateLine, "Payment Type:", d.paymentType || "N/A");
   if (d.lossType) fieldRow("Type of Loss:", d.lossType, 120);
+  y -= 4;
 
   // === SCOPE OF WORK ===
   if (d.scopeOfWork || d.serviceDescription) {
@@ -254,7 +275,7 @@ export async function GET(
     if (d.scopeOfWork) longField("", d.scopeOfWork);
   }
 
-  // === PROJECT DETAILS (customer-relevant only) ===
+  // === PROJECT DETAILS ===
   sectionHeader("Project Details");
   fieldRowDouble(
     "Estimated Duration:",
@@ -270,10 +291,10 @@ export async function GET(
   if (d.dumpsterPlacement)
     fieldRow("Dumpster Placement:", d.dumpsterPlacement, 140);
 
-  // === COST SUMMARY (customer-facing only) ===
+  // === COST SUMMARY ===
   sectionHeader("Cost Summary");
 
-  // Calculate customer price (same logic as detail page)
+  // Calculate totals
   const supReg = d.supervisorHours || 0;
   const supOt = d.supervisorOtHours || 0;
   const techReg = d.technicianHours || 0;
@@ -320,70 +341,90 @@ export async function GET(
     ? d.customerPriceOverride
     : (d.customerPrice ?? grandTotal * (1 + autoMarkup / 100));
 
-  // Show only COGS line items with cost > 0 (no internal breakdowns)
-  const activeCogsItems = cogsArr.filter((c: any) => c.cost > 0);
-  if (activeCogsItems.length > 0) {
-    checkPage(20 + activeCogsItems.length * 14 + 30);
-    y -= 16;
-    const costCols = [MARGIN, MARGIN + 380];
-    drawText("Item", costCols[0], y, 8, fontBold, gray);
-    drawText("Cost", costCols[1], y, 8, fontBold, gray);
-    y -= 2;
-    page.drawLine({
-      start: { x: MARGIN, y },
-      end: { x: PAGE_W - MARGIN, y },
-      thickness: 0.5,
-      color: lightGray,
-    });
-
-    for (const item of activeCogsItems) {
-      checkPage(16);
-      y -= 14;
-      drawText(sanitize(item.item), costCols[0], y, 9);
-      drawText(fmt(item.cost), costCols[1], y, 9);
-    }
-
-    // Materials as single collapsed line
-    if (matsTotal > 0) {
-      checkPage(16);
-      y -= 14;
-      drawText("Materials & Supplies", costCols[0], y, 9);
-      drawText(fmt(matsTotal), costCols[1], y, 9);
-    }
-
-    y -= 6;
-    page.drawLine({
-      start: { x: MARGIN, y },
-      end: { x: PAGE_W - MARGIN, y },
-      thickness: 1,
-      color: lightGray,
-    });
-  }
-
-  // Big estimate total
-  checkPage(50);
-  y -= 22;
-  page.drawRectangle({
-    x: MARGIN,
-    y: y - 6,
-    width: COL_W,
-    height: 28,
-    color: brand,
-  });
-  drawText("ESTIMATE TOTAL", MARGIN + 10, y, 12, fontBold, white);
-  const priceStr = fmt(customerPrice);
-  const priceW = fontBold.widthOfTextAtSize(priceStr, 12);
-  drawText(
-    priceStr,
-    PAGE_W - MARGIN - 10 - priceW,
-    y,
-    12,
-    fontBold,
-    white,
+  // Build line items: Labor + COGS (excl Vehicle/Trailer, $0) + Materials
+  const EXCLUDED_COGS = ["Vehicle", "Trailer"];
+  const activeCogsItems = cogsArr.filter(
+    (c: any) => c.cost > 0 && !EXCLUDED_COGS.includes(c.item),
   );
 
+  // Collect all visible rows
+  const costRows: Array<{ label: string; amount: number }> = [];
+  costRows.push({ label: "Labor", amount: laborTotal });
+  for (const item of activeCogsItems) {
+    costRows.push({ label: item.item, amount: item.cost });
+  }
+  if (matsTotal > 0) {
+    costRows.push({ label: "Materials & Supplies", amount: matsTotal });
+  }
+
+  // Table header
+  checkPage(20 + costRows.length * 18 + 40);
+  y -= 16;
+  const tblLeft = MARGIN;
+  const tblRight = PAGE_W - MARGIN;
+  const costCol = tblRight - 80;
+
+  // Header row background
+  page.drawRectangle({
+    x: tblLeft,
+    y: y - 4,
+    width: COL_W,
+    height: 16,
+    color: lightGray,
+  });
+  drawText("Description", tblLeft + 8, y, 8, fontBold, darkGray);
+  drawText("Amount", costCol, y, 8, fontBold, darkGray);
+
+  // Data rows with alternating shading
+  for (let i = 0; i < costRows.length; i++) {
+    const row = costRows[i];
+    y -= 18;
+    checkPage(20);
+
+    // Alternating row background
+    if (i % 2 === 1) {
+      page.drawRectangle({
+        x: tblLeft,
+        y: y - 4,
+        width: COL_W,
+        height: 16,
+        color: veryLightGray,
+      });
+    }
+
+    drawText(row.label, tblLeft + 8, y, 9);
+    const amtStr = fmt(row.amount);
+    const amtW = font.widthOfTextAtSize(amtStr, 9);
+    drawText(amtStr, tblRight - 8 - amtW, y, 9);
+  }
+
+  // Separator
+  y -= 8;
+  page.drawLine({
+    start: { x: tblLeft, y },
+    end: { x: tblRight, y },
+    thickness: 1,
+    color: lightGray,
+  });
+
+  // ESTIMATE TOTAL — dark branded bar
+  y -= 6;
+  const totalBarH = 30;
+  page.drawRectangle({
+    x: tblLeft,
+    y: y - totalBarH + 10,
+    width: COL_W,
+    height: totalBarH,
+    color: brandDark,
+  });
+  drawText("ESTIMATE TOTAL", tblLeft + 10, y - 10, 13, fontBold, white);
+  const priceStr = fmt(customerPrice);
+  const priceW = fontBold.widthOfTextAtSize(priceStr, 13);
+  drawText(priceStr, tblRight - 10 - priceW, y - 10, 13, fontBold, white);
+  y -= totalBarH + 6;
+
   // === TERMS & CONDITIONS ===
-  y -= 30;
+  y -= 10;
   sectionHeader("Terms & Conditions");
   const terms = [
     "This estimate is valid for 30 days from the date above.",
@@ -403,18 +444,18 @@ export async function GET(
   }
 
   // === ACCEPTANCE ===
-  checkPage(100);
+  checkPage(110);
   y -= 10;
   sectionHeader("Acceptance");
   y -= 6;
-  const wLines = wrapText(
+  const acceptLines = wrapText(
     "By signing below, the customer agrees to the scope of work and pricing outlined in this estimate.",
     COL_W - 10,
     9,
   );
-  for (const line of wLines) {
+  for (const line of acceptLines) {
     y -= 13;
-    drawText(line, MARGIN, y, 9);
+    drawText(line, MARGIN + 10, y, 9);
   }
 
   y -= 30;
@@ -446,44 +487,45 @@ export async function GET(
   });
   drawText("Printed Name", MARGIN, y - 12, 8, font, gray);
 
-  // Footer on each page
-  const pages = pdf.getPages();
+  // === FOOTER ON EACH PAGE ===
+  const pages = pdfDoc.getPages();
   const domainText = APP_DOMAIN;
   pages.forEach((p, i) => {
-    // Brand-colored footer line
-    p.drawLine({
-      start: { x: MARGIN, y: 42 },
-      end: { x: PAGE_W - MARGIN, y: 42 },
-      thickness: 0.5,
+    // Green footer strip
+    p.drawRectangle({
+      x: 0,
+      y: 0,
+      width: PAGE_W,
+      height: 24,
       color: brand,
     });
     p.drawText(COMPANY_NAME, {
       x: MARGIN,
-      y: 30,
+      y: 8,
       size: 7,
       font: fontBold,
-      color: gray,
+      color: white,
     });
     const domainW = font.widthOfTextAtSize(domainText, 7);
     p.drawText(domainText, {
       x: PAGE_W / 2 - domainW / 2,
-      y: 30,
+      y: 8,
       size: 7,
       font,
-      color: gray,
+      color: white,
     });
     const pageText = `Page ${i + 1} of ${pages.length}`;
     const pageTextW = font.widthOfTextAtSize(pageText, 7);
     p.drawText(pageText, {
       x: PAGE_W - MARGIN - pageTextW,
-      y: 30,
+      y: 8,
       size: 7,
       font,
-      color: gray,
+      color: white,
     });
   });
 
-  const pdfBytes = await pdf.save();
+  const pdfBytes = await pdfDoc.save();
   const custSlug = (d.customerName || "estimate")
     .replace(/\s+/g, "-")
     .slice(0, 30);
