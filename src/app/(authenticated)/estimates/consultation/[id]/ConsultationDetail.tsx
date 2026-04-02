@@ -343,71 +343,65 @@ export default function ConsultationDetail({
   return (
     <div className="max-w-4xl">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Link
-              href="/estimates"
-              className="text-indigo-600 hover:text-indigo-700 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {data.customerName}
-            </h1>
-            <span
-              className={`
-              inline-block px-3 py-1 text-xs font-semibold rounded-full
-              ${getStatusBadgeColor(data.status)}
-            `}
-            >
-              {getStatusLabel(data.status)}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-1">
+          <Link
+            href="/estimates"
+            className="text-indigo-600 hover:text-indigo-700 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {data.customerName}
+          </h1>
+          <span
+            className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${getStatusBadgeColor(data.status)}`}
+          >
+            {getStatusLabel(data.status)}
+          </span>
+          {data.isPrimary && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+              <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+              Primary
             </span>
-            {data.isPrimary && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
-                <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                Primary Estimate
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-slate-600">
-            {data.address}, {data.city}, {data.state} {data.zip}
-          </p>
-          <p className="text-sm text-slate-600">{formattedDate}</p>
+          )}
         </div>
+        <p className="text-sm text-slate-600 ml-7">
+          {data.address}, {data.city}, {data.state} {data.zip} &middot; {formattedDate}
+        </p>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 mt-3 ml-7">
           <a
             href={`/api/consultation-estimates/${data.id}/pdf`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+            className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5"
           >
-            <Download className="w-4 h-4" />
-            Download PDF
+            <Download className="w-3.5 h-3.5" />
+            PDF
           </a>
           <Link
             href={`/estimates/consultation/${data.id}/edit`}
-            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+            className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5"
           >
-            <Pencil className="w-4 h-4" />
+            <Pencil className="w-3.5 h-3.5" />
             Edit
           </Link>
           {data.status !== "converted" && (
             <button
               onClick={() => setShowInvoiceModal(true)}
-              className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors bg-emerald-600 hover:bg-emerald-700 flex items-center gap-2"
+              className="px-3 py-1.5 text-xs font-medium text-white rounded-lg transition-colors bg-emerald-600 hover:bg-emerald-700 flex items-center gap-1.5"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-3.5 h-3.5" />
               Convert to Invoice
             </button>
           )}
           {data.status === "converted" && data.estimateId && (
             <Link
               href={`/invoices/${data.estimateId}`}
-              className="px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-3.5 h-3.5" />
               View Invoice
             </Link>
           )}
@@ -415,9 +409,9 @@ export default function ConsultationDetail({
             <button
               onClick={handleSetPrimary}
               disabled={isSettingPrimary}
-              className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors flex items-center gap-2 disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
-              <Star className={`w-4 h-4 ${isSettingPrimary ? "animate-pulse" : ""}`} />
+              <Star className={`w-3.5 h-3.5 ${isSettingPrimary ? "animate-pulse" : ""}`} />
               {isSettingPrimary ? "Setting..." : "Set as Primary"}
             </button>
           )}
@@ -425,15 +419,15 @@ export default function ConsultationDetail({
             <button
               onClick={handleSyncToProject}
               disabled={isSyncing}
-              className="px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2 disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
               {isSyncing ? "Syncing..." : "Sync to Project"}
             </button>
           )}
         </div>
         {syncResult && (
-          <div className={`mt-2 text-sm px-3 py-2 rounded ${syncResult.success ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+          <div className={`mt-2 ml-7 text-xs px-3 py-1.5 rounded border ${syncResult.success ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
             {syncResult.message}
           </div>
         )}
