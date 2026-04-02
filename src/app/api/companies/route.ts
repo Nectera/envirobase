@@ -17,7 +17,13 @@ export async function GET(req: NextRequest) {
     const isSubcontractor = req.nextUrl.searchParams.get("isSubcontractor");
 
     const where: any = orgWhere(orgId);
-    if (search) where.search = search;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+      ];
+    }
     if (type) where.type = type;
     if (isSubcontractor === "true") where.isSubcontractor = true;
 

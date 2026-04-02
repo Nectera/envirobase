@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Users, TrendingUp, Activity, Plus, ChevronRight, Mail, Phone, Badge, Send, Pencil, X, Trash2, ArrowLeft } from "lucide-react";
+import { Users, TrendingUp, Activity, Plus, ChevronRight, Mail, Phone, Badge, Send, Pencil, X, Trash2, ArrowLeft, GitMerge } from "lucide-react";
+import MergeModal from "@/components/MergeModal";
 import ActivityFeed from "@/components/ActivityFeed";
 import EmailCompose from "@/components/EmailCompose";
 import ClickToCall from "@/components/ClickToCall";
@@ -87,6 +88,7 @@ export default function CompanyDetail({
   const [emailTo, setEmailTo] = useState("");
   const [emailRecipient, setEmailRecipient] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -201,6 +203,13 @@ export default function CompanyDetail({
           {deleting ? "Deleting..." : "Delete"}
         </button>
         <button
+          onClick={() => setShowMergeModal(true)}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-white border border-indigo-200 rounded-full hover:bg-indigo-50 transition"
+        >
+          <GitMerge size={14} />
+          Merge
+        </button>
+        <button
           onClick={openEditModal}
           className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition"
         >
@@ -209,6 +218,16 @@ export default function CompanyDetail({
         </button>
         </div>
       </div>
+
+      {showMergeModal && (
+        <MergeModal
+          entityType="company"
+          primaryId={company.id}
+          primaryName={company.name}
+          onClose={() => setShowMergeModal(false)}
+          onMerged={() => { setShowMergeModal(false); router.refresh(); }}
+        />
+      )}
 
       {/* Tabs */}
       <div className="mb-6 flex gap-8 border-b border-slate-200">

@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, User, Mail, Phone, Building2, MapPin, Target, Send, MessageSquare, FileText, Shield, Smartphone,
-  Pencil, Check, X, Loader2,
+  Pencil, Check, X, Loader2, GitMerge,
 } from "lucide-react";
+import MergeModal from "@/components/MergeModal";
 import ActivityFeed from "@/components/ActivityFeed";
 import NotesTab from "@/components/NotesTab";
 import EmailCompose from "@/components/EmailCompose";
@@ -58,6 +59,7 @@ export default function ContactDetail({
   const [showSMSCompose, setShowSMSCompose] = useState(false);
   const [showPandaDoc, setShowPandaDoc] = useState(false);
   const [showCallConfirm, setShowCallConfirm] = useState<{ phone: string; name: string } | null>(null);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -247,6 +249,16 @@ export default function ContactDetail({
       </div>
 
       {/* Details Tab */}
+      {showMergeModal && (
+        <MergeModal
+          entityType="contact"
+          primaryId={contactData.id}
+          primaryName={contactData.name || [contactData.firstName, contactData.lastName].filter(Boolean).join(" ")}
+          onClose={() => setShowMergeModal(false)}
+          onMerged={() => { setShowMergeModal(false); router.refresh(); }}
+        />
+      )}
+
       {activeTab === "details" && (
         <div>
           {/* Edit / Save / Cancel bar */}
@@ -269,12 +281,20 @@ export default function ContactDetail({
                 </button>
               </>
             ) : (
-              <button
-                onClick={startEdit}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition"
-              >
-                <Pencil size={14} /> {t("common.edit")}
-              </button>
+              <>
+                <button
+                  onClick={() => setShowMergeModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
+                >
+                  <GitMerge size={14} /> Merge
+                </button>
+                <button
+                  onClick={startEdit}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition"
+                >
+                  <Pencil size={14} /> {t("common.edit")}
+                </button>
+              </>
             )}
           </div>
 

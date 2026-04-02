@@ -17,7 +17,15 @@ export async function GET(req: NextRequest) {
 
     const where: any = { ...orgWhere(orgId) };
     if (companyId) where.companyId = companyId;
-    if (search) where.search = search;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
     const contacts = await prisma.contact.findMany({
       where,
