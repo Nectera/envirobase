@@ -206,7 +206,7 @@ export default function Sidebar({
 
   const sidebarContent = (
     <>
-      <div className={`${collapsed ? "px-2 py-5" : "px-5 py-5"} flex items-center justify-center relative`}>
+      <div className={`${collapsed ? "px-2 py-5" : "px-5 py-5"} flex items-center justify-center relative flex-shrink-0`}>
         <Logo size={collapsed ? 36 : 72} src={branding?.logoUrl} />
         {/* Close button — mobile only */}
         <button onClick={close} className="md:hidden absolute right-4 p-1.5 text-slate-400 hover:text-white rounded-xl">
@@ -214,7 +214,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      <nav className="flex-1 py-1 overflow-y-auto relative z-10">
+      <nav className="flex-1 py-1 overflow-y-auto relative z-10 scrollbar-hide" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
         {isTech && (
           <>
             {technicianNavItems.map((item) => renderNavItem(item))}
@@ -270,7 +270,7 @@ export default function Sidebar({
         )}
       </nav>
 
-      <div className="border-t border-white/[0.06] p-4 mx-2 space-y-3">
+      <div className="border-t border-white/[0.06] p-4 mx-2 space-y-3 flex-shrink-0">
         {/* Collapse toggle — desktop only */}
         <button
           onClick={toggle}
@@ -310,11 +310,12 @@ export default function Sidebar({
     <>
       {/* Desktop sidebar — floating translucent panel */}
       <aside
-        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 overflow-hidden transition-all duration-300 ease-in-out ${
+        className={`hidden md:flex flex-col flex-shrink-0 text-slate-300 fixed top-4 left-4 bottom-4 z-40 transition-all duration-300 ease-in-out ${
           collapsed ? "w-[72px]" : "w-[232px]"
         }`}
         style={{
           borderRadius: "24px",
+          overflow: "hidden",
           background: "rgba(15, 23, 42, 0.92)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
@@ -341,6 +342,7 @@ export default function Sidebar({
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
               border: "1px solid rgba(255, 255, 255, 0.06)",
+              overscrollBehavior: "contain",
             }}
           >
             <div className="absolute inset-0 pointer-events-none opacity-[0.06]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23ffffff' stop-opacity='1'/%3E%3Cstop offset='50%25' stop-color='%23ffffff' stop-opacity='0.3'/%3E%3Cstop offset='100%25' stop-color='%23000000' stop-opacity='0.8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 0 L40 20 L20 40 L0 20Z' fill='url(%23a)' stroke='%23ffffff' stroke-opacity='0.8' stroke-width='0.5'/%3E%3Cpath d='M20 4 L36 20 L20 36 L4 20Z' fill='none' stroke='%23ffffff' stroke-opacity='0.5' stroke-width='0.3'/%3E%3C/svg%3E")`, backgroundSize: "40px 40px" }} />
