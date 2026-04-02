@@ -862,6 +862,43 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
     []
   );
 
+  const handleCogsNameChange = useCallback(
+    (index: number, name: string) => {
+      manualCogsEdits.current.add(index);
+      setFormData((prev) => {
+        const newCogs = [...prev.cogs];
+        newCogs[index] = { ...newCogs[index], item: name };
+        return { ...prev, cogs: newCogs };
+      });
+    },
+    []
+  );
+
+  const addCustomCogsItem = useCallback(() => {
+    setFormData((prev) => {
+      const newIndex = prev.cogs.length;
+      manualCogsEdits.current.add(newIndex);
+      return {
+        ...prev,
+        cogs: [...prev.cogs, { item: "", qty: 1, cost: 0 }],
+      };
+    });
+  }, []);
+
+  const removeCogsItem = useCallback((index: number) => {
+    setFormData((prev) => {
+      const newCogs = prev.cogs.filter((_, i) => i !== index);
+      // Rebuild manual edits set with shifted indices
+      const newManual = new Set<number>();
+      Array.from(manualCogsEdits.current).forEach((idx) => {
+        if (idx < index) newManual.add(idx);
+        else if (idx > index) newManual.add(idx - 1);
+      });
+      manualCogsEdits.current = newManual;
+      return { ...prev, cogs: newCogs };
+    });
+  }, []);
+
   const handleMaterialChange = useCallback(
     (index: number, field: "qty" | "cost", value: number) => {
       // Track that this material was manually edited
@@ -1886,22 +1923,34 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                     <th className="text-left p-2 font-semibold">Item</th>
                     <th className="text-right p-2 font-semibold">Qty</th>
                     <th className="text-right p-2 font-semibold">Cost</th>
+                    <th className="w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {formData.cogs.map((cog, index) => {
+                    const isStandard = DEFAULT_COGS.some((item) => item.item === cog.item);
                     const notes = DEFAULT_COGS.find(
                       (item) => item.item === cog.item
                     )?.notes;
                     return (
                       <tr key={index} className="border-b">
                         <td className="p-2">
-                          <div>
-                            <p className="font-medium">{cog.item}</p>
-                            {notes && (
-                              <p className="text-xs text-gray-500 mt-1">{notes}</p>
-                            )}
-                          </div>
+                          {isStandard ? (
+                            <div>
+                              <p className="font-medium">{cog.item}</p>
+                              {notes && (
+                                <p className="text-xs text-gray-500 mt-1">{notes}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <input
+                              type="text"
+                              value={cog.item}
+                              placeholder="Scaffolding, equipment rental, etc."
+                              onChange={(e) => handleCogsNameChange(index, e.target.value)}
+                              className="w-full px-2 py-1 border rounded md:min-h-[44px]"
+                            />
+                          )}
                         </td>
                         <td className="p-2">
                           <input
@@ -1935,6 +1984,18 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                             className="w-full px-2 py-1 border rounded text-right md:min-h-[44px]"
                           />
                         </td>
+                        <td className="p-2 text-center">
+                          {!isStandard && (
+                            <button
+                              type="button"
+                              onClick={() => removeCogsItem(index)}
+                              className="text-red-400 hover:text-red-600 text-lg leading-none"
+                              title="Remove item"
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -1942,10 +2003,19 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
                     <td className="p-2">COGS Total</td>
                     <td></td>
                     <td className="p-2 text-right">{formatCurrency(totals.cogs)}</td>
+                    <td></td>
                   </tr>
                 </tbody>
               </table>
             </div>
+
+            <button
+              type="button"
+              onClick={addCustomCogsItem}
+              className="mt-2 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+            >
+              + Add Custom Item
+            </button>
 
             <StepNav showBack showNext onBack={() => navigateToStep(4)} onNext={() => navigateToStep(6)} />
           </div>
