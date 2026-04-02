@@ -119,6 +119,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Post-cost fields
     if (body.isPostCost !== undefined) data.isPostCost = body.isPostCost;
     if (body.originalEstimateId !== undefined) data.originalEstimateId = body.originalEstimateId;
+    if (body.isPrimary !== undefined) data.isPrimary = body.isPrimary;
     if (body.projectId !== undefined) data.projectId = body.projectId;
     if (body.projectNumber !== undefined) data.projectNumber = body.projectNumber;
 
@@ -249,12 +250,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             include: { company: true },
           });
 
-          // Link the consultation estimate to the project for future syncing
+          // Link the consultation estimate to the project and mark as primary
           await prisma.consultationEstimate.update({
             where: { id: params.id },
             data: {
               projectId: project.id,
               projectNumber: (project as any).projectNumber || null,
+              isPrimary: true,
             },
           });
 
@@ -321,7 +323,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }
     }
 
-    // Auto-sync labor hours to linked project on every save (not just approval)
+    // Auto-sync labor hours to linked project on every save — but only if this is the primary estimate (or the only one)
     const savedEst = item as any;
     let linkedProjectId: string | null = savedEst.projectId || null;
     if (!linkedProjectId && savedEst.leadId) {
@@ -332,20 +334,31 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       linkedProjectId = linkedLead?.projectId || null;
     }
     if (linkedProjectId) {
-      const estDays = savedEst.daysNeeded ? Math.ceil(savedEst.daysNeeded) : null;
-      const estLaborHours = Math.ceil(
-        (savedEst.supervisorHours || 0) + (savedEst.supervisorOtHours || 0) +
-        (savedEst.technicianHours || 0) + (savedEst.technicianOtHours || 0)
-      ) || null;
+      // Check if this estimate should auto-sync: must be primary OR the only non-post-cost estimate
+      let shouldSync = !!savedEst.isPrimary;
+      if (!shouldSync) {
+        const siblingCount = await prisma.consultationEstimate.count({
+          where: { projectId: linkedProjectId, isPostCost: { not: true }, id: { not: params.id } },
+        });
+        shouldSync = siblingCount === 0;
+      }
 
-      await prisma.project.update({
-        where: { id: linkedProjectId },
-        data: {
-          estimatedDays: estDays,
-          estimatedLaborHours: estLaborHours,
-          maxHoursPerDay: savedEst.hoursPerDay || 8,
-        },
-      }).catch(() => {}); // Non-critical — don't fail the save
+      if (shouldSync) {
+        const estDays = savedEst.daysNeeded ? Math.ceil(savedEst.daysNeeded) : null;
+        const estLaborHours = Math.ceil(
+          (savedEst.supervisorHours || 0) + (savedEst.supervisorOtHours || 0) +
+          (savedEst.technicianHours || 0) + (savedEst.technicianOtHours || 0)
+        ) || null;
+
+        await prisma.project.update({
+          where: { id: linkedProjectId },
+          data: {
+            estimatedDays: estDays,
+            estimatedLaborHours: estLaborHours,
+            maxHoursPerDay: savedEst.hoursPerDay || 8,
+          },
+        }).catch(() => {});
+      }
 
       // Ensure estimate has projectId stored
       if (!savedEst.projectId) {

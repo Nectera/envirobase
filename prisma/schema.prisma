@@ -884,6 +884,8 @@ model ConsultationEstimate {
   customerPriceOverride Float?
   customerPrice         Float?
   serviceDescription    String?
+  // Primary estimate designation
+  isPrimary             Boolean? @default(false)
   // Post-cost
   isPostCost            Boolean? @default(false)
   originalEstimateId    String?

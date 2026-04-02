@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText, DollarSign, X, Pencil, RefreshCw, Download } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, X, Pencil, RefreshCw, Download, Star } from "lucide-react";
 import { LABOR_RATES, DEFAULT_COGS, DEFAULT_MATERIALS } from "@/lib/materials";
 import {
   DEFAULT_CONSULTATION_FIELDS,
@@ -128,6 +128,7 @@ interface ConsultationEstimateData {
   serviceDescription?: string;
   projectId?: string;
   leadId?: string;
+  isPrimary?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -181,6 +182,7 @@ export default function ConsultationDetail({
   const [isConverting, setIsConverting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [isSettingPrimary, setIsSettingPrimary] = useState(false);
 
   const handleSyncToProject = async () => {
     if (!confirm("Sync estimated days and labor hours from this estimate to the linked project? This will overwrite the project's current estimates.")) return;
@@ -202,6 +204,29 @@ export default function ConsultationDetail({
       setSyncResult({ success: false, message: "Network error" });
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleSetPrimary = async () => {
+    if (!confirm("Set this as the primary estimate for the linked project? This will sync its hours/days to the project.")) return;
+    setIsSettingPrimary(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch(`/api/consultation-estimates/${data.id}/set-primary`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setSyncResult({ success: true, message: `Set as primary and synced: ${result.synced.estimatedDays} days, ${result.synced.estimatedLaborHours} hours` });
+        router.refresh();
+      } else {
+        setSyncResult({ success: false, message: result.error || "Failed to set primary" });
+      }
+    } catch {
+      setSyncResult({ success: false, message: "Network error" });
+    } finally {
+      setIsSettingPrimary(false);
     }
   };
 
@@ -338,6 +363,12 @@ export default function ConsultationDetail({
             >
               {getStatusLabel(data.status)}
             </span>
+            {data.isPrimary && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                Primary Estimate
+              </span>
+            )}
           </div>
           <p className="text-sm text-slate-600">
             {data.address}, {data.city}, {data.state} {data.zip}
@@ -379,6 +410,16 @@ export default function ConsultationDetail({
               <FileText className="w-4 h-4" />
               View Invoice
             </Link>
+          )}
+          {(data.projectId || data.leadId) && !data.isPrimary && (
+            <button
+              onClick={handleSetPrimary}
+              disabled={isSettingPrimary}
+              className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Star className={`w-4 h-4 ${isSettingPrimary ? "animate-pulse" : ""}`} />
+              {isSettingPrimary ? "Setting..." : "Set as Primary"}
+            </button>
           )}
           {(data.projectId || data.leadId) && (
             <button

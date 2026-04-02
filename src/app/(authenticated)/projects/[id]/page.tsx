@@ -99,9 +99,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       ],
     },
   });
-  const linkedConsultationEstimate = (allConsultationEstimates as any[]).find(
-    (e: any) => !e.isPostCost
-  ) || null;
+  const preCostEstimates = (allConsultationEstimates as any[]).filter((e: any) => !e.isPostCost);
+  const linkedConsultationEstimate =
+    preCostEstimates.find((e: any) => e.isPrimary) ||
+    preCostEstimates.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0] ||
+    null;
   const linkedPostCostEstimate = (allConsultationEstimates as any[]).find(
     (e: any) => e.isPostCost
   ) || null;
