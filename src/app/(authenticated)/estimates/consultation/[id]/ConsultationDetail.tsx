@@ -346,7 +346,7 @@ export default function ConsultationDetail({
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <Link
-            href="/estimates"
+            href={data.leadId ? `/leads/${data.leadId}` : "/estimates"}
             className="text-indigo-600 hover:text-indigo-700 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
