@@ -9,10 +9,17 @@ import { useTranslation } from "@/components/LanguageProvider";
 import { ArrowUp, ArrowDown, ChevronRight, Package } from "lucide-react";
 import Pagination from "@/components/Pagination";
 
-type ProjectWithTasks = Project & { tasks: ProjectTask[]; contentInventory?: { id: string }[] };
+type ProjectWithTasks = Project & { tasks: ProjectTask[]; contentInventory?: { id: string }[]; _totalHours?: number };
 
 type SortKey = "name" | "type" | "status" | "client" | "progress" | "startDate" | "permit";
 type SortDir = "asc" | "desc";
+
+function calcProgress(p: ProjectWithTasks): number {
+  const worked = (p as any)._totalHours || 0;
+  const est = (p as any).estimatedHours || 0;
+  if (est <= 0) return worked > 0 ? 100 : 0;
+  return Math.min(Math.round((worked / est) * 100), 100);
+}
 
 export default function ProjectFilters({ projects }: { projects: ProjectWithTasks[] }) {
   const { t } = useTranslation();
@@ -53,9 +60,7 @@ export default function ProjectFilters({ projects }: { projects: ProjectWithTask
           cmp = (a.client || "").localeCompare(b.client || "");
           break;
         case "progress": {
-          const pctA = a.tasks.length ? a.tasks.filter((t) => t.status === "completed").length / a.tasks.length : 0;
-          const pctB = b.tasks.length ? b.tasks.filter((t) => t.status === "completed").length / b.tasks.length : 0;
-          cmp = pctA - pctB;
+          cmp = calcProgress(a) - calcProgress(b);
           break;
         }
         case "startDate":
@@ -240,8 +245,7 @@ export default function ProjectFilters({ projects }: { projects: ProjectWithTask
           </thead>
           <tbody>
             {paginatedProjects.map((p) => {
-              const done = p.tasks.filter((t) => t.status === "completed").length;
-              const pct = p.tasks.length ? Math.round((done / p.tasks.length) * 100) : 0;
+              const pct = calcProgress(p);
               const barColor = barColors[getProjectTypes(p.type)[0]] || "bg-slate-500";
 
               return (

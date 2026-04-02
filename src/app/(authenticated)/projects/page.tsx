@@ -6,12 +6,29 @@ export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   try {
-    const projects = await prisma.project.findMany({
-      include: { tasks: true, contentInventory: { select: { id: true } } },
-    });
+    const [projects, hoursByProject] = await Promise.all([
+      prisma.project.findMany({
+        include: { tasks: true, contentInventory: { select: { id: true } } },
+      }),
+      prisma.timeEntry.groupBy({
+        by: ["projectId"],
+        _sum: { hours: true },
+      }),
+    ]);
+
+    // Build a lookup of total hours per project
+    const hoursMap = new Map(
+      hoursByProject.map((h: any) => [h.projectId, h._sum?.hours || 0])
+    );
+
+    // Attach _totalHours to each project
+    const projectsWithHours = (projects as any[]).map((p: any) => ({
+      ...p,
+      _totalHours: hoursMap.get(p.id) || 0,
+    }));
 
     // Sort oldest startDate first (nulls go to end)
-    (projects as any[]).sort((a: any, b: any) => {
+    projectsWithHours.sort((a: any, b: any) => {
       const aDate = a.startDate || (a.createdAt ? new Date(a.createdAt).toISOString() : "");
       const bDate = b.startDate || (b.createdAt ? new Date(b.createdAt).toISOString() : "");
       return String(aDate).localeCompare(String(bDate));
@@ -20,7 +37,7 @@ export default async function ProjectsPage() {
     return (
       <div>
         <ProjectsHeader />
-        <ProjectFilters projects={projects} />
+        <ProjectFilters projects={projectsWithHours} />
       </div>
     );
   } catch (error: any) {
