@@ -401,20 +401,21 @@ export async function GET(
     ? d.customerPriceOverride
     : (d.customerPrice ?? grandTotal * (1 + autoMarkup / 100));
 
-  // Build line items: Labor + COGS (excl Vehicle/Trailer, $0) + Materials
+  // Group into 3 high-level categories so customers can't pick apart individual items:
+  // Demo = labor + operating costs (the abatement/demolition work)
+  // COGS = waste, permits, clearances, project design, custom items (excl Vehicle/Trailer)
+  // Containment = materials & supplies (poly, suits, filters, etc.)
   const EXCLUDED_COGS = ["Vehicle", "Trailer"];
-  const activeCogsItems = cogsArr.filter(
-    (c: any) => c.cost > 0 && !EXCLUDED_COGS.includes(c.item),
-  );
+  const activeCogsCost = cogsArr
+    .filter((c: any) => c.cost > 0 && !EXCLUDED_COGS.includes(c.item))
+    .reduce((s: number, c: any) => s + (c.cost || 0), 0);
+
+  const demoTotal = laborTotal + opsCost;
 
   const costRows: Array<{ label: string; amount: number }> = [];
-  costRows.push({ label: "Labor", amount: laborTotal });
-  for (const item of activeCogsItems) {
-    costRows.push({ label: item.item, amount: item.cost });
-  }
-  if (matsTotal > 0) {
-    costRows.push({ label: "Materials & Supplies", amount: matsTotal });
-  }
+  if (demoTotal > 0) costRows.push({ label: "Demo", amount: demoTotal });
+  if (activeCogsCost > 0) costRows.push({ label: "COGS", amount: activeCogsCost });
+  if (matsTotal > 0) costRows.push({ label: "Containment", amount: matsTotal });
 
   // Table header
   checkPage(20 + costRows.length * 18 + 40);
@@ -457,7 +458,7 @@ export async function GET(
   }
 
   // Separator
-  y -= 8;
+  y -= 12;
   page.drawLine({
     start: { x: tblLeft, y },
     end: { x: tblRight, y },
@@ -466,20 +467,22 @@ export async function GET(
   });
 
   // ESTIMATE TOTAL — dark branded bar
-  y -= 6;
+  y -= 14;
   const totalBarH = 30;
+  checkPage(totalBarH + 10);
   page.drawRectangle({
     x: tblLeft,
-    y: y - totalBarH + 10,
+    y: y - 8,
     width: COL_W,
     height: totalBarH,
     color: brandDark,
   });
-  drawText("ESTIMATE TOTAL", tblLeft + 10, y - 10, 13, fontBold, white);
+  const totalTextY = y - 8 + (totalBarH - 13) / 2;
+  drawText("ESTIMATE TOTAL", tblLeft + 10, totalTextY, 13, fontBold, white);
   const priceStr = fmt(customerPrice);
   const priceW = fontBold.widthOfTextAtSize(priceStr, 13);
-  drawText(priceStr, tblRight - 10 - priceW, y - 10, 13, fontBold, white);
-  y -= totalBarH + 6;
+  drawText(priceStr, tblRight - 10 - priceW, totalTextY, 13, fontBold, white);
+  y -= totalBarH + 14;
 
   // === TERMS & CONDITIONS ===
   y -= 10;
