@@ -6,20 +6,33 @@ export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   try {
-    let projects;
+    const projects = await prisma.project.findMany({
+      include: { tasks: true, contentInventory: { select: { id: true } } },
+    });
+
+    // Aggregate total hours per project (more efficient than loading all timeEntries)
+    let hoursMap = new Map<string, number>();
     try {
-      projects = await prisma.project.findMany({
-        include: { tasks: true, contentInventory: { select: { id: true } }, timeEntries: { select: { hours: true } } },
+      const hoursByProject = await prisma.timeEntry.groupBy({
+        by: ["projectId"],
+        _sum: { hours: true },
+        where: { projectId: { not: null } },
       });
+      hoursMap = new Map(
+        hoursByProject.map((h: any) => [h.projectId as string, h._sum.hours || 0])
+      );
     } catch {
-      // Fallback if timeEntries relation isn't available yet (e.g. Prisma client not regenerated)
-      projects = await prisma.project.findMany({
-        include: { tasks: true, contentInventory: { select: { id: true } } },
-      });
+      // timeEntry table may not exist yet — progress will show 0%
     }
 
+    // Attach aggregated hours to each project
+    const projectsWithHours = projects.map((p: any) => ({
+      ...p,
+      _totalHours: hoursMap.get(p.id) || 0,
+    }));
+
     // Sort oldest startDate first (nulls go to end)
-    (projects as any[]).sort((a: any, b: any) => {
+    projectsWithHours.sort((a: any, b: any) => {
       const aDate = a.startDate || (a.createdAt ? new Date(a.createdAt).toISOString() : "");
       const bDate = b.startDate || (b.createdAt ? new Date(b.createdAt).toISOString() : "");
       return String(aDate).localeCompare(String(bDate));
@@ -28,7 +41,7 @@ export default async function ProjectsPage() {
     return (
       <div>
         <ProjectsHeader />
-        <ProjectFilters projects={projects} />
+        <ProjectFilters projects={projectsWithHours as any} />
       </div>
     );
   } catch (error: any) {

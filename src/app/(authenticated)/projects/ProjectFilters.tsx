@@ -9,7 +9,7 @@ import { useTranslation } from "@/components/LanguageProvider";
 import { ArrowUp, ArrowDown, ChevronRight, Package } from "lucide-react";
 import Pagination from "@/components/Pagination";
 
-type ProjectWithTasks = Project & { tasks: ProjectTask[]; contentInventory?: { id: string }[]; timeEntries?: { hours: number | null }[] };
+type ProjectWithTasks = Project & { tasks: ProjectTask[]; contentInventory?: { id: string }[]; _totalHours?: number };
 
 type SortKey = "name" | "type" | "status" | "client" | "progress" | "startDate" | "permit";
 type SortDir = "asc" | "desc";
@@ -18,7 +18,7 @@ type SortDir = "asc" | "desc";
 function calcProgress(p: ProjectWithTasks): number {
   const estimated = p.estimatedLaborHours;
   if (!estimated || estimated <= 0) return 0;
-  const actual = (p.timeEntries || []).reduce((sum, te) => sum + (te.hours || 0), 0);
+  const actual = p._totalHours || 0;
   return Math.min(Math.round((actual / estimated) * 100), 100);
 }
 
