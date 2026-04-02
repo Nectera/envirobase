@@ -13,8 +13,9 @@ import {
 import { LABOR_RATES } from "@/lib/materials";
 import { readFile } from "fs/promises";
 import path from "path";
+import Anthropic from "@anthropic-ai/sdk";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 /** Parse hex color string to rgb() */
 function hexToRgb(hex: string) {
@@ -34,6 +35,81 @@ function darkenHex(hex: string, factor: number) {
   return rgb(r, g, b);
 }
 
+/** Generate a polished project description via Claude */
+async function generateProjectDescription(d: any): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return buildFallbackDescription(d);
+
+  try {
+    const anthropic = new Anthropic({ apiKey });
+
+    const details = [
+      d.scopeOfWork && `Scope of Work: ${d.scopeOfWork}`,
+      d.serviceDescription && `Service: ${d.serviceDescription}`,
+      `Duration: ${d.daysNeeded || 0} days with a crew of ${d.crewSize || 0}`,
+      d.permitNeeded && d.permitNeeded !== "No" && `Permit required: ${d.permitNeeded}`,
+      d.vacateProperty && d.vacateProperty !== "No" && `Property vacate: ${d.vacateProperty}`,
+      d.airClearances && `Air clearances: ${d.airClearances}`,
+      d.wasteDescription && `Waste: ${d.wasteDescription}`,
+      d.wasteYards && `Waste volume: ${d.wasteYards} cubic yards`,
+      d.dumpsterPlacement && `Dumpster placement: ${d.dumpsterPlacement}`,
+      d.asbestosDumpster && "Asbestos dumpster required",
+      d.ductCleaning && `Duct cleaning: ${d.ductCleaning}`,
+      d.floringLayers && `Flooring layers: ${d.floringLayers}`,
+      d.dryWallLayers && `Drywall layers: ${d.dryWallLayers}`,
+      d.fieldNotes && `Field notes: ${d.fieldNotes}`,
+      d.paymentType && `Payment type: ${d.paymentType}`,
+      d.lossType && `Type of loss: ${d.lossType}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 500,
+      messages: [
+        {
+          role: "user",
+          content: `You are writing a professional project description for a customer-facing environmental services estimate PDF from ${COMPANY_SHORT}. Write 2-3 concise paragraphs that describe the project scope, approach, and key details in a polished, professional tone. Do NOT include pricing, internal costs, difficulty ratings, or crew-specific details. Do NOT use markdown formatting, bullet points, or headers — just clean paragraphs. Keep it factual and customer-appropriate.
+
+Project details:
+${details}`,
+        },
+      ],
+    });
+
+    const text =
+      response.content[0]?.type === "text" ? response.content[0].text : "";
+    return text.trim() || buildFallbackDescription(d);
+  } catch (err: any) {
+    console.error("[PDF] AI description failed, using fallback:", err.message);
+    return buildFallbackDescription(d);
+  }
+}
+
+/** Fallback: concatenate raw scope + details + notes */
+function buildFallbackDescription(d: any): string {
+  const parts: string[] = [];
+  if (d.serviceDescription) parts.push(d.serviceDescription);
+  if (d.scopeOfWork) parts.push(d.scopeOfWork);
+
+  const details: string[] = [];
+  if (d.daysNeeded) details.push(`Estimated duration: ${d.daysNeeded} days`);
+  if (d.crewSize) details.push(`Crew size: ${d.crewSize}`);
+  if (d.permitNeeded && d.permitNeeded !== "No")
+    details.push(`Permit: ${d.permitNeeded}`);
+  if (d.vacateProperty && d.vacateProperty !== "No")
+    details.push(`Vacate property: ${d.vacateProperty}`);
+  if (d.airClearances) details.push(`Air clearances: ${d.airClearances}`);
+  if (d.dumpsterPlacement)
+    details.push(`Dumpster placement: ${d.dumpsterPlacement}`);
+  if (details.length) parts.push(details.join(". ") + ".");
+
+  if (d.fieldNotes) parts.push(d.fieldNotes);
+
+  return parts.join("\n\n") || "Environmental remediation services as discussed during consultation.";
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: { id: string } },
@@ -50,6 +126,9 @@ export async function GET(
   }
 
   const d: any = est;
+
+  // Start AI description generation in parallel with PDF setup
+  const descriptionPromise = generateProjectDescription(d);
 
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -129,7 +208,6 @@ export async function GET(
   const sectionHeader = (title: string) => {
     checkPage(30);
     y -= 14;
-    // Green accent bar on left
     page.drawRectangle({
       x: MARGIN,
       y: y - 2,
@@ -158,23 +236,6 @@ export async function GET(
     drawText(v2 || "N/A", midX + 110, y, 9);
   };
 
-  const longField = (label: string, value: any) => {
-    const text =
-      typeof value === "string" ? value : value != null ? String(value) : "";
-    const rawLines = text ? text.split("\n") : ["N/A"];
-    const allLines: string[] = [];
-    for (const raw of rawLines) {
-      allLines.push(...wrapText(raw || " ", COL_W - 20, 9));
-    }
-    checkPage(14 + allLines.length * 13);
-    y -= 14;
-    if (label) drawText(label, MARGIN + 10, y, 8, fontBold, gray);
-    for (const line of allLines) {
-      y -= 13;
-      drawText(line, MARGIN + 10, y, 9);
-    }
-  };
-
   const fmt = (v: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -182,7 +243,6 @@ export async function GET(
     }).format(v);
 
   // === WHITE HEADER WITH LOGO ===
-  // Try to embed the logo
   let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
   try {
     const logoPath = path.join(
@@ -205,7 +265,14 @@ export async function GET(
       width: logoW,
       height: logoH,
     });
-    drawText(COMPANY_NAME, MARGIN + logoW + 12, y - 8, 14, fontBold, brandDark);
+    drawText(
+      COMPANY_NAME,
+      MARGIN + logoW + 12,
+      y - 8,
+      14,
+      fontBold,
+      brandDark,
+    );
     drawText(COMPANY_LOCATION, MARGIN + logoW + 12, y - 22, 9, font, gray);
     y -= logoH + 6;
   } else {
@@ -233,10 +300,6 @@ export async function GET(
   // === CLIENT INFO CARD ===
   sectionHeader("Client Information");
 
-  // Light background card
-  const cardTop = y;
-  const cardPadding = 8;
-  // Draw card after we know the height — for now gather fields
   const customerName = sanitize(d.customerName);
   const addressLine = `${d.address || ""}, ${d.city || ""}, ${d.state || "CO"} ${d.zip || ""}`;
   const dateLine = d.projectDate
@@ -252,7 +315,6 @@ export async function GET(
     height: 60,
     color: veryLightGray,
   });
-  // Card left accent
   page.drawRectangle({
     x: MARGIN,
     y: y - 58,
@@ -268,28 +330,26 @@ export async function GET(
   if (d.lossType) fieldRow("Type of Loss:", d.lossType, 120);
   y -= 4;
 
-  // === SCOPE OF WORK ===
-  if (d.scopeOfWork || d.serviceDescription) {
-    sectionHeader("Scope of Work");
-    if (d.serviceDescription) longField("Service:", d.serviceDescription);
-    if (d.scopeOfWork) longField("", d.scopeOfWork);
-  }
+  // === AI-GENERATED PROJECT DESCRIPTION ===
+  const projectDescription = await descriptionPromise;
 
-  // === PROJECT DETAILS ===
-  sectionHeader("Project Details");
-  fieldRowDouble(
-    "Estimated Duration:",
-    `${d.daysNeeded || 0} days`,
-    "Crew Size:",
-    String(d.crewSize || 0),
-  );
-  if (d.permitNeeded && d.permitNeeded !== "No")
-    fieldRow("Permit:", d.permitNeeded, 120);
-  if (d.vacateProperty && d.vacateProperty !== "No")
-    fieldRow("Vacate Property:", d.vacateProperty, 120);
-  if (d.airClearances) fieldRow("Air Clearances:", d.airClearances, 120);
-  if (d.dumpsterPlacement)
-    fieldRow("Dumpster Placement:", d.dumpsterPlacement, 140);
+  sectionHeader("Project Description");
+
+  // Render the description paragraph by paragraph
+  const paragraphs = projectDescription.split("\n\n").filter(Boolean);
+  for (const para of paragraphs) {
+    // Each paragraph may also have single newlines
+    const subLines = para.split("\n");
+    for (const sub of subLines) {
+      const wrapped = wrapText(sub.trim(), COL_W - 20, 9);
+      checkPage(wrapped.length * 13 + 4);
+      for (const line of wrapped) {
+        y -= 13;
+        drawText(line, MARGIN + 10, y, 9);
+      }
+    }
+    y -= 6; // paragraph spacing
+  }
 
   // === COST SUMMARY ===
   sectionHeader("Cost Summary");
@@ -347,7 +407,6 @@ export async function GET(
     (c: any) => c.cost > 0 && !EXCLUDED_COGS.includes(c.item),
   );
 
-  // Collect all visible rows
   const costRows: Array<{ label: string; amount: number }> = [];
   costRows.push({ label: "Labor", amount: laborTotal });
   for (const item of activeCogsItems) {
@@ -362,7 +421,6 @@ export async function GET(
   y -= 16;
   const tblLeft = MARGIN;
   const tblRight = PAGE_W - MARGIN;
-  const costCol = tblRight - 80;
 
   // Header row background
   page.drawRectangle({
@@ -373,7 +431,8 @@ export async function GET(
     color: lightGray,
   });
   drawText("Description", tblLeft + 8, y, 8, fontBold, darkGray);
-  drawText("Amount", costCol, y, 8, fontBold, darkGray);
+  const amtHeaderX = tblRight - 8 - fontBold.widthOfTextAtSize("Amount", 8);
+  drawText("Amount", amtHeaderX, y, 8, fontBold, darkGray);
 
   // Data rows with alternating shading
   for (let i = 0; i < costRows.length; i++) {
@@ -381,7 +440,6 @@ export async function GET(
     y -= 18;
     checkPage(20);
 
-    // Alternating row background
     if (i % 2 === 1) {
       page.drawRectangle({
         x: tblLeft,
@@ -459,7 +517,6 @@ export async function GET(
   }
 
   y -= 30;
-  // Signature line
   page.drawLine({
     start: { x: MARGIN, y },
     end: { x: MARGIN + 220, y },
@@ -468,7 +525,6 @@ export async function GET(
   });
   drawText("Customer Signature", MARGIN, y - 12, 8, font, gray);
 
-  // Date line
   page.drawLine({
     start: { x: MARGIN + 280, y },
     end: { x: PAGE_W - MARGIN, y },
@@ -478,7 +534,6 @@ export async function GET(
   drawText("Date", MARGIN + 280, y - 12, 8, font, gray);
 
   y -= 30;
-  // Printed name line
   page.drawLine({
     start: { x: MARGIN, y },
     end: { x: MARGIN + 220, y },
@@ -491,7 +546,6 @@ export async function GET(
   const pages = pdfDoc.getPages();
   const domainText = APP_DOMAIN;
   pages.forEach((p, i) => {
-    // Green footer strip
     p.drawRectangle({
       x: 0,
       y: 0,
