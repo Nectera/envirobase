@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Users, TrendingUp, Activity, Plus, ChevronRight, Mail, Phone, Badge, Send, Pencil, X, Trash2 } from "lucide-react";
+import { Users, TrendingUp, Activity, Plus, ChevronRight, Mail, Phone, Badge, Send, Pencil, X, Trash2, ArrowLeft } from "lucide-react";
 import ActivityFeed from "@/components/ActivityFeed";
 import EmailCompose from "@/components/EmailCompose";
 import ClickToCall from "@/components/ClickToCall";
@@ -162,8 +162,15 @@ export default function CompanyDetail({
 
   return (
     <div>
-      {/* Edit & Delete Buttons */}
-      <div className="flex justify-end gap-2 mb-4">
+      {/* Back + Edit & Delete */}
+      <div className="flex items-center justify-between mb-4">
+        <Link
+          href="/companies"
+          className="text-sm text-slate-400 hover:text-indigo-600 flex items-center gap-1"
+        >
+          <ArrowLeft size={14} /> Companies
+        </Link>
+        <div className="flex gap-2">
         <button
           onClick={async () => {
             const contactCount = company.contacts?.length || 0;
@@ -200,6 +207,7 @@ export default function CompanyDetail({
           <Pencil size={14} />
           Edit Company
         </button>
+        </div>
       </div>
 
       {/* Tabs */}
