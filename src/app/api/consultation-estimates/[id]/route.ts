@@ -321,6 +321,41 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }
     }
 
+    // Auto-sync labor hours to linked project on every save (not just approval)
+    const savedEst = item as any;
+    let linkedProjectId: string | null = savedEst.projectId || null;
+    if (!linkedProjectId && savedEst.leadId) {
+      const linkedLead = await prisma.lead.findUnique({
+        where: { id: savedEst.leadId },
+        select: { projectId: true },
+      });
+      linkedProjectId = linkedLead?.projectId || null;
+    }
+    if (linkedProjectId) {
+      const estDays = savedEst.daysNeeded ? Math.ceil(savedEst.daysNeeded) : null;
+      const estLaborHours = Math.ceil(
+        (savedEst.supervisorHours || 0) + (savedEst.supervisorOtHours || 0) +
+        (savedEst.technicianHours || 0) + (savedEst.technicianOtHours || 0)
+      ) || null;
+
+      await prisma.project.update({
+        where: { id: linkedProjectId },
+        data: {
+          estimatedDays: estDays,
+          estimatedLaborHours: estLaborHours,
+          maxHoursPerDay: savedEst.hoursPerDay || 8,
+        },
+      }).catch(() => {}); // Non-critical — don't fail the save
+
+      // Ensure estimate has projectId stored
+      if (!savedEst.projectId) {
+        await prisma.consultationEstimate.update({
+          where: { id: params.id },
+          data: { projectId: linkedProjectId },
+        }).catch(() => {});
+      }
+    }
+
     // Revalidate lead page(s) and estimates page so they reflect changes
     const oldLeadId = (currentEstimate as any).leadId;
     const newLeadId = body.leadId !== undefined ? body.leadId : oldLeadId;
