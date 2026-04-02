@@ -6,9 +6,17 @@ export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   try {
-    const projects = await prisma.project.findMany({
-      include: { tasks: true, contentInventory: { select: { id: true } }, timeEntries: { select: { hours: true } } },
-    });
+    let projects;
+    try {
+      projects = await prisma.project.findMany({
+        include: { tasks: true, contentInventory: { select: { id: true } }, timeEntries: { select: { hours: true } } },
+      });
+    } catch {
+      // Fallback if timeEntries relation isn't available yet (e.g. Prisma client not regenerated)
+      projects = await prisma.project.findMany({
+        include: { tasks: true, contentInventory: { select: { id: true } } },
+      });
+    }
 
     // Sort oldest startDate first (nulls go to end)
     (projects as any[]).sort((a: any, b: any) => {
