@@ -65,6 +65,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.state !== undefined) data.state = body.state;
     if (body.status !== undefined) data.status = body.status;
     if (body.skillRating !== undefined) data.skillRating = body.skillRating !== null ? Number(body.skillRating) : null;
+    if (body.hireDate !== undefined) data.hireDate = body.hireDate || null;
 
     // Verify worker belongs to org
     const existingWorker = await prisma.worker.findFirst({

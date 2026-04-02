@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
         city: body.city || null,
         state: body.state || null,
         status: body.status || "active",
+        hireDate: body.hireDate || null,
       }),
     });
 

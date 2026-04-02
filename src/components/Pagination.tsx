@@ -32,13 +32,13 @@ export default function Pagination({ currentPage, totalPages, totalItems, pageSi
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <ChevronLeft size={18} />
         </button>
         {startPage > 1 && (
           <>
-            <button onClick={() => onPageChange(1)} className="px-2 py-1 rounded hover:bg-gray-100">1</button>
+            <button onClick={() => onPageChange(1)} className="h-9 min-w-[36px] px-3 rounded-lg hover:bg-gray-100">1</button>
             {startPage > 2 && <span className="px-1">…</span>}
           </>
         )}
@@ -46,7 +46,7 @@ export default function Pagination({ currentPage, totalPages, totalItems, pageSi
           <button
             key={p}
             onClick={() => onPageChange(p)}
-            className={`px-2 py-1 rounded ${p === currentPage ? "bg-[#1a7a3a] text-white" : "hover:bg-gray-100"}`}
+            className={`h-9 min-w-[36px] px-3 rounded-lg font-medium ${p === currentPage ? "bg-[#7BC143] text-white" : "hover:bg-gray-100"}`}
           >
             {p}
           </button>
@@ -54,13 +54,13 @@ export default function Pagination({ currentPage, totalPages, totalItems, pageSi
         {endPage < totalPages && (
           <>
             {endPage < totalPages - 1 && <span className="px-1">…</span>}
-            <button onClick={() => onPageChange(totalPages)} className="px-2 py-1 rounded hover:bg-gray-100">{totalPages}</button>
+            <button onClick={() => onPageChange(totalPages)} className="h-9 min-w-[36px] px-3 rounded-lg hover:bg-gray-100">{totalPages}</button>
           </>
         )}
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <ChevronRight size={18} />
         </button>

@@ -68,8 +68,9 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
   const [resetPwValue, setResetPwValue] = useState("");
   const [resetPwError, setResetPwError] = useState("");
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const WORKERS_PAGE_SIZE = 25;
+  const WORKERS_PAGE_SIZE = 50;
   const [workersPage, setWorkersPage] = useState(1);
+  const [teamTab, setTeamTab] = useState<"team" | "temp">("team");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -89,6 +90,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
     types: [] as string[],
     status: "active",
     skillRating: 0,
+    hireDate: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -96,6 +98,10 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
   // Filter and search workers
   const filteredWorkers = useMemo(() => {
     return initialWorkers.filter((worker) => {
+      // Team/Temp tab filter
+      if (teamTab === "temp" && !worker.isTemp) return false;
+      if (teamTab === "team" && worker.isTemp) return false;
+
       // Status filter
       const workerStatus = worker.status || "active";
       if (filterStatus !== "all" && workerStatus !== filterStatus) {
@@ -114,7 +120,10 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
 
       return true;
     });
-  }, [initialWorkers, filterStatus, searchQuery]);
+  }, [initialWorkers, filterStatus, searchQuery, teamTab]);
+
+  const teamCount = useMemo(() => initialWorkers.filter((w: any) => !w.isTemp).length, [initialWorkers]);
+  const tempCount = useMemo(() => initialWorkers.filter((w: any) => w.isTemp).length, [initialWorkers]);
 
   const workersTotalPages = Math.ceil(filteredWorkers.length / WORKERS_PAGE_SIZE);
   const paginatedWorkers = useMemo(() => {
@@ -123,7 +132,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
   }, [filteredWorkers, workersPage]);
 
   // Reset page when filters change
-  useMemo(() => { setWorkersPage(1); }, [searchQuery, filterStatus]);
+  useMemo(() => { setWorkersPage(1); }, [searchQuery, filterStatus, teamTab]);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -143,6 +152,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
       types: [],
       status: "active",
       skillRating: 0,
+      hireDate: "",
     });
     setEditingWorker(null);
     setPhotoFile(null);
@@ -173,6 +183,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
       types,
       status: worker.status || "active",
       skillRating: worker.skillRating || 0,
+      hireDate: worker.hireDate || "",
     });
     setEditingWorker(worker);
     setPhotoFile(null);
@@ -500,6 +511,36 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
         </div>
       </div>
 
+      {/* Team / Temp Tabs */}
+      <div className="flex gap-1 border-b border-slate-200 mb-4">
+        <button
+          onClick={() => setTeamTab("team")}
+          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            teamTab === "team"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Team
+          <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${teamTab === "team" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
+            {teamCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setTeamTab("temp")}
+          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            teamTab === "temp"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Temp
+          <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${teamTab === "temp" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
+            {tempCount}
+          </span>
+        </button>
+      </div>
+
       {/* Filter Tabs & Search */}
       <div className="space-y-4">
         <div className="flex gap-2">
@@ -542,6 +583,9 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                 {t("team.tableHeaderPosition")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                Date Hired
+              </th>
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                 {t("team.tableHeaderSkill")}
               </th>
               <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
@@ -570,7 +614,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
           <tbody className="divide-y divide-slate-200">
             {filteredWorkers.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-6 py-8 text-center text-slate-500">
+                <td colSpan={11} className="px-6 py-8 text-center text-slate-500">
                   {t("team.noTeamMembers")}
                 </td>
               </tr>
@@ -610,6 +654,11 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                     {/* Position */}
                     <td className="px-6 py-4 text-sm text-slate-700">
                       {worker.position || "-"}
+                    </td>
+
+                    {/* Date Hired */}
+                    <td className="px-6 py-4 text-sm text-slate-700">
+                      {worker.hireDate ? new Date(worker.hireDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                     </td>
 
                     {/* Skill Rating */}
@@ -747,6 +796,8 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
             )}
           </tbody>
         </table>
+      </div>
+      <div className="flex justify-center mt-4">
         <Pagination
           currentPage={workersPage}
           totalPages={workersTotalPages}
@@ -933,6 +984,20 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Date Hired */}
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Date Hired
+                </label>
+                <input
+                  type="date"
+                  name="hireDate"
+                  value={formData.hireDate}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
 
               {/* Skill Rating */}
