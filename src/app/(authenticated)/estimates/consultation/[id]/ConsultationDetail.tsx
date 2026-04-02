@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText, DollarSign, X, Pencil, RefreshCw } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, X, Pencil, RefreshCw, Download } from "lucide-react";
 import { LABOR_RATES, DEFAULT_COGS, DEFAULT_MATERIALS } from "@/lib/materials";
 import {
   DEFAULT_CONSULTATION_FIELDS,
@@ -346,6 +346,15 @@ export default function ConsultationDetail({
         </div>
 
         <div className="flex gap-2">
+          <a
+            href={`/api/consultation-estimates/${data.id}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Download PDF
+          </a>
           <Link
             href={`/estimates/consultation/${data.id}/edit`}
             className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
