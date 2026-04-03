@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useMobileNav } from "./MobileNavProvider";
 
 /**
  * Global pull-to-refresh for PWA standalone mode.
@@ -12,6 +13,7 @@ import { useRouter } from "next/navigation";
  */
 export default function PullToRefresh() {
   const router = useRouter();
+  const { isOpen: sidebarOpen } = useMobileNav();
   const [pulling, setPulling] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -33,6 +35,11 @@ export default function PullToRefresh() {
     if (!isStandalone()) return;
 
     const handleTouchStart = (e: TouchEvent) => {
+      // Skip when mobile sidebar is open
+      if (sidebarOpen) return;
+      // Also check DOM in case context is stale — skip if touch is inside sidebar overlay
+      const target = e.target as HTMLElement;
+      if (target?.closest?.(".md\\:hidden.fixed.inset-0.z-50")) return;
       // Only trigger when scrolled to the top of the page
       const mainEl = document.querySelector("main");
       if (!mainEl || mainEl.scrollTop > 5) return;
@@ -86,7 +93,7 @@ export default function PullToRefresh() {
       document.removeEventListener("touchmove", handleTouchMove);
       document.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [isStandalone, pullDistance, router]);
+  }, [isStandalone, pullDistance, router, sidebarOpen]);
 
   if (!pulling && !refreshing) return null;
 
