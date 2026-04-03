@@ -13,8 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
-  CheckCircle2,
-  AlertCircle,
   Download,
   Link2,
   X,
@@ -50,6 +48,7 @@ type PerformanceRow = {
   bonusEarned: number | null;
   supervisor: string | null;
   cashSwing: number;
+  netMarginPct: number;
 };
 
 type PerformanceData = {
@@ -98,6 +97,20 @@ function formatPct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function getMarginColor(pct: number): string {
+  if (pct >= 0.15) return "bg-emerald-50/70";
+  if (pct >= 0.12) return "bg-yellow-50/70";
+  if (pct >= 0.10) return "bg-orange-50/70";
+  return "bg-red-50/70";
+}
+
+function getMarginBorder(pct: number): string {
+  if (pct >= 0.15) return "border-l-emerald-400";
+  if (pct >= 0.12) return "border-l-yellow-400";
+  if (pct >= 0.10) return "border-l-orange-400";
+  return "border-l-red-400";
+}
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "—";
   const d = new Date(dateStr + "T00:00:00");
@@ -111,7 +124,6 @@ export default function BudgetDashboard() {
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortAsc, setSortAsc] = useState(false);
   const [regionFilter, setRegionFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showLinkPanel, setShowLinkPanel] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -136,8 +148,6 @@ export default function BudgetDashboard() {
     if (!data) return [];
     let rows = data.rows;
     if (regionFilter !== "all") rows = rows.filter((r) => r.region === regionFilter);
-    if (statusFilter === "post_costed") rows = rows.filter((r) => r.hasPostCost);
-    else if (statusFilter === "estimated") rows = rows.filter((r) => !r.hasPostCost);
 
     rows = [...rows].sort((a, b) => {
       let av: any, bv: any;
@@ -152,7 +162,7 @@ export default function BudgetDashboard() {
       return sortAsc ? av - bv : bv - av;
     });
     return rows;
-  }, [data, sortKey, sortAsc, regionFilter, statusFilter]);
+  }, [data, sortKey, sortAsc, regionFilter]);
 
   // Recalculate totals for filtered rows
   const filteredTotals = useMemo(() => {
@@ -300,7 +310,7 @@ export default function BudgetDashboard() {
           iconBg="bg-purple-50"
           label="Projects"
           value={String(filteredRows.length)}
-          sub={`${filteredRows.filter((r) => r.hasPostCost).length} post-costed`}
+          sub="post-costed"
         />
       </div>
 
@@ -353,15 +363,13 @@ export default function BudgetDashboard() {
             <option key={r} value={r}>{r}</option>
           ))}
         </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-green-500"
-        >
-          <option value="all">All Projects</option>
-          <option value="post_costed">Post-Costed Only</option>
-          <option value="estimated">Estimated Only</option>
-        </select>
+        {/* Color legend */}
+        <div className="flex items-center gap-3 ml-2">
+          <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-sm bg-red-200" />&lt;10%</span>
+          <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-sm bg-orange-200" />10-12%</span>
+          <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-200" />12-14%</span>
+          <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-200" />15%+</span>
+        </div>
         <span className="text-[10px] text-slate-400 ml-2">
           {filteredRows.length} project{filteredRows.length !== 1 ? "s" : ""}
         </span>
@@ -427,24 +435,18 @@ export default function BudgetDashboard() {
               )}
               {/* Data Rows */}
               {filteredRows.map((row) => (
-                <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="px-3 py-2.5 whitespace-nowrap sticky left-0 bg-white z-10">
+                <tr key={row.id} className={`border-b border-slate-100 border-l-4 ${getMarginColor(row.netMarginPct)} ${getMarginBorder(row.netMarginPct)} transition-colors`}>
+                  <td className={`px-3 py-2.5 whitespace-nowrap sticky left-0 ${getMarginColor(row.netMarginPct)} z-10`}>
                     {formatDate(row.date)}
                   </td>
-                  <td className="px-3 py-2.5 sticky left-[72px] bg-white z-10">
+                  <td className={`px-3 py-2.5 sticky left-[72px] ${getMarginColor(row.netMarginPct)} z-10`}>
                     <Link href={`/projects/${row.id}`} className="text-green-700 hover:underline font-medium truncate block max-w-[180px]">
                       {row.project}
                     </Link>
                     <div className="flex items-center gap-1 mt-0.5">
-                      {row.hasPostCost ? (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                          <CheckCircle2 size={9} /> Post-Costed
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">
-                          <AlertCircle size={9} /> Estimated
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-white/60 text-slate-600">
+                        {formatPct(row.netMarginPct)} net
+                      </span>
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap">{formatCurrency(row.revenue)}</td>

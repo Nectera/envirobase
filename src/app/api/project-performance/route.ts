@@ -123,12 +123,11 @@ export async function GET(req: NextRequest) {
     const rows: any[] = [];
     for (const project of projects) {
       const estPair = estimatesByProject[project.id];
-      if (!estPair?.preCost && !estPair?.postCost) continue; // Skip only if no estimates at all
+      if (!estPair?.postCost) continue; // Only show projects with post-cost estimates
 
-      // Use post-cost if available, otherwise fall back to pre-cost
-      const actual = estPair?.postCost || estPair?.preCost;
+      const actual = estPair.postCost;
       const preCost = estPair?.preCost;
-      const hasPostCost = !!estPair?.postCost;
+      const hasPostCost = true;
 
       const revenue = Number(actual.customerPrice) || 0;
       const laborCost = Number(actual.laborCost) || 0;
@@ -212,6 +211,7 @@ export async function GET(req: NextRequest) {
         bonusEarned,
         supervisor,
         cashSwing: Math.round(cashSwing * 100) / 100,
+        netMarginPct: revenue > 0 ? netIncome / revenue : 0,
       });
     }
 
