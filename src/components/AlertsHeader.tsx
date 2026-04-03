@@ -117,6 +117,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName, br
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
+      window.dispatchEvent(new Event("notifications-read"));
     } catch {}
   };
 
@@ -133,6 +134,7 @@ export default function AlertsHeader({ alertCount = 0, alerts = [], userName, br
           prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
         );
         setUnreadCount((c) => Math.max(0, c - 1));
+        window.dispatchEvent(new Event("notifications-read"));
       } catch {}
     }
     // Navigate to the linked page (fix legacy overtime links)
