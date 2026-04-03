@@ -238,14 +238,17 @@ export default function BudgetDashboard() {
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Project Performance</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Revenue tracking and cost analysis across all projects
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-slate-900">Project Performance</h1>
+            <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
+              Revenue tracking and cost analysis across all projects
+            </p>
+          </div>
+          <YearSelector year={year} onChange={setYear} />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowLinkPanel(!showLinkPanel)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
@@ -264,7 +267,6 @@ export default function BudgetDashboard() {
             <Download size={14} />
             Export CSV
           </button>
-          <YearSelector year={year} onChange={setYear} />
         </div>
       </div>
 
@@ -277,7 +279,7 @@ export default function BudgetDashboard() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <SummaryCard
           icon={<DollarSign size={16} className="text-blue-600" />}
           iconBg="bg-blue-50"
@@ -336,7 +338,7 @@ export default function BudgetDashboard() {
             );
           })}
         </div>
-        <div className="flex items-center gap-4 mt-2 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-x-4 gap-y-1 mt-2">
           {[
             { label: "Labor", value: t.laborCost, color: "bg-indigo-400" },
             { label: "Operating", value: t.opsCost, color: "bg-amber-400" },
@@ -352,27 +354,29 @@ export default function BudgetDashboard() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <select
-          value={regionFilter}
-          onChange={(e) => setRegionFilter(e.target.value)}
-          className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-green-500"
-        >
-          <option value="all">All Regions</option>
-          {regions.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={regionFilter}
+            onChange={(e) => setRegionFilter(e.target.value)}
+            className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="all">All Regions</option>
+            {regions.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+          <span className="text-[10px] text-slate-400">
+            {filteredRows.length} project{filteredRows.length !== 1 ? "s" : ""}
+          </span>
+        </div>
         {/* Color legend */}
-        <div className="flex items-center gap-3 ml-2">
+        <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-sm bg-red-200" />&lt;10%</span>
           <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-sm bg-orange-200" />10-12%</span>
           <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-200" />12-14%</span>
           <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-200" />15%+</span>
         </div>
-        <span className="text-[10px] text-slate-400 ml-2">
-          {filteredRows.length} project{filteredRows.length !== 1 ? "s" : ""}
-        </span>
       </div>
 
       {/* Data Table */}
@@ -381,8 +385,8 @@ export default function BudgetDashboard() {
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <SortHeader label="Date" sortKey="date" current={sortKey} asc={sortAsc} onClick={handleSort} className="sticky left-0 bg-slate-50 z-10" />
-                <SortHeader label="Project" sortKey="project" current={sortKey} asc={sortAsc} onClick={handleSort} className="sticky left-[72px] bg-slate-50 z-10" />
+                <SortHeader label="Date" sortKey="date" current={sortKey} asc={sortAsc} onClick={handleSort} className="md:sticky md:left-0 bg-slate-50 md:z-10" />
+                <SortHeader label="Project" sortKey="project" current={sortKey} asc={sortAsc} onClick={handleSort} className="md:sticky md:left-[72px] bg-slate-50 md:z-10" />
                 <SortHeader label="Revenue" sortKey="revenue" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
                 <SortHeader label="Total Cost" sortKey="totalCost" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
                 <SortHeader label="Net Income" sortKey="netIncome" current={sortKey} asc={sortAsc} onClick={handleSort} align="right" />
@@ -401,7 +405,7 @@ export default function BudgetDashboard() {
             <tbody>
               {/* Totals Row */}
               <tr className="bg-slate-50/70 border-b border-slate-300 font-semibold">
-                <td className="px-3 py-2 sticky left-0 bg-slate-50/70 z-10" colSpan={2}>
+                <td className="px-3 py-2 md:sticky md:left-0 bg-slate-50/70 md:z-10" colSpan={2}>
                   <span className="text-slate-600">Totals</span>
                 </td>
                 <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(t.revenue)}</td>
@@ -421,7 +425,7 @@ export default function BudgetDashboard() {
               {/* Percentage Row */}
               {t.revenue > 0 && (
                 <tr className="bg-slate-50/40 border-b border-slate-200 text-[10px] text-slate-400">
-                  <td className="px-3 py-1 sticky left-0 bg-slate-50/40 z-10" colSpan={2}>% of Revenue</td>
+                  <td className="px-3 py-1 md:sticky md:left-0 bg-slate-50/40 md:z-10" colSpan={2}>% of Revenue</td>
                   <td className="px-3 py-1 text-right">—</td>
                   <td className="px-3 py-1 text-right">{formatPct(t.totalCost / t.revenue)}</td>
                   <td className="px-3 py-1 text-right">{formatPct(t.netIncome / t.revenue)}</td>
@@ -436,10 +440,10 @@ export default function BudgetDashboard() {
               {/* Data Rows */}
               {filteredRows.map((row) => (
                 <tr key={row.id} className={`border-b border-slate-100 border-l-4 ${getMarginColor(row.netMarginPct)} ${getMarginBorder(row.netMarginPct)} transition-colors`}>
-                  <td className={`px-3 py-2.5 whitespace-nowrap sticky left-0 ${getMarginColor(row.netMarginPct)} z-10`}>
+                  <td className={`px-3 py-2.5 whitespace-nowrap md:sticky md:left-0 ${getMarginColor(row.netMarginPct)} md:z-10`}>
                     {formatDate(row.date)}
                   </td>
-                  <td className={`px-3 py-2.5 sticky left-[72px] ${getMarginColor(row.netMarginPct)} z-10`}>
+                  <td className={`px-3 py-2.5 md:sticky md:left-[72px] ${getMarginColor(row.netMarginPct)} md:z-10`}>
                     <Link href={`/projects/${row.id}`} className="text-green-700 hover:underline font-medium truncate block max-w-[180px]">
                       {row.project}
                     </Link>
