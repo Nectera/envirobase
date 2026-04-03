@@ -73,6 +73,7 @@ model Organization {
   notifications          Notification[]
   chatChannels           ChatChannel[]
   calendarEvents         CalendarEvent[]
+  pastProjects           PastProject[]
   companyInfos           CompanyInfo[]
   companyLicenses        CompanyLicense[]
   integrationAuths       IntegrationAuth[]
@@ -1281,6 +1282,45 @@ model Reaction {
   @@unique([targetType, targetId, userId, emoji])
   @@index([targetType, targetId])
   @@map("reactions")
+}
+
+// ─── Past Projects (for estimate PDFs) ──────────────────────────
+
+model PastProject {
+  id              String   @id @default(uuid())
+  serviceType     String   // ASBESTOS, LEAD, METH, MOLD, SELECT_DEMO
+  name            String
+  description     String?
+  location        String?
+  squareFeet      Float?
+  completionDate  String?
+  testimonial     String?
+  featured        Boolean  @default(true)
+  displayOrder    Int      @default(0)
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  photos ProjectPhoto[]
+
+  @@index([organizationId])
+  @@index([serviceType])
+  @@map("past_projects")
+}
+
+model ProjectPhoto {
+  id             String      @id @default(uuid())
+  pastProjectId  String
+  pastProject    PastProject @relation(fields: [pastProjectId], references: [id], onDelete: Cascade)
+  url            String
+  caption        String?
+  displayOrder   Int         @default(0)
+  isPrimary      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+
+  @@index([pastProjectId])
+  @@map("project_photos")
 }
 
 // ─── Content Inventory ──────────────────────────────────────────

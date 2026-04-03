@@ -12,3 +12,4 @@ export const CHAT_BUCKET = "chat-uploads";
 export const DFR_PHOTOS_BUCKET = "dfr-photos";
 export const CERTIFICATIONS_BUCKET = "certifications";
 export const INVOICES_BUCKET = "material-invoices";
+export const PAST_PROJECTS_BUCKET = "past-project-photos";

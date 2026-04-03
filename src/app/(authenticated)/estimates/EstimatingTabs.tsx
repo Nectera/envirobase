@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, FileText } from "lucide-react";
+import { BookOpen, FileText, Image } from "lucide-react";
 import XactimateLibraryPage from "../xactimate-library/page";
+import PastProjectsPage from "./past-projects/PastProjectsPage";
 
 export default function EstimatingTabs({ children }: { children: React.ReactNode }) {
-  const [activeTab, setActiveTab] = useState<"estimates" | "library">("estimates");
+  const [activeTab, setActiveTab] = useState<"estimates" | "library" | "pastProjects">("estimates");
 
   const tabs = [
     { key: "estimates" as const, label: "Estimates", icon: FileText },
     { key: "library" as const, label: "Xact Library", icon: BookOpen },
+    { key: "pastProjects" as const, label: "Past Projects", icon: Image },
   ];
 
   return (
@@ -37,7 +39,9 @@ export default function EstimatingTabs({ children }: { children: React.ReactNode
       </div>
 
       {/* Tab content */}
-      {activeTab === "estimates" ? children : <XactimateLibraryPage />}
+      {activeTab === "estimates" && children}
+      {activeTab === "library" && <XactimateLibraryPage />}
+      {activeTab === "pastProjects" && <PastProjectsPage />}
     </div>
   );
 }
