@@ -173,6 +173,7 @@ export const en: Record<string, string> = {
   "sidebar.signOut": "Sign Out",
   "sidebar.salesCrm": "Sales & CRM",
   "sidebar.projectManagement": "Project Management",
+  "sidebar.scheduling": "Scheduling",
   "sidebar.myPortal": "Employee Portal",
   "sidebar.salesPortal": "Sales Portal",
   "sidebar.pms": "Project Management System",

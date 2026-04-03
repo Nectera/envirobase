@@ -55,7 +55,6 @@ export default function Sidebar({
     { href: "/companies", labelKey: "sidebar.companies", icon: Building2 },
     { href: "/contacts", labelKey: "sidebar.contacts", icon: Users },
     { href: "/tasks", labelKey: "sidebar.tasks", icon: CheckSquare },
-    { href: "/calendar", labelKey: "sidebar.calendar", icon: CalendarDays },
   ];
 
   // Hide Estimates on mobile
@@ -65,8 +64,12 @@ export default function Sidebar({
     { href: "/dashboard", labelKey: "sidebar.dashboard", icon: Home },
     { href: "/projects", labelKey: "sidebar.projects", icon: FolderOpen },
     { href: "/tasks", labelKey: "sidebar.tasks", icon: CheckSquare },
-    { href: "/schedule", labelKey: "sidebar.schedule", icon: Calendar },
     { href: "/compliance", labelKey: "sidebar.compliance", icon: ClipboardCheck },
+  ];
+
+  const schedulingNavItems: NavItem[] = [
+    { href: "/schedule", labelKey: "sidebar.schedule", icon: Calendar },
+    { href: "/calendar", labelKey: "sidebar.calendar", icon: CalendarDays },
   ];
 
   const teamFinanceNavItems: NavItem[] = [
@@ -242,6 +245,8 @@ export default function Sidebar({
             {sectionDivider}
             {renderCollapsibleSection("sidebar.projectManagement", pmNavItems)}
             {sectionDivider}
+            {renderCollapsibleSection("sidebar.scheduling", schedulingNavItems)}
+            {sectionDivider}
             {renderCollapsibleSection("sidebar.teamFinance", teamFinanceNavItems)}
             {sectionDivider}
             {renderCollapsibleSection("sidebar.settings", pmSettingsNavItems)}
@@ -252,6 +257,8 @@ export default function Sidebar({
             {chatNavItem()}
             {sectionDivider}
             {renderCollapsibleSection("sidebar.projectManagement", pmNavItems)}
+            {sectionDivider}
+            {renderCollapsibleSection("sidebar.scheduling", schedulingNavItems)}
             {sectionDivider}
             {renderCollapsibleSection("sidebar.teamFinance", teamFinanceNavItems)}
             {sectionDivider}
