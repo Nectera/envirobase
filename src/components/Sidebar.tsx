@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Home, FolderOpen, Users, ClipboardCheck, LogOut,
   Clock, ClipboardList, Building2, Calendar, CalendarDays, FileText,
@@ -171,6 +171,54 @@ export default function Sidebar({
     return true;
   }, [collapsedSections]);
 
+  // --- iOS pull-to-refresh prevention for mobile sidebar ---
+  const mobileOverlayRef = useRef<HTMLDivElement>(null);
+  const mobileNavRef = useRef<HTMLElement | null>(null);
+  const touchStartY = useRef(0);
+
+  useEffect(() => {
+    const overlay = mobileOverlayRef.current;
+    if (!overlay || !isOpen) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const nav = mobileNavRef.current;
+      const target = e.target as Node;
+
+      // If touch is inside the scrollable nav, allow it unless at scroll boundaries
+      if (nav && nav.contains(target)) {
+        const dy = e.touches[0].clientY - touchStartY.current;
+        const atTop = nav.scrollTop <= 0;
+        const atBottom = nav.scrollTop + nav.clientHeight >= nav.scrollHeight - 1;
+
+        // Block pull-down at top (triggers refresh) or pull-up at bottom (bounce)
+        if ((atTop && dy > 0) || (atBottom && dy < 0)) {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // Touch is on backdrop, logo, footer — block everything
+      e.preventDefault();
+    };
+
+    overlay.addEventListener("touchstart", onTouchStart, { passive: true });
+    overlay.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      overlay.removeEventListener("touchstart", onTouchStart);
+      overlay.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [isOpen]);
+
+  // Callback ref to capture the <nav> element for touch interception
+  const navRefCallback = useCallback((node: HTMLElement | null) => {
+    mobileNavRef.current = node;
+  }, []);
+
   const sectionDivider = (
     <div className="mx-4 my-2 border-t border-white/[0.06]" />
   );
@@ -214,7 +262,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      <nav className="flex-1 py-1 overflow-y-auto relative z-10 scrollbar-hide" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
+      <nav ref={navRefCallback} className="flex-1 py-1 overflow-y-auto relative z-10 scrollbar-hide" style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
         {isTech && (
           <>
             {technicianNavItems.map((item) => renderNavItem(item))}
@@ -331,7 +379,7 @@ export default function Sidebar({
 
       {/* Mobile overlay sidebar — always expanded */}
       {isOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div ref={mobileOverlayRef} className="md:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={close} />
           {/* Sidebar panel */}
