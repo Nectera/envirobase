@@ -7,7 +7,6 @@ import {
   AtSign, User as UserIcon, Lock, Globe, Check, Reply,
   Pencil, Trash2, UserPlus, UserMinus, SmilePlus, Video,
 } from "lucide-react";
-import EmojiReactions from "@/components/EmojiReactions";
 import ChatMessageContextMenu from "@/components/ChatMessageContextMenu";
 
 // Pull-to-refresh removed from chat — chat polls every few seconds so PTR
@@ -941,31 +940,9 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                         </div>
                       )}
                       {msg.content && (
-                        <div className="relative group/msg">
-                          <p className="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap">
-                            {renderContent(msg)}
-                          </p>
-                          {/* Action buttons — reply */}
-                          <div className="absolute -right-2 -top-3 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-all bg-white border border-slate-200 rounded-lg shadow-sm px-1 py-0.5">
-                            <button
-                              onClick={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
-                              className="p-1.5 rounded-md text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                              title="Reply"
-                            >
-                              <Reply size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      {/* Reply button for file-only messages (no content) */}
-                      {!msg.content && msg.fileUrl && (
-                        <button
-                          onClick={() => { setReplyingTo(msg); inputRef.current?.focus(); }}
-                          className="mt-1 p-1.5 rounded-md text-slate-400 hover:text-green-600 hover:bg-green-50 opacity-0 group-hover:opacity-100 transition-all"
-                          title="Reply"
-                        >
-                          <Reply size={14} />
-                        </button>
+                        <p className="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap">
+                          {renderContent(msg)}
+                        </p>
                       )}
                       {msg.fileUrl && isImage && (
                         <img
@@ -990,12 +967,30 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                           )}
                         </a>
                       )}
-                      <EmojiReactions
-                        targetType="message"
-                        targetId={msg.id}
-                        currentUserId={currentUserId}
-                        initialReactions={messageReactions[msg.id] || []}
-                      />
+                      {/* Read-only reaction badges — adding reactions is via long-press menu */}
+                      {(messageReactions[msg.id] || []).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Object.entries(
+                            (messageReactions[msg.id] || []).reduce<Record<string, { count: number; byMe: boolean }>>((acc, r) => {
+                              if (!acc[r.emoji]) acc[r.emoji] = { count: 0, byMe: false };
+                              acc[r.emoji].count++;
+                              if (r.userId === currentUserId) acc[r.emoji].byMe = true;
+                              return acc;
+                            }, {})
+                          ).map(([emoji, { count, byMe }]) => (
+                            <span
+                              key={emoji}
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border ${
+                                byMe
+                                  ? "bg-green-50 border-green-200 text-green-700"
+                                  : "bg-slate-50 border-slate-200 text-slate-600"
+                              }`}
+                            >
+                              {emoji} {count > 1 && count}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </MessageRow>
                 );
