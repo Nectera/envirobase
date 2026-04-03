@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Group estimates by project
+    // Group estimates by project — prefer isPrimary for pre-cost
     const estimatesByProject: Record<string, { preCost: any | null; postCost: any | null }> = {};
     for (const est of estimates as any[]) {
       const pid = est.projectId || projects.find((p: any) => p.projectNumber === est.projectNumber)?.id;
@@ -97,8 +97,20 @@ export async function GET(req: NextRequest) {
       if (!estimatesByProject[pid]) estimatesByProject[pid] = { preCost: null, postCost: null };
       if (est.isPostCost) {
         estimatesByProject[pid].postCost = est;
+      } else if (est.isPrimary) {
+        // Primary always wins
+        estimatesByProject[pid].preCost = est;
       } else if (!estimatesByProject[pid].preCost) {
         estimatesByProject[pid].preCost = est;
+      }
+    }
+
+    // Resolve pre-cost via originalEstimateId if post-cost exists but no pre-cost was matched
+    for (const pid of Object.keys(estimatesByProject)) {
+      const pair = estimatesByProject[pid];
+      if (pair.postCost && !pair.preCost && pair.postCost.originalEstimateId) {
+        const original = (estimates as any[]).find((e: any) => e.id === pair.postCost.originalEstimateId);
+        if (original) pair.preCost = original;
       }
     }
 
@@ -106,12 +118,12 @@ export async function GET(req: NextRequest) {
     const rows: any[] = [];
     for (const project of projects) {
       const estPair = estimatesByProject[project.id];
-      if (!estPair?.preCost) continue; // Skip projects with no estimate at all
+      if (!estPair?.preCost && !estPair?.postCost) continue; // Skip only if no estimates at all
 
       // Use post-cost if available, otherwise fall back to pre-cost
-      const actual = estPair.postCost || estPair.preCost;
-      const preCost = estPair.preCost;
-      const hasPostCost = !!estPair.postCost;
+      const actual = estPair?.postCost || estPair?.preCost;
+      const preCost = estPair?.preCost;
+      const hasPostCost = !!estPair?.postCost;
 
       const revenue = Number(actual.customerPrice) || 0;
       const laborCost = Number(actual.laborCost) || 0;
@@ -123,17 +135,17 @@ export async function GET(req: NextRequest) {
       const grossProfit = revenue - laborCost - materialCost - cogsCost;
       const actualHours = hoursMap[project.id] || 0;
 
-      // Estimated hours from pre-cost
-      const estSupervisorHours = Number(preCost.supervisorHours) || 0;
-      const estTechnicianHours = Number(preCost.technicianHours) || 0;
+      // Estimated hours from pre-cost (may be null if only post-cost exists)
+      const estSupervisorHours = Number(preCost?.supervisorHours) || 0;
+      const estTechnicianHours = Number(preCost?.technicianHours) || 0;
       const estimatedHours = estSupervisorHours + estTechnicianHours;
 
       // Revenue from pre-cost (estimated)
-      const estRevenue = Number(preCost.customerPrice) || 0;
-      const estLaborCost = Number(preCost.laborCost) || 0;
-      const estOpsCost = Number(preCost.opsCost) || 0;
-      const estMaterialCost = Number(preCost.materialCost) || 0;
-      const estCogsCost = Number(preCost.cogsCost) || 0;
+      const estRevenue = Number(preCost?.customerPrice) || 0;
+      const estLaborCost = Number(preCost?.laborCost) || 0;
+      const estOpsCost = Number(preCost?.opsCost) || 0;
+      const estMaterialCost = Number(preCost?.materialCost) || 0;
+      const estCogsCost = Number(preCost?.cogsCost) || 0;
       const estTotalCost = estLaborCost + estOpsCost + estMaterialCost + estCogsCost;
       const estNetIncome = estRevenue - estTotalCost;
 

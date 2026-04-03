@@ -930,7 +930,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
         leadId: selectedLead?.id || lead?.id || null,
         companyId: selectedCompanyId || null,
         contactId: selectedContactId || null,
-        status: "pending", // Final submit changes status from draft to pending
+        status: initialData?.isPostCost ? "costed" : "pending", // Post-cost → costed, regular → pending
         supervisorHours: formData.laborSupervisor.regularHours,
         supervisorOtHours: formData.laborSupervisor.otHours,
         technicianHours: formData.laborTechnician.regularHours,
@@ -990,7 +990,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
       leadId: selectedLead?.id || lead?.id || null,
       companyId: selectedCompanyId || null,
       contactId: selectedContactId || null,
-      status: "draft",
+      status: initialData?.isPostCost ? "post_cost" : "draft",
       customerName: formData.customerName,
       address: formData.address,
       city: formData.city,
