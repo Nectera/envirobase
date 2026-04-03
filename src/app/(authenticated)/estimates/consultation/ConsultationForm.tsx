@@ -236,6 +236,10 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
   const [showAllMaterials, setShowAllMaterials] = useState(false);
   const isEditMode = !!editId;
 
+  // When editing, skip all auto-populate effects on initial mount to preserve saved values.
+  // Flips to true after the first render frame so user edits still trigger recalculation.
+  const initialHydrationDone = useRef(!isEditMode);
+
   // Track manually edited material/COGS indices so auto-populate doesn't overwrite them
   const manualMaterialEdits = useRef<Set<number>>(new Set());
   const manualCogsEdits = useRef<Set<number>>(new Set());
@@ -461,12 +465,14 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
   // Auto-markup: 15% base + 1% per difficulty rating
   useEffect(() => {
+    if (!initialHydrationDone.current) return;
     const autoMarkup = 15 + formData.difficultyRating;
     setFormData((prev) => ({ ...prev, markupPercent: autoMarkup, customerPriceOverride: null }));
   }, [formData.difficultyRating]);
 
   // Auto-populate service description from scope of work
   useEffect(() => {
+    if (!initialHydrationDone.current) return;
     if (formData.scopeOfWork) {
       setFormData((prev) => ({ ...prev, serviceDescription: formData.scopeOfWork }));
     }
@@ -500,11 +506,21 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
 
+  // After the first render frame, enable auto-populate effects for user edits
+  useEffect(() => {
+    if (!initialHydrationDone.current) {
+      requestAnimationFrame(() => {
+        initialHydrationDone.current = true;
+      });
+    }
+  }, []);
+
   // Auto-populate labor when consultation changes
   // Crew size INCLUDES the supervisor when permit is required.
   // e.g. crewSize=3 with permit → 1 supervisor + 2 technicians
   // Drive time is added per employee (each person drives the same hours)
   useEffect(() => {
+    if (!initialHydrationDone.current) return;
     let supervisorRegularHours = 0;
     let technicianCount = formData.crewSize;
 
@@ -539,6 +555,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
   // Auto-populate COGS when consultation changes
   useEffect(() => {
+    if (!initialHydrationDone.current) return;
     // Pre-compute totals for referral fee calculation (excluding referral fee itself)
     const laborCostForRef =
       (formData.laborSupervisor.regularHours * rates.supervisorHourly +
@@ -660,6 +677,7 @@ export default function ConsultationForm({ lead, editId, initialData, companies 
 
   // Auto-populate materials when labor hours change
   useEffect(() => {
+    if (!initialHydrationDone.current) return;
     const totalHours =
       formData.laborSupervisor.regularHours +
       formData.laborSupervisor.otHours +
