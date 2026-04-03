@@ -8,6 +8,7 @@ import {
   Pencil, Trash2, UserPlus, UserMinus, SmilePlus, Video,
 } from "lucide-react";
 import EmojiReactions from "@/components/EmojiReactions";
+import ChatMessageContextMenu from "@/components/ChatMessageContextMenu";
 
 // Pull-to-refresh removed from chat — chat polls every few seconds so PTR
 // was unnecessary and its touch handlers conflicted with normal scrolling
@@ -117,6 +118,12 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
 
   // Video meeting
   const [startingMeet, setStartingMeet] = useState(false);
+
+  // Long-press context menu
+  const [contextMenuMsgId, setContextMenuMsgId] = useState<string | null>(null);
+  const [starredMessageIds, setStarredMessageIds] = useState<Set<string>>(new Set());
+  const [showForwardPicker, setShowForwardPicker] = useState(false);
+  const [forwardingMsgId, setForwardingMsgId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -310,6 +317,82 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
     } catch { } finally {
       setStartingMeet(false);
     }
+  };
+
+  // ─── Context menu actions ─────────────────────────────────────
+  const handleContextMenuReaction = async (emoji: string) => {
+    if (!contextMenuMsgId) return;
+    const msgId = contextMenuMsgId;
+    // Optimistic update
+    setMessageReactions((prev) => {
+      const existing = prev[msgId] || [];
+      const mine = existing.find((r) => r.emoji === emoji && r.userId === currentUserId);
+      if (mine) {
+        return { ...prev, [msgId]: existing.filter((r) => !(r.emoji === emoji && r.userId === currentUserId)) };
+      }
+      return { ...prev, [msgId]: [...existing, { emoji, userId: currentUserId, userName: currentUserName }] };
+    });
+    try {
+      await fetch("/api/reactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetType: "message", targetId: msgId, emoji }),
+      });
+    } catch { }
+  };
+
+  const handleCopyMessage = () => {
+    const msg = messages.find((m) => m.id === contextMenuMsgId);
+    if (msg?.content) {
+      navigator.clipboard.writeText(msg.content).catch(() => {});
+    }
+  };
+
+  const handleStarMessage = async () => {
+    if (!contextMenuMsgId) return;
+    const msgId = contextMenuMsgId;
+    // Optimistic
+    setStarredMessageIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId); else next.add(msgId);
+      return next;
+    });
+    try {
+      await fetch(`/api/chat/messages/${msgId}/star`, { method: "POST" });
+    } catch { }
+  };
+
+  const handleDeleteMessage = async () => {
+    if (!contextMenuMsgId) return;
+    const msgId = contextMenuMsgId;
+    if (!confirm("Delete this message? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/chat/messages/${msgId}`, { method: "DELETE" });
+      if (res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== msgId));
+      }
+    } catch { }
+  };
+
+  const handleForwardMessage = (targetChannelId: string) => {
+    if (!forwardingMsgId) return;
+    fetch(`/api/chat/messages/${forwardingMsgId}/forward`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channelId: targetChannelId }),
+    })
+      .then((res) => {
+        if (res.ok) {
+          setShowForwardPicker(false);
+          setForwardingMsgId(null);
+        }
+      })
+      .catch(() => {});
+  };
+
+  const openForwardPicker = () => {
+    setForwardingMsgId(contextMenuMsgId);
+    setShowForwardPicker(true);
   };
 
   // ─── Create channel ───────────────────────────────────────────
@@ -825,7 +908,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                 const isImage = msg.fileMimeType?.startsWith("image/");
 
                 return (
-                  <div key={msg.id} className={`flex gap-2.5 group ${showAvatar ? "mt-4" : "mt-0.5"}`}>
+                  <MessageRow key={msg.id} msgId={msg.id} onLongPress={() => setContextMenuMsgId(msg.id)} className={`flex gap-2.5 group ${showAvatar ? "mt-4" : "mt-0.5"}`}>
                     {/* Avatar */}
                     <div className="w-8 flex-shrink-0">
                       {showAvatar && (
@@ -914,7 +997,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                         initialReactions={messageReactions[msg.id] || []}
                       />
                     </div>
-                  </div>
+                  </MessageRow>
                 );
               })}
               <div ref={messagesEndRef} />
@@ -1455,6 +1538,120 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
           </div>
         </div>
       )}
+
+      {/* Long-press context menu */}
+      {contextMenuMsgId && (
+        <ChatMessageContextMenu
+          isOpen={true}
+          onClose={() => setContextMenuMsgId(null)}
+          messageId={contextMenuMsgId}
+          messageContent={messages.find((m) => m.id === contextMenuMsgId)?.content || ""}
+          isOwn={(messages.find((m) => m.id === contextMenuMsgId)?.senderId || "") === currentUserId}
+          isStarred={starredMessageIds.has(contextMenuMsgId)}
+          onReply={() => {
+            const msg = messages.find((m) => m.id === contextMenuMsgId);
+            if (msg) { setReplyingTo(msg); inputRef.current?.focus(); }
+          }}
+          onForward={openForwardPicker}
+          onCopy={handleCopyMessage}
+          onStar={handleStarMessage}
+          onDelete={handleDeleteMessage}
+          onReaction={handleContextMenuReaction}
+        />
+      )}
+
+      {/* Forward picker modal */}
+      {showForwardPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+          <div className="w-[300px] max-h-[400px] bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-800">Forward to…</h3>
+              <button onClick={() => { setShowForwardPicker(false); setForwardingMsgId(null); }} className="text-slate-400 hover:text-slate-600">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[320px] py-1">
+              {channels
+                .filter((ch) => ch.id !== selectedChannelId)
+                .map((ch) => (
+                  <button
+                    key={ch.id}
+                    onClick={() => handleForwardMessage(ch.id)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                  >
+                    <Hash size={14} className="text-slate-400 flex-shrink-0" />
+                    <span className="truncate">{ch.name}</span>
+                  </button>
+                ))}
+              {channels.filter((ch) => ch.id !== selectedChannelId).length === 0 && (
+                <p className="text-center text-sm text-slate-400 py-6">No other channels</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * MessageRow — wraps each message with long-press detection.
+ * Uses inline touch handlers instead of a hook so it can live inside .map().
+ */
+function MessageRow({
+  msgId,
+  onLongPress,
+  className,
+  children,
+}: {
+  msgId: string;
+  onLongPress: () => void;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
+  const handleTouchStart = useCallback(() => {
+    didLongPress.current = false;
+    timerRef.current = setTimeout(() => {
+      didLongPress.current = true;
+      if (navigator.vibrate) navigator.vibrate(30);
+      onLongPress();
+    }, 500);
+  }, [onLongPress]);
+
+  const handleTouchMove = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (didLongPress.current) {
+      e.preventDefault();
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  return (
+    <div
+      className={className}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
+      style={{ userSelect: "none", WebkitUserSelect: "none" }}
+    >
+      {children}
     </div>
   );
 }

@@ -74,6 +74,7 @@ model Organization {
   chatChannels           ChatChannel[]
   calendarEvents         CalendarEvent[]
   pastProjects           PastProject[]
+  starredMessages        StarredMessage[]
   companyInfos           CompanyInfo[]
   companyLicenses        CompanyLicense[]
   integrationAuths       IntegrationAuth[]
@@ -1321,6 +1322,23 @@ model ProjectPhoto {
 
   @@index([pastProjectId])
   @@map("project_photos")
+}
+
+// ─── Starred Messages ───────────────────────────────────────────
+
+model StarredMessage {
+  id             String   @id @default(uuid())
+  messageId      String
+  userId         String
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("starred_messages")
 }
 
 // ─── Content Inventory ──────────────────────────────────────────
