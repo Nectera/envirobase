@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()), 10);
+    const yearParam = searchParams.get("year") || "all";
+    const isAllYears = yearParam === "all";
+    const year = isAllYears ? new Date().getFullYear() : parseInt(yearParam, 10);
     const yearStart = `${year}-01-01`;
     const yearEnd = `${year + 1}-01-01`;
 
@@ -59,13 +61,16 @@ export async function GET(req: NextRequest) {
     const projectIds = projects.map((p: any) => p.id);
     const projectNumbers = projects.map((p: any) => p.projectNumber).filter(Boolean) as string[];
 
-    // Fetch all consultation estimates linked to these projects
+    // Fetch all consultation estimates linked to these projects (include lead for office fallback)
     const estimates = await prisma.consultationEstimate.findMany({
       where: {
         OR: [
           { projectId: { in: projectIds } },
           ...(projectNumbers.length > 0 ? [{ projectNumber: { in: projectNumbers } }] : []),
         ],
+      },
+      include: {
+        lead: { select: { office: true } },
       },
     });
 
@@ -160,12 +165,13 @@ export async function GET(req: NextRequest) {
         ? workerSupervisor.worker.name
         : null);
 
-      // Region mapping from office
+      // Region mapping from office (fall back to lead's office if project has none)
+      const officeValue = project.office || estPair?.preCost?.lead?.office || estPair?.postCost?.lead?.office;
       let region = "Unknown";
-      if (project.office === "greeley") region = "NOCO";
-      else if (project.office === "grand_junction") region = "Western Slope";
-      else if (project.office === "denver") region = "Denver Metro";
-      else if (project.office) region = project.office;
+      if (officeValue === "greeley") region = "NOCO";
+      else if (officeValue === "grand_junction") region = "Western Slope";
+      else if (officeValue === "denver") region = "Denver Metro";
+      else if (officeValue) region = officeValue;
 
       // Cash Swing from 15% Net = NetIncome - (Revenue * 0.15) - Bonus
       const cashSwing = netIncome - (revenue * 0.15) - (bonusEarned || 0);
@@ -209,11 +215,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Filter by year based on project date
-    const filteredRows = rows.filter((r) => {
-      if (!r.date) return true;
-      return r.date >= yearStart && r.date < yearEnd;
-    });
+    // Filter by year based on project date (skip if "all")
+    const filteredRows = isAllYears
+      ? rows
+      : rows.filter((r) => {
+          if (!r.date) return true;
+          return r.date >= yearStart && r.date < yearEnd;
+        });
 
     // Sort by date descending
     filteredRows.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -261,7 +269,7 @@ export async function GET(req: NextRequest) {
         };
 
     return NextResponse.json({
-      year,
+      year: isAllYears ? "all" : year,
       rows: filteredRows,
       totals,
       percentages: pcts,

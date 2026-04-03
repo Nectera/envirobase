@@ -53,7 +53,7 @@ type PerformanceRow = {
 };
 
 type PerformanceData = {
-  year: number;
+  year: number | "all";
   rows: PerformanceRow[];
   totals: {
     revenue: number;
@@ -107,7 +107,7 @@ function formatDate(dateStr: string | null): string {
 export default function BudgetDashboard() {
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState<number | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortAsc, setSortAsc] = useState(false);
   const [regionFilter, setRegionFilter] = useState<string>("all");
@@ -193,7 +193,7 @@ export default function BudgetDashboard() {
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `Project_Performance_${year}.csv`; a.click();
+    a.href = url; a.download = `Project_Performance_${year === "all" ? "All_Years" : year}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -214,7 +214,7 @@ export default function BudgetDashboard() {
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center">
           <BarChart3 size={48} className="mx-auto text-slate-300 mb-4" />
-          <h2 className="text-sm font-semibold text-slate-700 mb-2">No Performance Data for {year}</h2>
+          <h2 className="text-sm font-semibold text-slate-700 mb-2">No Performance Data{year !== "all" ? ` for ${year}` : ""}</h2>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
             Complete projects with consultation estimates will appear here. Post-cost data shows actual figures; pre-cost data shows estimates.
           </p>
@@ -475,7 +475,7 @@ export default function BudgetDashboard() {
         </div>
         {filteredRows.length === 0 && (
           <div className="py-12 text-center text-xs text-slate-400">
-            No projects match the current filters for {year}
+            No projects match the current filters{year !== "all" ? ` for ${year}` : ""}
           </div>
         )}
       </div>
@@ -485,16 +485,38 @@ export default function BudgetDashboard() {
 
 /* ─── Sub-components ──────────────────────────────────────────────── */
 
-function YearSelector({ year, onChange }: { year: number; onChange: (y: number) => void }) {
+function YearSelector({ year, onChange }: { year: number | "all"; onChange: (y: number | "all") => void }) {
   return (
     <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1">
-      <button onClick={() => onChange(year - 1)} className="p-1 text-slate-400 hover:text-slate-700">
-        <ChevronLeft size={14} />
+      <button
+        onClick={() => onChange("all")}
+        className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
+          year === "all"
+            ? "bg-indigo-100 text-indigo-700"
+            : "text-slate-400 hover:text-slate-700"
+        }`}
+      >
+        All
       </button>
-      <span className="text-xs font-semibold text-slate-800 w-10 text-center">{year}</span>
-      <button onClick={() => onChange(year + 1)} className="p-1 text-slate-400 hover:text-slate-700">
-        <ChevronRight size={14} />
-      </button>
+      {year !== "all" && (
+        <>
+          <button onClick={() => onChange(year - 1)} className="p-1 text-slate-400 hover:text-slate-700">
+            <ChevronLeft size={14} />
+          </button>
+          <span className="text-xs font-semibold text-slate-800 w-10 text-center">{year}</span>
+          <button onClick={() => onChange(year + 1)} className="p-1 text-slate-400 hover:text-slate-700">
+            <ChevronRight size={14} />
+          </button>
+        </>
+      )}
+      {year === "all" && (
+        <button
+          onClick={() => onChange(new Date().getFullYear())}
+          className="p-1 text-slate-400 hover:text-slate-700"
+        >
+          <ChevronRight size={14} />
+        </button>
+      )}
     </div>
   );
 }
