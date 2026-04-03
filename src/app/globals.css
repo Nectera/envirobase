@@ -12,6 +12,9 @@
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 @layer base {
+  html, body {
+    overscroll-behavior-y: none;
+  }
   body {
     @apply text-slate-900 antialiased;
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
