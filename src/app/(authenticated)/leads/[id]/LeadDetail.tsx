@@ -50,6 +50,7 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
   const [showSMSCompose, setShowSMSCompose] = useState(false);
   const [showPandaDoc, setShowPandaDoc] = useState(false);
   const [approvingEstimateId, setApprovingEstimateId] = useState<string | null>(null);
+  const [deletingEstimateId, setDeletingEstimateId] = useState<string | null>(null);
   const [showSiteVisitModal, setShowSiteVisitModal] = useState(false);
   const [siteVisitDate, setSiteVisitDate] = useState("");
   const [siteVisitTime, setSiteVisitTime] = useState("");
@@ -173,6 +174,17 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
       router.refresh();
     } finally {
       setApprovingEstimateId(null);
+    }
+  };
+
+  const handleDeleteEstimate = async (estimateId: string) => {
+    if (!confirm("Delete this estimate? This cannot be undone.")) return;
+    setDeletingEstimateId(estimateId);
+    try {
+      await fetch(`/api/consultation-estimates/${estimateId}`, { method: "DELETE" });
+      router.refresh();
+    } finally {
+      setDeletingEstimateId(null);
     }
   };
 
@@ -926,6 +938,14 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
                           <Check size={10} /> Approved
                         </span>
                       )}
+                      <button
+                        onClick={() => handleDeleteEstimate(est.id)}
+                        disabled={deletingEstimateId === est.id}
+                        className="ml-1.5 p-1 text-slate-400 hover:text-red-500 transition disabled:opacity-50"
+                        title="Delete estimate"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   );
                 })}
