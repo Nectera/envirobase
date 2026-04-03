@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
         startDate: true,
         estEndDate: true,
         createdAt: true,
+        isSubbedOut: true,
+        subContractorId: true,
         workers: {
           select: {
             role: true,
@@ -56,6 +58,21 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // Fetch subcontractor company names for subbed-out projects
+    const subContractorIds = projects
+      .filter((p: any) => p.isSubbedOut && p.subContractorId)
+      .map((p: any) => p.subContractorId) as string[];
+    const subContractorMap: Record<string, string> = {};
+    if (subContractorIds.length > 0) {
+      const subCompanies = await prisma.company.findMany({
+        where: { id: { in: subContractorIds } },
+        select: { id: true, name: true },
+      });
+      for (const sc of subCompanies) {
+        subContractorMap[sc.id] = sc.name;
+      }
+    }
 
     // Gather all project IDs and project numbers
     const projectIds = projects.map((p: any) => p.id);
@@ -158,11 +175,14 @@ export async function GET(req: NextRequest) {
       const bonusEarned = postData?.bonusEarned ?? null;
       const supervisorName = postData?.supervisor ?? null;
 
-      // Fall back to ProjectWorker supervisor
+      // Fall back to ProjectWorker supervisor, then subcontractor
       const workerSupervisor = project.workers.find((w: any) => w.role === "Supervisor");
-      const supervisor = supervisorName || (workerSupervisor
-        ? workerSupervisor.worker.name
-        : null);
+      const subName = (project as any).isSubbedOut && (project as any).subContractorId
+        ? subContractorMap[(project as any).subContractorId]
+        : null;
+      const supervisor = supervisorName
+        || (workerSupervisor ? workerSupervisor.worker.name : null)
+        || (subName ? `Sub: ${subName}` : null);
 
       // Region mapping from office (fall back to lead's office if project has none)
       const officeValue = project.office || estPair?.preCost?.lead?.office || estPair?.postCost?.lead?.office;
