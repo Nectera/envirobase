@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const worker = await prisma.worker.create({
       data: orgData(orgId, {
-        name: body.name,
+        name: body.name?.trim(),
         role: body.role,
         position: body.position || null,
         types: Array.isArray(body.types) ? body.types.join(",") : body.types,

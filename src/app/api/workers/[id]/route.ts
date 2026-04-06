@@ -48,7 +48,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (!v.success) return NextResponse.json({ error: v.error }, { status: 400 });
 
     const data: any = {};
-    if (body.name !== undefined) data.name = body.name;
+    if (body.name !== undefined) data.name = body.name?.trim();
     if (body.role !== undefined) data.role = body.role;
     if (body.position !== undefined) data.position = body.position;
     if (body.types !== undefined) data.types = Array.isArray(body.types) ? body.types.join(",") : body.types;

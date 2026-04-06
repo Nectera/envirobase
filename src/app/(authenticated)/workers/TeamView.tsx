@@ -97,29 +97,31 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
 
   // Filter and search workers
   const filteredWorkers = useMemo(() => {
-    return initialWorkers.filter((worker) => {
-      // Team/Temp tab filter
-      if (teamTab === "temp" && !worker.isTemp) return false;
-      if (teamTab === "team" && worker.isTemp) return false;
+    return initialWorkers
+      .filter((worker) => {
+        // Team/Temp tab filter
+        if (teamTab === "temp" && !worker.isTemp) return false;
+        if (teamTab === "team" && worker.isTemp) return false;
 
-      // Status filter
-      const workerStatus = worker.status || "active";
-      if (filterStatus !== "all" && workerStatus !== filterStatus) {
-        return false;
-      }
+        // Status filter
+        const workerStatus = worker.status || "active";
+        if (filterStatus !== "all" && workerStatus !== filterStatus) {
+          return false;
+        }
 
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          worker.name?.toLowerCase().includes(query) ||
-          worker.email?.toLowerCase().includes(query) ||
-          worker.phone?.toLowerCase().includes(query)
-        );
-      }
+        // Search filter
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase().trim();
+          return (
+            worker.name?.trim().toLowerCase().includes(query) ||
+            worker.email?.trim().toLowerCase().includes(query) ||
+            worker.phone?.trim().toLowerCase().includes(query)
+          );
+        }
 
-      return true;
-    });
+        return true;
+      })
+      .sort((a, b) => (a.name || "").trim().toLowerCase().localeCompare((b.name || "").trim().toLowerCase()));
   }, [initialWorkers, filterStatus, searchQuery, teamTab]);
 
   const teamCount = useMemo(() => initialWorkers.filter((w: any) => !w.isTemp).length, [initialWorkers]);
