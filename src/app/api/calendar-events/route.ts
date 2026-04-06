@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
   const where: any = orgWhere(orgId);
   if (type) where.type = type;
   if (office) where.office = office;
-  if (startDate && endDate) where.dateRange = { start: startDate, end: endDate };
+  if (startDate && endDate) {
+    where.startDate = { lte: endDate };
+    where.endDate = { gte: startDate };
+  }
 
   const events = await prisma.calendarEvent.findMany({ where });
   return NextResponse.json(events);

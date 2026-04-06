@@ -24,8 +24,8 @@ export default async function CalendarPage() {
   // Fetch all data in parallel
   const [scheduleEntries, timeOffEntries, calendarEvents, workers, projects, tasks] = await Promise.all([
     prisma.scheduleEntry.findMany({ include: { worker: true, project: true } }),
-    prisma.timeOff.findMany({ where: { dateRange: { start: startDate, end: endDate } }, include: { worker: true } }),
-    prisma.calendarEvent.findMany({ where: { dateRange: { start: startDate, end: endDate } } }),
+    prisma.timeOff.findMany({ where: { startDate: { lte: endDate }, endDate: { gte: startDate } }, include: { worker: true } }),
+    prisma.calendarEvent.findMany({ where: { startDate: { lte: endDate }, endDate: { gte: startDate } } }),
     prisma.worker.findMany(),
     prisma.project.findMany({ include: { workers: { include: { worker: true } } } }),
     prisma.task.findMany({
