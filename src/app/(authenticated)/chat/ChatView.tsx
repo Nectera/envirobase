@@ -124,6 +124,9 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
   const [showForwardPicker, setShowForwardPicker] = useState(false);
   const [forwardingMsgId, setForwardingMsgId] = useState<string | null>(null);
 
+  // Image lightbox
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -948,7 +951,8 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                         <img
                           src={msg.fileUrl}
                           alt={msg.fileName || "Image"}
-                          className="mt-1 rounded-lg max-w-xs max-h-60 object-cover border border-slate-200"
+                          className="mt-1 rounded-lg max-w-xs max-h-60 object-cover border border-slate-200 cursor-pointer active:opacity-80 transition-opacity"
+                          onClick={() => setLightboxUrl(msg.fileUrl!)}
                         />
                       )}
                       {msg.fileUrl && !isImage && (
@@ -1583,6 +1587,36 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Image lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Full size"
+            className="max-w-[90vw] max-h-[80vh] rounded-lg object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <a
+            href={lightboxUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 text-sm text-white/70 hover:text-white transition"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Open original &rarr;
+          </a>
         </div>
       )}
     </div>
