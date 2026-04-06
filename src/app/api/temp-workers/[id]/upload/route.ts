@@ -3,6 +3,7 @@ import { requireOrg } from "@/lib/org-context";
 import { checkRateLimit, API_WRITE_LIMIT } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { supabase, CERTIFICATIONS_BUCKET } from "@/lib/supabase";
+import sharp from "sharp";
 
 type TempDoc = {
   url: string;
@@ -77,16 +78,30 @@ export async function POST(
       );
     }
 
-    const ext = file.name.split(".").pop() || "jpg";
+    let ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    let buffer = Buffer.from(await file.arrayBuffer());
+    let uploadType = file.type;
+
+    // Convert HEIC/HEIF to JPEG so all browsers can display them
+    if (file.type === "image/heic" || file.type === "image/heif" || ext === "heic" || ext === "heif") {
+      try {
+        buffer = await sharp(buffer).jpeg({ quality: 85 }).toBuffer() as Buffer<ArrayBuffer>;
+        uploadType = "image/jpeg";
+        ext = "jpg";
+      } catch (convErr) {
+        console.error("HEIC conversion failed:", convErr);
+        return NextResponse.json({ error: "Failed to process HEIC image" }, { status: 500 });
+      }
+    }
+
     const storagePath = `temp-workers/${workerId}/${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 8)}.${ext}`;
 
-    const buffer = Buffer.from(await file.arrayBuffer());
     const { data, error } = await supabase.storage
       .from(CERTIFICATIONS_BUCKET)
       .upload(storagePath, buffer, {
-        contentType: file.type,
+        contentType: uploadType,
         upsert: true,
       });
 
