@@ -75,6 +75,7 @@ model Organization {
   calendarEvents         CalendarEvent[]
   pastProjects           PastProject[]
   starredMessages        StarredMessage[]
+  googleCalendarSyncs    GoogleCalendarSync[]
   companyInfos           CompanyInfo[]
   companyLicenses        CompanyLicense[]
   integrationAuths       IntegrationAuth[]
@@ -605,6 +606,7 @@ model CalendarEvent {
   color          String?
   createdBy      String?
   notes          String?
+  googleEventId  String?
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
   createdAt      DateTime @default(now())
@@ -612,6 +614,26 @@ model CalendarEvent {
 
   @@index([organizationId])
   @@map("calendar_events")
+}
+
+// ─── Google Calendar Sync ───────────────────────────────────────
+
+model GoogleCalendarSync {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  googleEmail    String
+  accessToken    String
+  refreshToken   String
+  tokenExpiry    DateTime
+  calendarId     String   @default("primary")
+  enabled        Boolean  @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("google_calendar_syncs")
 }
 
 // ─── Company ─────────────────────────────────────────────────────

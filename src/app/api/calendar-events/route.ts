@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
+import { pushEventToAllConnected } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,29 @@ export async function POST(req: NextRequest) {
         createdBy: session.user.id || null,
       }),
     });
+
+    // Push to Google Calendar for all connected users in this org (fire-and-forget)
+    if (orgId) {
+      pushEventToAllConnected(orgId, {
+        title: event.title || "Untitled Event",
+        description: event.description,
+        startDate: event.startDate || body.startDate,
+        endDate: event.endDate || event.startDate || body.startDate,
+        allDay: event.allDay,
+        startTime: event.startTime,
+        endTime: event.endTime,
+      })
+        .then(async (googleIds) => {
+          const firstGoogleId = Object.values(googleIds)[0];
+          if (firstGoogleId) {
+            await prisma.calendarEvent.update({
+              where: { id: event.id },
+              data: { googleEventId: firstGoogleId },
+            }).catch(() => {});
+          }
+        })
+        .catch((err: any) => console.error("Google Calendar sync error:", err));
+    }
 
     return NextResponse.json(event, { status: 201 });
   } catch (error: any) {

@@ -89,6 +89,7 @@ export const createWorkerSchema = z.object({
   city: z.string().max(100).nullable().optional(),
   state: z.string().max(50).nullable().optional(),
   status: z.enum(["active", "inactive", "terminated"]).optional(),
+  hireDate: z.string().max(20).nullable().optional(),
 });
 
 export const updateWorkerSchema = createWorkerSchema.partial();

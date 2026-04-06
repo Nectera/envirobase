@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/components/LanguageProvider";
 import {
   ChevronLeft, ChevronRight, CalendarDays, Plus,
   Palmtree, FolderOpen, CalendarCheck, User as UserIcon, Users,
-  CheckSquare,
+  CheckSquare, Link2, Unlink, Loader2,
 } from "lucide-react";
 import MonthView from "./MonthView";
 import WeekView from "./WeekView";
@@ -37,6 +37,7 @@ export default function CalendarView({
 }: CalendarViewProps) {
   const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isAdmin = userRole === "ADMIN" || userRole === "PROJECT_MANAGER" || userRole === "SUPERVISOR";
 
   // State
@@ -49,6 +50,59 @@ export default function CalendarView({
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [showFilters, setShowFilters] = useState({ projects: true, timeOff: true, events: true, tasks: true });
   const [calendarScope, setCalendarScope] = useState<"all" | "mine">("all");
+
+  // Google Calendar integration
+  const [gcalStatus, setGcalStatus] = useState<{ connected: boolean; googleEmail?: string } | null>(null);
+  const [gcalLoading, setGcalLoading] = useState(false);
+  const [gcalToast, setGcalToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check Google Calendar connection status
+    fetch("/api/google-calendar/status")
+      .then((res) => res.json())
+      .then((data) => setGcalStatus(data))
+      .catch(() => {});
+
+    // Show toast based on URL params from OAuth callback
+    const gcalParam = searchParams.get("gcal");
+    if (gcalParam === "connected") {
+      setGcalToast("Google Calendar connected successfully!");
+      setGcalStatus({ connected: true });
+      fetch("/api/google-calendar/status")
+        .then((res) => res.json())
+        .then((data) => setGcalStatus(data))
+        .catch(() => {});
+    } else if (gcalParam === "denied") {
+      setGcalToast("Google Calendar connection was cancelled.");
+    } else if (gcalParam === "error") {
+      setGcalToast("Failed to connect Google Calendar. Please try again.");
+    }
+
+    if (gcalParam) {
+      window.history.replaceState({}, "", "/calendar");
+    }
+  }, [searchParams]);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!gcalToast) return;
+    const timer = setTimeout(() => setGcalToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [gcalToast]);
+
+  const handleDisconnectGcal = async () => {
+    if (!confirm("Disconnect Google Calendar? Future events will no longer sync.")) return;
+    setGcalLoading(true);
+    try {
+      const res = await fetch("/api/google-calendar/disconnect", { method: "POST" });
+      if (res.ok) {
+        setGcalStatus({ connected: false });
+        setGcalToast("Google Calendar disconnected.");
+      }
+    } catch { } finally {
+      setGcalLoading(false);
+    }
+  };
 
   // Navigation
   const goToday = () => setCurrentDate(new Date());
@@ -172,6 +226,28 @@ export default function CalendarView({
           <p className="text-sm text-slate-500 mt-0.5">{t("calendar.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Google Calendar connect/disconnect */}
+          {gcalStatus?.connected ? (
+            <button
+              onClick={handleDisconnectGcal}
+              disabled={gcalLoading}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-500 bg-slate-100 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors"
+              title={`Connected: ${gcalStatus.googleEmail || "Google Calendar"}`}
+            >
+              {gcalLoading ? <Loader2 size={14} className="animate-spin" /> : <Unlink size={14} />}
+              <span className="hidden sm:inline">{gcalStatus.googleEmail || "Google Calendar"}</span>
+              <span className="sm:hidden">GCal</span>
+            </button>
+          ) : (
+            <a
+              href="/api/google-calendar/connect"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"
+            >
+              <Link2 size={14} />
+              <span className="hidden sm:inline">Connect Google Calendar</span>
+              <span className="sm:hidden">Google Cal</span>
+            </a>
+          )}
           {isAdmin && (
             <button
               onClick={() => setShowEventModal(true)}
@@ -371,6 +447,13 @@ export default function CalendarView({
             : handleCreateEvent}
           onClose={() => { setShowEventModal(false); setEditingEvent(null); }}
         />
+      )}
+
+      {/* Google Calendar toast */}
+      {gcalToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-slate-800 text-white text-sm shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
+          {gcalToast}
+        </div>
       )}
     </div>
   );
