@@ -1263,6 +1263,8 @@ model ChatMessage {
   replyToId      String?  // ID of the message being replied to
   replyToName    String?  // Sender name of the replied message (denormalized)
   replyToContent String?  // Snippet of the replied message (denormalized)
+  pinnedAt       DateTime?
+  pinnedBy       String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

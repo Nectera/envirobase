@@ -5,7 +5,7 @@ import {
   MessageSquare, Hash, Send, Paperclip, X, Plus, Search,
   Users, ChevronLeft, Loader2, Image as ImageIcon, FileText,
   AtSign, User as UserIcon, Lock, Globe, Check, Reply,
-  Pencil, Trash2, UserPlus, UserMinus, SmilePlus, Video,
+  Pencil, Trash2, UserPlus, UserMinus, SmilePlus, Video, Pin,
 } from "lucide-react";
 import ChatMessageContextMenu from "@/components/ChatMessageContextMenu";
 
@@ -49,6 +49,8 @@ interface Message {
   replyToId?: string;
   replyToName?: string;
   replyToContent?: string;
+  pinnedAt?: string;
+  pinnedBy?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -121,8 +123,11 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
   // Long-press context menu
   const [contextMenuMsgId, setContextMenuMsgId] = useState<string | null>(null);
   const [starredMessageIds, setStarredMessageIds] = useState<Set<string>>(new Set());
+  const [pinnedMessageIds, setPinnedMessageIds] = useState<Set<string>>(new Set());
   const [showForwardPicker, setShowForwardPicker] = useState(false);
   const [forwardingMsgId, setForwardingMsgId] = useState<string | null>(null);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
 
   // Image lightbox
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -173,6 +178,10 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
           }
         } else {
           setMessages(data.messages);
+          // Populate pinned IDs from message data
+          const pinned = new Set<string>();
+          data.messages.forEach((m: Message) => { if (m.pinnedAt) pinned.add(m.id); });
+          setPinnedMessageIds(pinned);
         }
         // Update last message time
         const allMsgs = isPolling ? data.messages : data.messages;
@@ -293,8 +302,13 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
       if (res.ok) {
         const data = await res.json();
         setPendingFile(data);
+      } else {
+        const err = await res.json().catch(() => ({ error: "Upload failed" }));
+        alert(err.error || "Upload failed");
       }
-    } catch { } finally {
+    } catch {
+      alert("Upload failed. Please try again.");
+    } finally {
       setUploadingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -362,6 +376,60 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
     try {
       await fetch(`/api/chat/messages/${msgId}/star`, { method: "POST" });
     } catch { }
+  };
+
+  const handlePinMessage = async () => {
+    if (!contextMenuMsgId) return;
+    const msgId = contextMenuMsgId;
+    // Optimistic
+    setPinnedMessageIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId); else next.add(msgId);
+      return next;
+    });
+    try {
+      await fetch(`/api/chat/messages/${msgId}/pin`, { method: "POST" });
+    } catch { }
+  };
+
+  const handleEditMessage = () => {
+    if (!contextMenuMsgId) return;
+    const msg = messages.find((m) => m.id === contextMenuMsgId);
+    if (msg) {
+      setEditingMsgId(msg.id);
+      setEditContent(msg.content);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMsgId || !editContent.trim()) return;
+    try {
+      const res = await fetch(`/api/chat/messages/${editingMsgId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editContent }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setMessages((prev) => prev.map((m) => m.id === editingMsgId ? { ...m, content: updated.content, updatedAt: updated.updatedAt } : m));
+      }
+    } catch { }
+    setEditingMsgId(null);
+    setEditContent("");
+  };
+
+  const handleSaveAttachment = () => {
+    const msg = messages.find((m) => m.id === contextMenuMsgId);
+    if (msg?.fileUrl) {
+      const a = document.createElement("a");
+      a.href = msg.fileUrl;
+      a.download = msg.fileName || "attachment";
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
   };
 
   const handleDeleteMessage = async () => {
@@ -933,6 +1001,9 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                           {msg.updatedAt && new Date(msg.updatedAt).getTime() - new Date(msg.createdAt).getTime() > 1000 && (
                             <span className="text-[10px] text-slate-400 italic">(edited)</span>
                           )}
+                          {pinnedMessageIds.has(msg.id) && (
+                            <Pin size={10} className="text-blue-400 fill-blue-400 inline-block" />
+                          )}
                         </div>
                       )}
                       {/* Reply quote */}
@@ -942,11 +1013,24 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                           <p className="text-[11px] text-slate-500 truncate max-w-[260px]">{msg.replyToContent}</p>
                         </div>
                       )}
-                      {msg.content && (
+                      {editingMsgId === msg.id ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <input
+                            type="text"
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") { setEditingMsgId(null); setEditContent(""); } }}
+                            className="flex-1 text-sm border border-green-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-green-400"
+                            autoFocus
+                          />
+                          <button onClick={handleSaveEdit} className="text-xs text-green-600 font-medium px-2 py-1 rounded hover:bg-green-50">Save</button>
+                          <button onClick={() => { setEditingMsgId(null); setEditContent(""); }} className="text-xs text-slate-400 px-2 py-1 rounded hover:bg-slate-50">Cancel</button>
+                        </div>
+                      ) : msg.content ? (
                         <p className="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap">
                           {renderContent(msg)}
                         </p>
-                      )}
+                      ) : null}
                       {msg.fileUrl && isImage && (
                         <img
                           src={msg.fileUrl}
@@ -1076,7 +1160,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                     ref={fileInputRef}
                     className="hidden"
                     onChange={handleFileUpload}
-                    accept="image/*,.pdf,.doc,.docx,.xlsx,.csv,.txt"
+                    accept="image/*,.heic,.heif,.pdf,.doc,.docx,.xlsx,.csv,.txt"
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -1547,6 +1631,10 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
           messageContent={messages.find((m) => m.id === contextMenuMsgId)?.content || ""}
           isOwn={(messages.find((m) => m.id === contextMenuMsgId)?.senderId || "") === currentUserId}
           isStarred={starredMessageIds.has(contextMenuMsgId)}
+          isPinned={pinnedMessageIds.has(contextMenuMsgId)}
+          hasAttachment={!!messages.find((m) => m.id === contextMenuMsgId)?.fileUrl}
+          attachmentUrl={messages.find((m) => m.id === contextMenuMsgId)?.fileUrl}
+          attachmentName={messages.find((m) => m.id === contextMenuMsgId)?.fileName}
           onReply={() => {
             const msg = messages.find((m) => m.id === contextMenuMsgId);
             if (msg) { setReplyingTo(msg); inputRef.current?.focus(); }
@@ -1554,8 +1642,11 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
           onForward={openForwardPicker}
           onCopy={handleCopyMessage}
           onStar={handleStarMessage}
+          onPin={handlePinMessage}
+          onEdit={handleEditMessage}
           onDelete={handleDeleteMessage}
           onReaction={handleContextMenuReaction}
+          onSaveAttachment={handleSaveAttachment}
         />
       )}
 

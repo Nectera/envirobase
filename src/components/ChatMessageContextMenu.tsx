@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Reply, Forward, Copy, Star, Trash2, X } from "lucide-react";
+import { Reply, Forward, Copy, Star, Trash2, X, Pencil, Pin, Download, Plus } from "lucide-react";
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥"];
+
+const FULL_EMOJI_SET = [
+  "👍","👎","❤️","🔥","😂","😮","😢","🙏",
+  "🎉","✅","👀","💯","😎","🤔","💪","😤",
+  "🤣","👏","🙌","😊","🥳","🤝","😍","🥺",
+  "😱","🫡","🫶","💀","🤡","🫠","🤯","😈",
+  "👻","💩","🦄","🍕","☕","🏆","⭐","🚀",
+];
 
 interface ChatMessageContextMenuProps {
   isOpen: boolean;
@@ -12,12 +20,19 @@ interface ChatMessageContextMenuProps {
   messageContent: string;
   isOwn: boolean;
   isStarred: boolean;
+  isPinned: boolean;
+  hasAttachment: boolean;
+  attachmentUrl?: string;
+  attachmentName?: string;
   onReply: () => void;
   onForward: () => void;
   onCopy: () => void;
   onStar: () => void;
+  onPin: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   onReaction: (emoji: string) => void;
+  onSaveAttachment: () => void;
 }
 
 export default function ChatMessageContextMenu({
@@ -26,14 +41,20 @@ export default function ChatMessageContextMenu({
   messageContent,
   isOwn,
   isStarred,
+  isPinned,
+  hasAttachment,
   onReply,
   onForward,
   onCopy,
   onStar,
+  onPin,
+  onEdit,
   onDelete,
   onReaction,
+  onSaveAttachment,
 }: ChatMessageContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [showAllEmojis, setShowAllEmojis] = useState(false);
 
   // Close on outside click
   useEffect(() => {
@@ -55,11 +76,14 @@ export default function ChatMessageContextMenu({
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (showAllEmojis) setShowAllEmojis(false);
+        else onClose();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, showAllEmojis]);
 
   // Prevent body scroll while menu is open
   useEffect(() => {
@@ -67,6 +91,11 @@ export default function ChatMessageContextMenu({
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
+  // Reset expanded emoji when menu closes
+  useEffect(() => {
+    if (!isOpen) setShowAllEmojis(false);
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -80,20 +109,51 @@ export default function ChatMessageContextMenu({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] animate-in fade-in duration-150">
       <div
         ref={menuRef}
-        className="w-[260px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-[280px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
       >
         {/* Emoji reaction bar */}
-        <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-100">
-          {QUICK_EMOJIS.map((emoji) => (
+        {!showAllEmojis ? (
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-100">
+            {QUICK_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => handleAction(() => onReaction(emoji))}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 active:scale-110 transition-all text-lg"
+              >
+                {emoji}
+              </button>
+            ))}
             <button
-              key={emoji}
-              onClick={() => handleAction(() => onReaction(emoji))}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 active:scale-110 transition-all text-lg"
+              onClick={() => setShowAllEmojis(true)}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 active:scale-110 transition-all text-slate-400"
             >
-              {emoji}
+              <Plus size={16} />
             </button>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="border-b border-slate-100">
+            <div className="flex items-center justify-between px-3 py-1.5">
+              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Emoji</span>
+              <button
+                onClick={() => setShowAllEmojis(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-8 gap-0.5 px-2 pb-2 max-h-[160px] overflow-y-auto">
+              {FULL_EMOJI_SET.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleAction(() => onReaction(emoji))}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 active:scale-110 transition-all text-lg"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Action buttons */}
         <div className="py-1">
@@ -104,6 +164,18 @@ export default function ChatMessageContextMenu({
             <Reply size={18} className="text-slate-400" />
             Reply
           </button>
+
+          {/* Edit — only for own messages */}
+          {isOwn && (
+            <button
+              onClick={() => handleAction(onEdit)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            >
+              <Pencil size={18} className="text-slate-400" />
+              Edit
+            </button>
+          )}
+
           <button
             onClick={() => handleAction(onForward)}
             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors"
@@ -118,6 +190,21 @@ export default function ChatMessageContextMenu({
             <Copy size={18} className="text-slate-400" />
             Copy
           </button>
+
+          {/* Pin / Unpin */}
+          <button
+            onClick={() => handleAction(onPin)}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-50 active:bg-slate-100 transition-colors ${
+              isPinned ? "text-blue-600" : "text-slate-700"
+            }`}
+          >
+            <Pin
+              size={18}
+              className={isPinned ? "text-blue-500 fill-blue-500" : "text-slate-400"}
+            />
+            {isPinned ? "Unpin" : "Pin"}
+          </button>
+
           <button
             onClick={() => handleAction(onStar)}
             className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-50 active:bg-slate-100 transition-colors ${
@@ -130,6 +217,17 @@ export default function ChatMessageContextMenu({
             />
             {isStarred ? "Unstar" : "Star"}
           </button>
+
+          {/* Save Attachment — only if message has a file */}
+          {hasAttachment && (
+            <button
+              onClick={() => handleAction(onSaveAttachment)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            >
+              <Download size={18} className="text-slate-400" />
+              Save Attachment
+            </button>
+          )}
 
           {/* Delete — only for own messages */}
           {isOwn && (
