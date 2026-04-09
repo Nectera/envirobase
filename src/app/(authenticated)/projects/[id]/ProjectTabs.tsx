@@ -1207,7 +1207,7 @@ export default function ProjectTabs({
                     <ClipboardList size={16} className="text-indigo-500" />
                     Field Reports ({fieldReports.length})
                   </h3>
-                  {project.status === "in_progress" ? (
+                  {(project.status === "in_progress" || project.status === "completed") ? (
                     <Link href={`/field-reports/new?projectId=${project.id}`}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition">
                       <Plus size={14} /> New Report
@@ -2115,7 +2115,7 @@ export default function ProjectTabs({
         {/* Menu items */}
         {quickAddOpen && (
           <div className="mb-3 flex flex-col items-end gap-1.5">
-            {project.status !== "in_progress" && (
+            {project.status !== "in_progress" && project.status !== "completed" && (
               <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-full shadow-md mb-1">
                 <AlertTriangle size={14} className="text-amber-600 flex-shrink-0" />
                 <span className="text-xs font-medium text-amber-700">Project must be started to create reports</span>
@@ -2130,7 +2130,7 @@ export default function ProjectTabs({
               { label: "Post-Project Inspection", href: `/post-project-inspection/new?projectId=${project.id}`, icon: FileCheck, color: "text-teal-600 bg-teal-50", requiresStart: true },
             ].map((item) => {
               const ItemIcon = item.icon;
-              const disabled = item.requiresStart && project.status !== "in_progress";
+              const disabled = item.requiresStart && project.status !== "in_progress" && project.status !== "completed";
               if (disabled) {
                 return (
                   <div
@@ -2235,7 +2235,7 @@ export default function ProjectTabs({
 
 /* ───── PSI / JHA / SPA Sub-Tab ───── */
 function PsiTab({ entries, projectId, projectStatus }: { entries: PsiJhaSpaEntry[]; projectId: string; projectStatus: string }) {
-  const canCreate = projectStatus === "in_progress";
+  const canCreate = projectStatus === "in_progress" || projectStatus === "completed";
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",
     submitted: "bg-blue-100 text-blue-800",
@@ -2439,7 +2439,7 @@ function TimeReportsTab({ entries, projectId }: { entries: TimeEntry[]; projectI
 
 /* ───── Pre-Abatement Inspection Sub-Tab ───── */
 function PreAbatementTab({ entries, projectId, projectStatus }: { entries: PreAbatementEntry[]; projectId: string; projectStatus: string }) {
-  const canCreate = projectStatus === "in_progress";
+  const canCreate = projectStatus === "in_progress" || projectStatus === "completed";
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",
     submitted: "bg-blue-100 text-blue-800",
@@ -2528,7 +2528,7 @@ function PreAbatementTab({ entries, projectId, projectStatus }: { entries: PreAb
 
 /* ───── Certificates of Completion Sub-Tab ───── */
 function CertsTab({ entries, projectId, projectStatus }: { entries: CertEntry[]; projectId: string; projectStatus: string }) {
-  const canCreate = projectStatus === "in_progress";
+  const canCreate = projectStatus === "in_progress" || projectStatus === "completed";
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",
     submitted: "bg-blue-100 text-blue-800",
@@ -2607,7 +2607,7 @@ function CertsTab({ entries, projectId, projectStatus }: { entries: CertEntry[];
 
 /* ───── Post Project Inspection Sub-Tab ───── */
 function PostProjectTab({ entries, projectId, projectStatus }: { entries: PostProjectEntry[]; projectId: string; projectStatus: string }) {
-  const canCreate = projectStatus === "in_progress";
+  const canCreate = projectStatus === "in_progress" || projectStatus === "completed";
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",
     submitted: "bg-blue-100 text-blue-800",
