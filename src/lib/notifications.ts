@@ -161,25 +161,14 @@ export async function sendNotificationToWorker(
       return false;
     }
 
-    // If worker has a linked userId, use that for preferences + email
-    if (worker.userId) {
-      return sendNotificationToUser(worker.userId, type, subject, bodyContent);
+    // Temp workers don't have app accounts — skip all notifications
+    if (worker.isTemp || !worker.userId) {
+      logger.info(`Skipping notification for temp/unlinked worker ${workerId}`);
+      return false;
     }
 
-    // Fallback: send directly to worker email (no preference check possible)
-    if (worker.email) {
-      const html = buildNotificationHtml(subject, bodyContent);
-      const result = await sendHtmlEmail({
-        to: worker.email,
-        subject: `${APP_NAME} — ${subject}`,
-        html,
-        text: subject,
-      });
-      return result.success;
-    }
-
-    logger.warn(`Cannot send notification — worker ${workerId} has no email or user link`);
-    return false;
+    // Worker has a linked userId — use that for preferences + email
+    return sendNotificationToUser(worker.userId, type, subject, bodyContent);
   } catch (error: any) {
     logger.error("sendNotificationToWorker error", { error: error.message, workerId, type });
     return false;

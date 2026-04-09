@@ -969,6 +969,8 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                   </select>
                 </div>
 
+                {/* Hide Role for temp workers — they don't have app accounts */}
+                {!(editingWorker?.isTemp || (!editingWorker && teamTab === "temp")) && (
                 <div>
                   <label className="block text-sm font-medium text-slate-900 mb-2">
                     {t("workers.role")}
@@ -986,6 +988,7 @@ export default function TeamView({ workers: initialWorkers, positions: initialPo
                     ))}
                   </select>
                 </div>
+                )}
               </div>
 
               {/* Date Hired */}
