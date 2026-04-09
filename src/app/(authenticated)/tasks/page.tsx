@@ -12,8 +12,8 @@ export default async function TasksPage() {
   // Auto-escalate overdue tasks on page load (fire-and-forget, non-blocking)
   escalateOverdueTasks().catch(() => {});
 
-  // Get all workers for the assignee dropdown
-  const workers = await prisma.worker.findMany({ orderBy: { name: "asc" } });
+  // Get all workers for the assignee dropdown (exclude temp workers)
+  const workers = await prisma.worker.findMany({ where: { isTemp: false }, orderBy: { name: "asc" } });
   const workerMap = new Map((workers as any[]).map((w: any) => [w.id, { id: w.id, name: w.name }]));
 
   // Get all tasks and enrich with worker info

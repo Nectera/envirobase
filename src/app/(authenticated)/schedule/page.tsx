@@ -60,6 +60,7 @@ export default async function SchedulePage() {
   // Admin/Supervisor view: full schedule
   const projects = await prisma.project.findMany();
   const allWorkers = await prisma.worker.findMany({
+    where: { isTemp: false },
     include: { certifications: true },
   });
   // Only field workers can be scheduled on projects

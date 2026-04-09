@@ -15,7 +15,7 @@ export default async function AutomationsPage() {
 
   const rules = await prisma.taskAutomationRule.findMany();
   const templates = await prisma.taskTemplate.findMany();
-  const workers = await prisma.worker.findMany({ orderBy: { name: "asc" } });
+  const workers = await prisma.worker.findMany({ where: { isTemp: false }, orderBy: { name: "asc" } });
 
   return (
     <div>

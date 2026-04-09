@@ -75,7 +75,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   }));
 
   // Fetch PM-eligible workers (Project Manager + General Manager positions)
-  const allWorkers = await prisma.worker.findMany();
+  const allWorkers = await prisma.worker.findMany({ where: { isTemp: false } });
   const pmEligibleWorkers = (allWorkers as any[]).filter(
     (w: any) => w.position === "Project Manager"
   );
