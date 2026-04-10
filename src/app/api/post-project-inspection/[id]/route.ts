@@ -32,7 +32,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const body = await req.json();
-    const updated = await prisma.postProjectInspection.update({ where: orgWhere(orgId, { id: params.id }), data: body });
+    // Separate core DB columns from form data that goes into JSON
+    const { projectId, inspectionDate, status, ...rest } = body;
+    const updateData: any = { data: rest };
+    if (projectId) updateData.projectId = projectId;
+    if (inspectionDate) updateData.inspectionDate = inspectionDate;
+    if (status) updateData.status = status;
+    const updated = await prisma.postProjectInspection.update({ where: orgWhere(orgId, { id: params.id }), data: updateData });
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(updated);
   } catch (error: any) {

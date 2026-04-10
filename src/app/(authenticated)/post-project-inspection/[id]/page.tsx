@@ -13,8 +13,10 @@ function CheckBadge({ value }: { value: "yes" | "no" | "na" }) {
 }
 
 export default async function PostProjectDetailPage({ params }: { params: { id: string } }) {
-  const item = await prisma.postProjectInspection.findUnique({ where: { id: params.id }, include: { project: true } });
-  if (!item) notFound();
+  const raw = await prisma.postProjectInspection.findUnique({ where: { id: params.id }, include: { project: true } });
+  if (!raw) notFound();
+  // Spread the JSON `data` field onto the item so form fields are accessible directly
+  const item: any = { ...raw, ...(typeof raw.data === "object" && raw.data !== null ? raw.data : {}) };
 
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",

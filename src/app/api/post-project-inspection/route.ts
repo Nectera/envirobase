@@ -35,21 +35,15 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    // Core DB columns: projectId, inspectionDate, status
+    // Everything else goes into the `data` JSON field
+    const { projectId, inspectionDate, status, ...rest } = body;
     const item = await prisma.postProjectInspection.create({
       data: orgData(orgId, {
-        projectId: body.projectId,
-        inspectionDate: body.inspectionDate || new Date().toISOString().split("T")[0],
-        inspectionTime: body.inspectionTime || "",
-        clientName: body.clientName || "",
-        clientAddress: body.clientAddress || "",
-        projectName: body.projectName || "",
-        projectManagerName: body.projectManagerName || "",
-        checklistItems: body.checklistItems || {},
-        damageNotes: body.damageNotes || "",
-        comments: body.comments || "",
-        pmSignature: body.pmSignature || "",
-        status: body.status || "draft",
-        createdBy: body.createdBy || "",
+        projectId,
+        inspectionDate: inspectionDate || new Date().toISOString().split("T")[0],
+        status: status || "draft",
+        data: rest,
       }),
     });
     return NextResponse.json(item, { status: 201 });

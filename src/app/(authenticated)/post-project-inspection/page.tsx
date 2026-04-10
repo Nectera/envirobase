@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 export default async function PostProjectListPage() {
   const language: Language = "en";
   const t = (key: string) => getTranslation(language, key);
-  const items = await prisma.postProjectInspection.findMany({ include: { project: true } });
+  const rawItems = await prisma.postProjectInspection.findMany({ include: { project: true } });
+  // Spread JSON data field so form fields (clientName, projectManagerName, etc.) are accessible directly
+  const items = rawItems.map((r: any) => ({ ...r, ...(typeof r.data === "object" && r.data !== null ? r.data : {}) }));
 
   const statusColors: Record<string, string> = {
     draft: "bg-yellow-100 text-yellow-800",

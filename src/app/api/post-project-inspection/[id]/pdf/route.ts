@@ -46,8 +46,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     if (result instanceof NextResponse) return result;
     const { session, orgId } = result;
 
-    const item = await prisma.postProjectInspection.findUnique({ where: orgWhere(orgId, { id: params.id }), include: { project: true } });
-    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const raw = await prisma.postProjectInspection.findUnique({ where: orgWhere(orgId, { id: params.id }), include: { project: true } });
+    if (!raw) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Spread JSON data field so form fields are accessible directly
+    const item: any = { ...raw, ...(typeof raw.data === "object" && raw.data !== null ? raw.data : {}) };
 
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage([612, 792]); // Letter size
