@@ -56,6 +56,7 @@ const SUPERVISOR_ROUTES = [
   "/field-reports", "/psi-jha-spa", "/pre-abatement-inspection",
   "/post-project-inspection", "/certificate-of-completion",
   "/chat", "/settings/notifications", "/bonus-pool", "/compliance",
+  "/respirator-fit-test",
 ];
 
 export function canAccessRoute(role: string | undefined | null, pathname: string): boolean {
