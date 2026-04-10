@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { formatDate, getStatusColor, getProjectTypes, hasProjectType } from "@/lib/utils";
 import { TYPE_LABELS } from "@/lib/regulations";
+import { LABOR_RATES } from "@/lib/materials";
 import { Check, Circle, Loader2, Plus, FileDown, ChevronRight, ChevronDown, AlertTriangle, ClipboardList, Clock, Shield, CheckSquare, Award, BarChart3, CalendarDays, Pencil, Save, X, FileText, FolderOpen, Activity, Play, CheckCircle2, User, Upload, FileCheck, ShieldAlert, Trash2, MoreHorizontal, ExternalLink, Star, Send, MessageSquare } from "lucide-react";
 import ActivityFeed from "@/components/ActivityFeed";
 import TaskDetailModal from "@/components/TaskDetailModal";
@@ -669,12 +670,13 @@ export default function ProjectTabs({
     });
 
     // Calculate actual hours from time entries (completed entries only)
-    const completedEntries = timeEntries.filter((e: any) => e.clockOut && e.totalHours != null);
+    // projectRole comes from ProjectWorker: "Supervisor", "Worker", "AMS", "Inspector"
+    const completedEntries = timeEntries.filter((e: any) => e.clockOut && (e.totalHours != null || e.hours != null));
     const actualSupHours = Math.round(
-      completedEntries.filter((e: any) => e.role === "supervisor").reduce((sum: number, e: any) => sum + (e.totalHours || 0), 0) * 100
+      completedEntries.filter((e: any) => e.projectRole === "Supervisor").reduce((sum: number, e: any) => sum + (e.totalHours || e.hours || 0), 0) * 100
     ) / 100;
     const actualTechHours = Math.round(
-      completedEntries.filter((e: any) => e.role === "technician").reduce((sum: number, e: any) => sum + (e.totalHours || 0), 0) * 100
+      completedEntries.filter((e: any) => e.projectRole === "Worker").reduce((sum: number, e: any) => sum + (e.totalHours || e.hours || 0), 0) * 100
     ) / 100;
 
     // 2. Create Post-Cost estimate (duplicate of original consultation estimate)
@@ -683,9 +685,9 @@ export default function ProjectTabs({
     if (linkedConsultationEstimate) {
       const { id: _origId, createdAt: _ca, updatedAt: _ua, ...estFields } = linkedConsultationEstimate;
 
-      // Recalculate labor cost with actual hours but original rates
-      const supRate = linkedConsultationEstimate.supervisorRate || 0;
-      const techRate = linkedConsultationEstimate.technicianRate || 0;
+      // Recalculate labor cost with actual hours using standard rates
+      const supRate = LABOR_RATES.supervisor.hourly + LABOR_RATES.supervisor.taxBurden;
+      const techRate = LABOR_RATES.technician.hourly + LABOR_RATES.technician.taxBurden;
       const supOtHours = linkedConsultationEstimate.supervisorOtHours || 0;
       const techOtHours = linkedConsultationEstimate.technicianOtHours || 0;
       const actualLaborCost = Math.round(

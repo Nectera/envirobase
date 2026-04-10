@@ -40,9 +40,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     where: { projectId: project.id },
     include: { worker: true },
   });
+  // Build a lookup from workerId → project role (Supervisor, Worker, AMS, Inspector)
+  const workerRoleMap: Record<string, string> = {};
+  for (const pw of (project as any).workers || []) {
+    workerRoleMap[pw.workerId] = pw.role || "Worker";
+  }
   const timeEntries = rawTimeEntries.map((e: any) => ({
     ...e,
     workerName: e.worker?.name || "Unknown",
+    projectRole: workerRoleMap[e.workerId] || "Worker",
   }));
 
   const rawPsiJhaSpas = await prisma.psiJhaSpa.findMany({

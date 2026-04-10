@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
+import { LABOR_RATES } from "@/lib/materials";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Fetch actual hours from time entries
+    // Fetch actual hours from time entries (include workerId for role-based labor calc)
     const timeEntries = await prisma.timeEntry.findMany({
       where: {
         projectId: { in: projectIds },
@@ -99,15 +100,37 @@ export async function GET(req: NextRequest) {
       },
       select: {
         projectId: true,
+        workerId: true,
         hours: true,
       },
     });
 
-    // Group time entries by project
+    // Fetch all project workers for role lookup (Supervisor vs Worker)
+    const projectWorkers = await prisma.projectWorker.findMany({
+      where: { projectId: { in: projectIds } },
+      select: { projectId: true, workerId: true, role: true },
+    });
+
+    // Build lookup: projectId → workerId → role
+    const pwRoleMap: Record<string, Record<string, string>> = {};
+    for (const pw of projectWorkers) {
+      if (!pwRoleMap[pw.projectId]) pwRoleMap[pw.projectId] = {};
+      pwRoleMap[pw.projectId][pw.workerId] = pw.role || "Worker";
+    }
+
+    // Group time entries by project + track supervisor/technician hours
     const hoursMap: Record<string, number> = {};
+    const supHoursMap: Record<string, number> = {};
+    const techHoursMap: Record<string, number> = {};
     for (const te of timeEntries) {
       if (te.projectId && te.hours) {
         hoursMap[te.projectId] = (hoursMap[te.projectId] || 0) + te.hours;
+        const role = pwRoleMap[te.projectId]?.[te.workerId] || "Worker";
+        if (role === "Supervisor") {
+          supHoursMap[te.projectId] = (supHoursMap[te.projectId] || 0) + te.hours;
+        } else {
+          techHoursMap[te.projectId] = (techHoursMap[te.projectId] || 0) + te.hours;
+        }
       }
     }
 
@@ -147,10 +170,20 @@ export async function GET(req: NextRequest) {
       const hasPostCost = true;
 
       const revenue = Number(actual.customerPrice) || 0;
-      const laborCost = Number(actual.laborCost) || 0;
+      let laborCost = Number(actual.laborCost) || 0;
       const opsCost = Number(actual.opsCost) || 0;
       const materialCost = Number(actual.materialCost) || 0;
       const cogsCost = Number(actual.cogsCost) || 0;
+
+      // If stored laborCost is 0 but there are time entries, calculate from hours + rates
+      if (laborCost === 0 && (hoursMap[project.id] || 0) > 0) {
+        const supRate = LABOR_RATES.supervisor.hourly + LABOR_RATES.supervisor.taxBurden;
+        const techRate = LABOR_RATES.technician.hourly + LABOR_RATES.technician.taxBurden;
+        const supH = supHoursMap[project.id] || 0;
+        const techH = techHoursMap[project.id] || 0;
+        laborCost = Math.round((supH * supRate + techH * techRate) * 100) / 100;
+      }
+
       const totalCost = laborCost + opsCost + materialCost + cogsCost;
       const netIncome = revenue - totalCost;
       const grossProfit = revenue - laborCost - materialCost - cogsCost;
