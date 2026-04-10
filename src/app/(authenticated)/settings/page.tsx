@@ -1,10 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { requireOrg } from "@/lib/org-context";
+import { NextResponse } from "next/server";
 import SettingsView from "./SettingsView";
 import { DEFAULT_COGS_RATES } from "@/lib/materials";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  // Server-side admin check — blocks client-side navigations that bypass middleware
+  const auth = await requireOrg();
+  if (auth instanceof NextResponse) redirect("/login");
+  const { session } = auth;
+  const role = (session.user as any)?.role;
+  if (role !== "ADMIN") redirect("/dashboard");
   const positionsSetting = await prisma.setting.findUnique({ where: { key: "positions" } });
   const positions: string[] = positionsSetting?.value
     ? JSON.parse(positionsSetting.value)
