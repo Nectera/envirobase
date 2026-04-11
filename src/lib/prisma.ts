@@ -192,6 +192,7 @@ const wrappers: Record<string, any> = {
     update: (o: any) => rawPrisma.contact.update(o),
     delete: (o: any) => rawPrisma.contact.delete(o),
     deleteMany: (o?: any) => rawPrisma.contact.deleteMany(o),
+    count: (o?: any) => rawPrisma.contact.count(o),
   },
 
   // ── Lead (statusIn) ──
