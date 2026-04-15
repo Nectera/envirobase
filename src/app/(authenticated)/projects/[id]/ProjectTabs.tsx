@@ -746,7 +746,8 @@ export default function ProjectTabs({
       }),
     });
 
-    // 4. Create "Send Invoice" task for Office Manager
+    // 4. Create "Send Invoice" task for Office Manager — link to lead if available
+    const invoiceLeadId = linkedConsultationEstimate?.leadId;
     await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -757,8 +758,8 @@ export default function ProjectTabs({
         priority: "high",
         dueDate: today,
         assignedTo: omAssignee,
-        linkedEntityType: "project",
-        linkedEntityId: project.id,
+        linkedEntityType: invoiceLeadId ? "lead" : "project",
+        linkedEntityId: invoiceLeadId || project.id,
         autoCreated: true,
       }),
     });
