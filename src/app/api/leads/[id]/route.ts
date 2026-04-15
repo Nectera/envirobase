@@ -191,13 +191,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       const project = await prisma.project.create({
         data: orgData(orgId, {
           projectNumber: generateProjectNumber(projectType),
-          name: `${companyName} - ${projectType.split(",").join(" / ")} ${fullAddress ? "@ " + fullAddress : ""}`.trim(),
+          name: `${leadName || companyName} - ${projectType.split(",").join(" / ")} ${fullAddress ? "@ " + fullAddress : ""}`.trim(),
           type: projectType,
           subtype: null,
           status: "planning",
           priority: "medium",
           address: fullAddress || "",
-          client: companyName,
+          client: leadName || companyName,
           clientPhone: (currentLead as any).phone || null,
           clientEmail: (currentLead as any).email || null,
           startDate: null,
