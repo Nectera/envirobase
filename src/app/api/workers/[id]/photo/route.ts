@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireOrg, orgWhere, orgData } from "@/lib/org-context";
+import { requireOrg, orgWhere } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
+import { supabase } from "@/lib/supabase";
+
+const TEAM_PHOTOS_BUCKET = "team-photos";
 
 export const dynamic = "force-dynamic";
 
@@ -31,25 +32,39 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Generate filename
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const filename = `${params.id}.${ext}`;
+    const storagePath = `${params.id}.${ext}`;
 
-    // Save to public/uploads/team/
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "team");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // Delete any existing photo for this worker (different extension)
+    const { data: existingFiles } = await supabase.storage
+      .from(TEAM_PHOTOS_BUCKET)
+      .list("", { search: params.id });
+
+    if (existingFiles && existingFiles.length > 0) {
+      const filesToRemove = existingFiles.map((f) => f.name);
+      await supabase.storage.from(TEAM_PHOTOS_BUCKET).remove(filesToRemove);
     }
 
-    // Remove old photo if exists
-    const existingFiles = fs.readdirSync(uploadDir).filter((f) => f.startsWith(params.id));
-    for (const f of existingFiles) {
-      fs.unlinkSync(path.join(uploadDir, f));
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from(TEAM_PHOTOS_BUCKET)
+      .upload(storagePath, buffer, {
+        contentType: file.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Supabase upload error:", uploadError);
+      return NextResponse.json({ error: "Failed to upload photo" }, { status: 500 });
     }
 
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(TEAM_PHOTOS_BUCKET)
+      .getPublicUrl(storagePath);
+
+    const photoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
     // Update worker record
-    const photoUrl = `/uploads/team/${filename}?t=${Date.now()}`;
     await prisma.worker.update({
       where: orgWhere(orgId, { id: params.id }),
       data: { photoUrl },
@@ -57,6 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     return NextResponse.json({ photoUrl });
   } catch (error: any) {
+    console.error("Worker photo upload error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

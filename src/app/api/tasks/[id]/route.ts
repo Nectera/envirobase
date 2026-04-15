@@ -82,17 +82,34 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data,
     });
 
+    // Resolve linked entity for notification link
+    let linkedEntity: { label: string; url: string } | undefined;
+    let pushUrl = "/tasks";
+    if (task.linkedEntityType && task.linkedEntityId) {
+      try {
+        if (task.linkedEntityType === "lead") {
+          const lead = await prisma.lead.findUnique({ where: { id: task.linkedEntityId }, select: { customerName: true } });
+          if (lead) { linkedEntity = { label: `Lead: ${lead.customerName}`, url: `/leads/${task.linkedEntityId}` }; pushUrl = `/leads/${task.linkedEntityId}`; }
+        } else if (task.linkedEntityType === "project") {
+          const proj = await prisma.project.findUnique({ where: { id: task.linkedEntityId }, select: { name: true } });
+          if (proj) { linkedEntity = { label: `Project: ${proj.name}`, url: `/projects/${task.linkedEntityId}` }; pushUrl = `/projects/${task.linkedEntityId}`; }
+        } else if (task.linkedEntityType === "consultation_estimate") {
+          linkedEntity = { label: "Estimate", url: `/estimates/${task.linkedEntityId}` }; pushUrl = `/estimates/${task.linkedEntityId}`;
+        }
+      } catch { /* resolve failure should not block */ }
+    }
+
     // Send notification if assignee changed
     try {
       if (body.assignedTo && body.assignedTo !== currentTask.assignedTo) {
-        const notifBody = buildTaskNotificationBody(task.title, "assigned", task.description || undefined);
+        const notifBody = buildTaskNotificationBody(task.title, "assigned", task.description || undefined, linkedEntity);
         sendNotificationToWorker(body.assignedTo, "taskAssigned", `New Task: ${task.title}`, notifBody);
         // Also send push notification (fire-and-forget)
         prisma.worker.findUnique({ where: { id: body.assignedTo }, select: { userId: true } })
           .then((w: any) => w?.userId && sendPushToUser(w.userId, "taskAssigned", {
             title: "New Task Assigned",
             body: task.title + (task.dueDate ? ` — Due ${task.dueDate}` : ""),
-            url: "/tasks",
+            url: pushUrl,
             tag: `task-${task.id}`,
           })).catch(() => {});
       }
@@ -101,7 +118,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Send notification on task completion to admins/supervisors
     if (isBeingCompleted) {
       try {
-        const notifBody = buildTaskNotificationBody(task.title, "completed");
+        const notifBody = buildTaskNotificationBody(task.title, "completed", undefined, linkedEntity);
         sendNotificationToRole("ADMIN", "taskCompleted", `Task Completed: ${task.title}`, notifBody);
         sendNotificationToRole("SUPERVISOR", "taskCompleted", `Task Completed: ${task.title}`, notifBody);
       } catch { /* notification failure should not block response */ }

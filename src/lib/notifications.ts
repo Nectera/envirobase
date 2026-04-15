@@ -224,6 +224,7 @@ export function buildTaskNotificationBody(
   taskTitle: string,
   action: "assigned" | "completed" | "due_soon",
   details?: string,
+  linkedEntity?: { label: string; url: string },
 ): string {
   const messages: Record<string, string> = {
     assigned: `You have been assigned a new task: <strong>${escapeHtml(taskTitle)}</strong>.`,
@@ -231,11 +232,16 @@ export function buildTaskNotificationBody(
     due_soon: `Task <strong>${escapeHtml(taskTitle)}</strong> is due soon.`,
   };
 
+  const linkButton = linkedEntity
+    ? `<p style="margin:16px 0 0;"><a href="${fullUrl(linkedEntity.url)}" style="display:inline-block;padding:10px 24px;background:#4f46e5;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">View ${escapeHtml(linkedEntity.label)}</a></p>`
+    : "";
+
   return `
     <p style="margin:0 0 16px;color:#475569;font-size:14px;line-height:1.7;">
       ${messages[action]}
     </p>
     ${details ? `<p style="margin:0 0 16px;color:#64748b;font-size:13px;line-height:1.6;">${escapeHtml(details)}</p>` : ""}
+    ${linkButton}
   `;
 }
 

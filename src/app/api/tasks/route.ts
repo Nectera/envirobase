@@ -70,10 +70,27 @@ export async function POST(req: NextRequest) {
       }),
     });
 
+    // Resolve linked entity for notification link
+    let linkedEntity: { label: string; url: string } | undefined;
+    let pushUrl = "/tasks";
+    if (task.linkedEntityType && task.linkedEntityId) {
+      try {
+        if (task.linkedEntityType === "lead") {
+          const lead = await prisma.lead.findUnique({ where: { id: task.linkedEntityId }, select: { customerName: true } });
+          if (lead) { linkedEntity = { label: `Lead: ${lead.customerName}`, url: `/leads/${task.linkedEntityId}` }; pushUrl = `/leads/${task.linkedEntityId}`; }
+        } else if (task.linkedEntityType === "project") {
+          const proj = await prisma.project.findUnique({ where: { id: task.linkedEntityId }, select: { name: true } });
+          if (proj) { linkedEntity = { label: `Project: ${proj.name}`, url: `/projects/${task.linkedEntityId}` }; pushUrl = `/projects/${task.linkedEntityId}`; }
+        } else if (task.linkedEntityType === "consultation_estimate") {
+          linkedEntity = { label: "Estimate", url: `/estimates/${task.linkedEntityId}` }; pushUrl = `/estimates/${task.linkedEntityId}`;
+        }
+      } catch { /* resolve failure should not block */ }
+    }
+
     // Notify assigned worker about new task
     if (task.assignedTo) {
       try {
-        const notifBody = buildTaskNotificationBody(task.title, "assigned", task.description || undefined);
+        const notifBody = buildTaskNotificationBody(task.title, "assigned", task.description || undefined, linkedEntity);
         sendNotificationToWorker(task.assignedTo, "taskAssigned", `New Task: ${task.title}`, notifBody);
       } catch { /* notification failure should not block response */ }
       // Also send push notification (fire-and-forget)
@@ -81,7 +98,7 @@ export async function POST(req: NextRequest) {
         .then((w: any) => w?.userId && sendPushToUser(w.userId, "taskAssigned", {
           title: "New Task Assigned",
           body: task.title + (task.dueDate ? ` — Due ${task.dueDate}` : ""),
-          url: "/tasks",
+          url: pushUrl,
           tag: `task-${task.id}`,
         })).catch(() => {});
     }
