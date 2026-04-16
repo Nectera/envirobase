@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, FileDown, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import ResendButton from "../ResendButton";
 
 function Field({ label, value, fullWidth }: { label: string; value: React.ReactNode; fullWidth?: boolean }) {
   return (
@@ -80,6 +81,7 @@ export default async function FieldReportDetailPage({ params }: { params: { id: 
           <span className={`px-3 py-1 text-xs font-semibold rounded-full capitalize ${statusColors[report.status] || "bg-slate-100"}`}>
             {report.status}
           </span>
+          <ResendButton reportId={report.id} status={report.status} />
           <a
             href={`/api/field-reports/${report.id}/pdf`}
             className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg"

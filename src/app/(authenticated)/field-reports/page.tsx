@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Plus, FileText, ChevronRight, AlertTriangle, FileDown, FolderOpen } from "lucide-react";
 import { getTranslation, type Language } from "@/lib/translations";
+import ResendButton from "./ResendButton";
 
 export default async function FieldReportsPage() {
   const language: Language = "en";
@@ -110,6 +111,7 @@ export default async function FieldReportsPage() {
                         </td>
                         <td className="px-5 py-2.5">
                           <div className="flex items-center gap-2 justify-end">
+                            <ResendButton reportId={report.id} status={report.status} compact />
                             <a href={`/api/field-reports/${report.id}/pdf`} className="text-slate-400 hover:text-indigo-600" title="Download PDF">
                               <FileDown size={15} />
                             </a>
