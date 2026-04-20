@@ -6,6 +6,7 @@ import {
   Clock, Users, AlertTriangle, CheckCircle2, Flag, ChevronDown, ChevronRight,
   Download, FileText, Search, Filter, ArrowLeft, DollarSign, CalendarDays,
   BarChart3, Eye, Check, X as XIcon, MapPin, Pencil, Save, Loader2, Trash2,
+  Plus,
 } from "lucide-react";
 
 type Worker = {
@@ -66,6 +67,104 @@ export default function PayrollHub({
   const [editClockOut, setEditClockOut] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+
+  // Bulk add modal state
+  type BulkRow = { workerId: string; date: string; clockIn: string; clockOut: string; notes: string };
+  const emptyBulkRow = (): BulkRow => ({ workerId: "", date: "", clockIn: "07:00", clockOut: "15:30", notes: "" });
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
+  const [bulkRows, setBulkRows] = useState<BulkRow[]>([emptyBulkRow()]);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkErrors, setBulkErrors] = useState<string[]>([]);
+  const [bulkSuccess, setBulkSuccess] = useState(0);
+
+  const updateBulkRow = (index: number, field: keyof BulkRow, value: string) => {
+    setBulkRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  };
+
+  const addBulkRow = () => {
+    const last = bulkRows[bulkRows.length - 1];
+    setBulkRows((prev) => [...prev, { workerId: "", date: last?.date || "", clockIn: last?.clockIn || "07:00", clockOut: last?.clockOut || "15:30", notes: last?.notes || "" }]);
+  };
+
+  const removeBulkRow = (index: number) => {
+    if (bulkRows.length <= 1) return;
+    setBulkRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const submitBulkEntries = async () => {
+    setBulkSaving(true);
+    setBulkErrors([]);
+    setBulkSuccess(0);
+    const errors: string[] = [];
+    let successCount = 0;
+    const newEntries: TimeEntryRow[] = [];
+
+    for (let i = 0; i < bulkRows.length; i++) {
+      const row = bulkRows[i];
+      if (!row.workerId || !row.date || !row.clockIn || !row.clockOut) {
+        errors.push(`Row ${i + 1}: Missing required fields`);
+        continue;
+      }
+      const clockInISO = new Date(`${row.date}T${row.clockIn}:00`).toISOString();
+      const clockOutISO = new Date(`${row.date}T${row.clockOut}:00`).toISOString();
+
+      try {
+        const res = await fetch("/api/time-clock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workerId: row.workerId,
+            clockIn: clockInISO,
+            clockOut: clockOutISO,
+            notes: row.notes || "Manual entry (bulk add)",
+            entryType: "project",
+          }),
+        });
+        if (res.ok) {
+          const created = await res.json();
+          const worker = workers.find((w) => w.id === row.workerId);
+          newEntries.push({
+            id: created.id,
+            workerId: row.workerId,
+            worker: worker || { id: row.workerId, name: "Unknown" },
+            projectId: created.projectId || null,
+            project: null,
+            date: created.date || row.date,
+            clockIn: created.clockIn,
+            clockOut: created.clockOut,
+            hours: created.hours,
+            notes: created.notes || row.notes,
+            approvalStatus: created.approvalStatus || "pending",
+            flagReason: null,
+            overtime: (created.hours || 0) > 8,
+          });
+          successCount++;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          const workerName = workers.find((w) => w.id === row.workerId)?.name || "Unknown";
+          errors.push(`Row ${i + 1} (${workerName}): ${err.error || "Failed to create"}`);
+        }
+      } catch {
+        errors.push(`Row ${i + 1}: Network error`);
+      }
+    }
+
+    if (newEntries.length > 0) {
+      setEntries((prev) => [...newEntries, ...prev]);
+    }
+    setBulkSuccess(successCount);
+    setBulkErrors(errors);
+    setBulkSaving(false);
+
+    if (errors.length === 0 && successCount > 0) {
+      setTimeout(() => {
+        setShowBulkAdd(false);
+        setBulkRows([emptyBulkRow()]);
+        setBulkSuccess(0);
+        setBulkErrors([]);
+      }, 1500);
+    }
+  };
 
   const openEditModal = (entry: TimeEntryRow) => {
     setEditingEntry(entry);
@@ -457,6 +556,9 @@ export default function PayrollHub({
               </select>
             </div>
             <div className="flex gap-2">
+              <button onClick={() => { setShowBulkAdd(true); setBulkRows([emptyBulkRow()]); setBulkSuccess(0); setBulkErrors([]); }} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
+                <Plus size={14} /> Add Timesheets
+              </button>
               <button onClick={approveAll} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">
                 <CheckCircle2 size={14} /> Approve All Pending
               </button>
@@ -759,6 +861,133 @@ export default function PayrollHub({
               );
             })
           )}
+        </div>
+      )}
+
+      {/* ─── Bulk Add Timesheets Modal ─── */}
+      {showBulkAdd && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowBulkAdd(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">Add Timesheets</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Add multiple time entries at once for training, missed clock-ins, etc.</p>
+              </div>
+              <button onClick={() => setShowBulkAdd(false)} className="text-slate-400 hover:text-slate-600">
+                <XIcon size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {/* Column headers */}
+              <div className="hidden sm:grid sm:grid-cols-[1fr_120px_100px_100px_1fr_32px] gap-2 mb-2">
+                <span className="text-[10px] font-medium text-slate-500 uppercase">Worker *</span>
+                <span className="text-[10px] font-medium text-slate-500 uppercase">Date *</span>
+                <span className="text-[10px] font-medium text-slate-500 uppercase">Clock In *</span>
+                <span className="text-[10px] font-medium text-slate-500 uppercase">Clock Out *</span>
+                <span className="text-[10px] font-medium text-slate-500 uppercase">Notes</span>
+                <span></span>
+              </div>
+              <div className="space-y-2">
+                {bulkRows.map((row, idx) => (
+                  <div key={idx} className="sm:grid sm:grid-cols-[1fr_120px_100px_100px_1fr_32px] gap-2 items-start bg-slate-50 rounded-lg p-2 sm:p-0 sm:bg-transparent space-y-2 sm:space-y-0">
+                    <select
+                      value={row.workerId}
+                      onChange={(e) => updateBulkRow(idx, "workerId", e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">Select worker...</option>
+                      {workers.sort((a, b) => (a.name || "").localeCompare(b.name || "")).map((w) => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="date"
+                      value={row.date}
+                      onChange={(e) => updateBulkRow(idx, "date", e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <input
+                      type="time"
+                      value={row.clockIn}
+                      onChange={(e) => updateBulkRow(idx, "clockIn", e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <input
+                      type="time"
+                      value={row.clockOut}
+                      onChange={(e) => updateBulkRow(idx, "clockOut", e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <input
+                      type="text"
+                      value={row.notes}
+                      onChange={(e) => updateBulkRow(idx, "notes", e.target.value)}
+                      placeholder="e.g. Training"
+                      className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      onClick={() => removeBulkRow(idx)}
+                      disabled={bulkRows.length <= 1}
+                      className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition disabled:opacity-30 disabled:cursor-not-allowed self-center"
+                      title="Remove row"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={addBulkRow}
+                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 rounded-lg transition"
+              >
+                <Plus size={13} /> Add Row
+              </button>
+
+              {/* Apply same date/time to all rows helper */}
+              {bulkRows.length > 1 && bulkRows[0].date && (
+                <button
+                  onClick={() => {
+                    const first = bulkRows[0];
+                    setBulkRows((prev) => prev.map((r) => ({ ...r, date: first.date, clockIn: first.clockIn, clockOut: first.clockOut, notes: r.notes || first.notes })));
+                  }}
+                  className="mt-2 text-[11px] text-slate-500 hover:text-indigo-600 underline"
+                >
+                  Apply Row 1 date &amp; times to all rows
+                </button>
+              )}
+
+              {/* Status messages */}
+              {bulkSuccess > 0 && (
+                <div className="mt-3 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
+                  <CheckCircle2 size={14} className="inline mr-1.5" />
+                  {bulkSuccess} timesheet{bulkSuccess !== 1 ? "s" : ""} added successfully!
+                </div>
+              )}
+              {bulkErrors.length > 0 && (
+                <div className="mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 space-y-1">
+                  {bulkErrors.map((err, i) => (
+                    <div key={i}><AlertTriangle size={12} className="inline mr-1" />{err}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-xl">
+              <span className="text-[11px] text-slate-500">{bulkRows.length} row{bulkRows.length !== 1 ? "s" : ""} · 30-min lunch auto-deducted for 6+ hr shifts</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowBulkAdd(false)} className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800">
+                  Cancel
+                </button>
+                <button
+                  onClick={submitBulkEntries}
+                  disabled={bulkSaving || bulkRows.every((r) => !r.workerId)}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
+                >
+                  {bulkSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {bulkSaving ? "Saving..." : `Add ${bulkRows.filter((r) => r.workerId && r.date).length} Timesheet${bulkRows.filter((r) => r.workerId && r.date).length !== 1 ? "s" : ""}`}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
