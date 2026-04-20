@@ -26,13 +26,14 @@ export default function ChatUnreadBadge() {
           : notifData.unreadCount || 0;
       }
 
-      const total = chatCount + notifCount;
-      setCount(total);
+      // Sidebar badge shows only chat unreads
+      setCount(chatCount);
 
-      // Update PWA app badge
+      // PWA app badge shows combined chat + notifications
+      const pwaBadge = chatCount + notifCount;
       if ("setAppBadge" in navigator) {
-        if (total > 0) {
-          (navigator as any).setAppBadge(total);
+        if (pwaBadge > 0) {
+          (navigator as any).setAppBadge(pwaBadge);
         } else {
           (navigator as any).clearAppBadge();
         }
