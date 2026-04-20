@@ -55,6 +55,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields: workerId" }, { status: 400 });
     }
 
+    // Manual/backdated entry: admin provides clockIn + clockOut
+    if (body.clockIn && body.clockOut) {
+      const clockInTime = new Date(body.clockIn);
+      const clockOutTime = new Date(body.clockOut);
+      const diffMs = clockOutTime.getTime() - clockInTime.getTime();
+      let hours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+
+      // Auto-deduct 30-min lunch for 6+ hour shifts (unless admin opts out)
+      if (hours >= 6 && !body.skipLunchDeduction) {
+        hours = Math.round((hours - 0.5) * 100) / 100;
+      }
+
+      const dateStr = clockInTime.toISOString().split("T")[0];
+
+      const entry = await prisma.timeEntry.create({
+        data: orgData(orgId, {
+          projectId: projectId || null,
+          workerId,
+          date: dateStr,
+          clockIn: clockInTime.toISOString(),
+          clockOut: clockOutTime.toISOString(),
+          hours: Math.max(0, hours),
+          notes: body.notes || "",
+        }),
+      });
+
+      return NextResponse.json(entry, { status: 201 });
+    }
+
+    // Live clock-in: check for existing open entry
 // Check if this worker already has an open clock-in
     const openEntries = await prisma.timeEntry.findMany({
       where: { ...orgWhere(orgId), workerId, clockOut: null },

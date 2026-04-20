@@ -76,6 +76,7 @@ export default function PayrollHub({
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [bulkSuccess, setBulkSuccess] = useState(0);
+  const [skipLunch, setSkipLunch] = useState(false);
 
   const updateBulkRow = (index: number, field: keyof BulkRow, value: string) => {
     setBulkRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
@@ -118,6 +119,7 @@ export default function PayrollHub({
             clockOut: clockOutISO,
             notes: row.notes || "Manual entry (bulk add)",
             entryType: "project",
+            skipLunchDeduction: skipLunch,
           }),
         });
         if (res.ok) {
@@ -556,8 +558,8 @@ export default function PayrollHub({
               </select>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => { setShowBulkAdd(true); setBulkRows([emptyBulkRow()]); setBulkSuccess(0); setBulkErrors([]); }} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
-                <Plus size={14} /> Add Timesheets
+              <button onClick={() => { setShowBulkAdd(true); setBulkRows([emptyBulkRow()]); setBulkSuccess(0); setBulkErrors([]); setSkipLunch(false); }} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
+                <Plus size={14} /> Timesheets
               </button>
               <button onClick={approveAll} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">
                 <CheckCircle2 size={14} /> Approve All Pending
@@ -956,6 +958,22 @@ export default function PayrollHub({
                 </button>
               )}
 
+              {/* Skip lunch deduction toggle */}
+              <label className="mt-3 flex items-center gap-2 cursor-pointer select-none">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={skipLunch}
+                  onClick={() => setSkipLunch((v) => !v)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${skipLunch ? "bg-indigo-600" : "bg-slate-300"}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${skipLunch ? "translate-x-[18px]" : "translate-x-[3px]"}`} />
+                </button>
+                <span className="text-xs text-slate-600">
+                  Skip lunch deduction {skipLunch && <span className="text-slate-400">(full hours will be logged)</span>}
+                </span>
+              </label>
+
               {/* Status messages */}
               {bulkSuccess > 0 && (
                 <div className="mt-3 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
@@ -972,7 +990,7 @@ export default function PayrollHub({
               )}
             </div>
             <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-xl">
-              <span className="text-[11px] text-slate-500">{bulkRows.length} row{bulkRows.length !== 1 ? "s" : ""} · 30-min lunch auto-deducted for 6+ hr shifts</span>
+              <span className="text-[11px] text-slate-500">{bulkRows.length} row{bulkRows.length !== 1 ? "s" : ""} · {skipLunch ? "No lunch deduction" : "30-min lunch auto-deducted for 6+ hr shifts"}</span>
               <div className="flex items-center gap-2">
                 <button onClick={() => setShowBulkAdd(false)} className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800">
                   Cancel
