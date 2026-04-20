@@ -9,6 +9,7 @@ export default async function FieldReportsPage() {
   const t = (key: string) => getTranslation(language, key);
   const reports = await prisma.dailyFieldReport.findMany({
     include: { project: true },
+    orderBy: { date: "desc" },
   });
 
   // Group reports by project

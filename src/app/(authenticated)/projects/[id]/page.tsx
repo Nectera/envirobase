@@ -30,6 +30,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const rawFieldReports = await prisma.dailyFieldReport.findMany({
     where: { projectId: project.id },
+    orderBy: { date: "desc" },
   });
   const fieldReports = rawFieldReports.map((r: any) => ({
     ...r,
