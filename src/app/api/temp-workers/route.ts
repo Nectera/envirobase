@@ -50,6 +50,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
+    // Check for potential duplicates among active temp workers
+    const trimmedName = name.trim().toLowerCase();
+    const allTemps = await prisma.worker.findMany({
+      where: { isTemp: true, status: "active", organizationId: orgId },
+      select: { id: true, name: true, tempAgency: true, tempCertifications: true },
+    });
+
+    const duplicates = allTemps.filter((w: any) => {
+      const existingName = (w.name || "").toLowerCase();
+      // Exact match
+      if (existingName === trimmedName) return true;
+      // One name contains the other (catches "Martin Lopez" vs "Martin Lopez Aguirre")
+      if (existingName.includes(trimmedName) || trimmedName.includes(existingName)) return true;
+      // Check if first + last name tokens overlap significantly
+      const existingParts = existingName.split(/\s+/);
+      const newParts = trimmedName.split(/\s+/);
+      const overlap = newParts.filter((p: string) => existingParts.includes(p));
+      if (overlap.length >= 2) return true;
+      return false;
+    });
+
+    // If duplicates found and caller didn't confirm, return them as a warning
+    if (duplicates.length > 0 && !body.confirmCreate) {
+      return NextResponse.json(
+        { warning: "Potential duplicates found", duplicates },
+        { status: 409 }
+      );
+    }
+
     const certsStr = Array.isArray(certifications) ? certifications.join(",") : certifications || null;
 
     const worker = await prisma.worker.create({

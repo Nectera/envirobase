@@ -138,6 +138,7 @@ export default function TimeClockPanel({
   const [tempCerts, setTempCerts] = useState<string[]>([]);
   const [tempSaving, setTempSaving] = useState(false);
   const [tempFiles, setTempFiles] = useState<{ file: File; type: string }[]>([]);
+  const [tempDuplicates, setTempDuplicates] = useState<{ id: string; name: string; tempAgency?: string | null }[]>([]);
   const [showDocsModal, setShowDocsModal] = useState(false);
   const [docsWorkerId, setDocsWorkerId] = useState<string | null>(null);
   const [docsWorkerName, setDocsWorkerName] = useState("");
@@ -219,7 +220,19 @@ export default function TimeClockPanel({
     }
   }
 
-  async function handleCreateTemp() {
+  function handleSelectExistingTemp(workerId: string) {
+    setClockingForOther(true);
+    setSelectedWorker(workerId);
+    setSelectedRole("technician");
+    setShowTempModal(false);
+    setTempName("");
+    setTempAgency("");
+    setTempCerts([]);
+    setTempFiles([]);
+    setTempDuplicates([]);
+  }
+
+  async function handleCreateTemp(forceCreate = false) {
     if (!tempName.trim()) return;
     setTempSaving(true);
     try {
@@ -230,8 +243,17 @@ export default function TimeClockPanel({
           name: tempName.trim(),
           agency: tempAgency.trim() || null,
           certifications: tempCerts.length > 0 ? tempCerts : null,
+          confirmCreate: forceCreate,
         }),
       });
+      if (res.status === 409) {
+        const data = await res.json();
+        if (data.duplicates) {
+          setTempDuplicates(data.duplicates);
+          setTempSaving(false);
+          return;
+        }
+      }
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || "Failed to create temp worker");
@@ -262,6 +284,7 @@ export default function TimeClockPanel({
       setTempAgency("");
       setTempCerts([]);
       setTempFiles([]);
+      setTempDuplicates([]);
       // Refresh to get updated worker list
       router.refresh();
     } catch {
@@ -1302,7 +1325,7 @@ export default function TimeClockPanel({
                 <input
                   type="text"
                   value={tempName}
-                  onChange={(e) => setTempName(e.target.value)}
+                  onChange={(e) => { setTempName(e.target.value); setTempDuplicates([]); }}
                   placeholder="Full name"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   autoFocus
@@ -1419,15 +1442,48 @@ export default function TimeClockPanel({
               </div>
             </div>
 
+            {/* Duplicate Warning */}
+            {tempDuplicates.length > 0 && (
+              <div className="mt-4 border border-amber-200 bg-amber-50 rounded-xl p-4">
+                <p className="text-sm font-semibold text-amber-800 mb-2">Possible duplicate found</p>
+                <p className="text-xs text-amber-700 mb-3">A temp worker with a similar name already exists. Select them below or create anyway.</p>
+                <div className="space-y-2">
+                  {tempDuplicates.map((dup) => (
+                    <button
+                      key={dup.id}
+                      onClick={() => handleSelectExistingTemp(dup.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 bg-white border border-amber-200 rounded-lg hover:border-amber-400 hover:bg-amber-50 transition text-left"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 text-xs font-bold shrink-0">
+                        {dup.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">{dup.name}</p>
+                        {dup.tempAgency && <p className="text-[11px] text-slate-500">{dup.tempAgency}</p>}
+                      </div>
+                      <span className="text-xs text-amber-600 font-medium shrink-0">Select</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleCreateTemp(true)}
+                  disabled={tempSaving}
+                  className="w-full mt-3 px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+                >
+                  Not a duplicate — create new worker anyway
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
               <button
-                onClick={() => { setShowTempModal(false); setTempFiles([]); }}
+                onClick={() => { setShowTempModal(false); setTempFiles([]); setTempDuplicates([]); }}
                 className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
               >
                 Cancel
               </button>
               <button
-                onClick={handleCreateTemp}
+                onClick={() => handleCreateTemp(false)}
                 disabled={!tempName.trim() || tempSaving}
                 className="px-5 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-sm font-medium rounded-full transition"
               >
