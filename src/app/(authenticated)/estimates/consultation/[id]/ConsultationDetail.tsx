@@ -310,6 +310,23 @@ export default function ConsultationDetail({
   const [editingTerms, setEditingTerms] = useState(false);
   const [savingTerms, setSavingTerms] = useState(false);
   const [termsSaved, setTermsSaved] = useState(false);
+  const [termsTemplates, setTermsTemplates] = useState<{ id: string; name: string; terms: string[] }[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  const fetchTermsTemplates = async () => {
+    if (termsTemplates.length > 0) return;
+    setLoadingTemplates(true);
+    try {
+      const res = await fetch("/api/terms-templates");
+      if (res.ok) setTermsTemplates(await res.json());
+    } catch {} finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const applyTemplate = (templateTerms: string[]) => {
+    setTerms([...templateTerms]);
+  };
 
   const updateTerm = (index: number, value: string) => {
     setTerms((prev) => prev.map((t, i) => (i === index ? value : t)));
@@ -1072,6 +1089,24 @@ export default function ConsultationDetail({
             )}
             {editingTerms ? (
               <>
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const t = termsTemplates.find((tpl) => tpl.id === e.target.value);
+                    if (t) applyTemplate(t.terms);
+                    e.target.value = "";
+                  }}
+                  onFocus={fetchTermsTemplates}
+                  className="px-2 py-1 text-xs border border-slate-200 rounded-lg text-slate-600 bg-white cursor-pointer"
+                >
+                  <option value="" disabled>{loadingTemplates ? "Loading..." : "Load template..."}</option>
+                  {termsTemplates.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                  ))}
+                  {!loadingTemplates && termsTemplates.length === 0 && (
+                    <option disabled>No templates yet</option>
+                  )}
+                </select>
                 <button
                   onClick={resetTerms}
                   className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1"

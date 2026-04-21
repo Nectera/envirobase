@@ -64,6 +64,7 @@ model Organization {
   leads                  Lead[]
   estimates              Estimate[]
   consultationEstimates  ConsultationEstimate[]
+  termsTemplates         TermsTemplate[]
   invoices               Invoice[]
   tasks                  Task[]
   taskAutomationRules    TaskAutomationRule[]
@@ -838,6 +839,19 @@ model EstimateFollowUp {
   @@index([status])
   @@index([nextTouchAt])
   @@map("estimate_follow_ups")
+}
+
+model TermsTemplate {
+  id             String        @id @default(uuid())
+  name           String
+  terms          Json
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@map("terms_templates")
 }
 
 model ConsultationEstimate {

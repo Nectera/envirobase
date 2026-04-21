@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, FileText, Image } from "lucide-react";
+import { BookOpen, FileText, Image, ScrollText } from "lucide-react";
 import XactimateLibraryPage from "../xactimate-library/page";
 import PastProjectsPage from "./past-projects/PastProjectsPage";
+import TermsTemplatesManager from "./TermsTemplatesManager";
 
 export default function EstimatingTabs({ children }: { children: React.ReactNode }) {
-  const [activeTab, setActiveTab] = useState<"estimates" | "library" | "pastProjects">("estimates");
+  const [activeTab, setActiveTab] = useState<"estimates" | "library" | "pastProjects" | "termsTemplates">("estimates");
 
   const tabs = [
     { key: "estimates" as const, label: "Estimates", icon: FileText },
     { key: "library" as const, label: "Xact Library", icon: BookOpen },
     { key: "pastProjects" as const, label: "Past Projects", icon: Image },
+    { key: "termsTemplates" as const, label: "Terms Templates", icon: ScrollText },
   ];
 
   return (
@@ -42,6 +44,7 @@ export default function EstimatingTabs({ children }: { children: React.ReactNode
       {activeTab === "estimates" && children}
       {activeTab === "library" && <XactimateLibraryPage />}
       {activeTab === "pastProjects" && <PastProjectsPage />}
+      {activeTab === "termsTemplates" && <TermsTemplatesManager onClose={() => setActiveTab("estimates")} />}
     </div>
   );
 }
