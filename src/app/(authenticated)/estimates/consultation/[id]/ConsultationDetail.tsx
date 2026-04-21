@@ -296,6 +296,50 @@ export default function ConsultationDetail({
     : autoMarkupPercent;
   const autoProfitMargin = customerPrice > 0 ? ((customerPrice - grandTotal) / customerPrice * 100) : 0;
 
+  // Terms & Conditions
+  const DEFAULT_TERMS = [
+    "This estimate is valid for 30 days from the date listed above.",
+    "Final pricing may vary if site conditions differ from those observed during consultation.",
+    "All work performed in compliance with applicable federal, state, and local regulations.",
+    "Payment terms will be established upon acceptance of this estimate.",
+  ];
+  const savedTerms: string[] = Array.isArray((data as any).termsAndConditions) && (data as any).termsAndConditions.length > 0
+    ? (data as any).termsAndConditions
+    : DEFAULT_TERMS;
+  const [terms, setTerms] = useState<string[]>(savedTerms);
+  const [editingTerms, setEditingTerms] = useState(false);
+  const [savingTerms, setSavingTerms] = useState(false);
+  const [termsSaved, setTermsSaved] = useState(false);
+
+  const updateTerm = (index: number, value: string) => {
+    setTerms((prev) => prev.map((t, i) => (i === index ? value : t)));
+  };
+  const addTerm = () => setTerms((prev) => [...prev, ""]);
+  const removeTerm = (index: number) => {
+    if (terms.length <= 1) return;
+    setTerms((prev) => prev.filter((_, i) => i !== index));
+  };
+  const saveTerms = async () => {
+    setSavingTerms(true);
+    try {
+      const res = await fetch(`/api/consultation-estimates/${data.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ termsAndConditions: terms.filter((t) => t.trim()) }),
+      });
+      if (res.ok) {
+        setEditingTerms(false);
+        setTermsSaved(true);
+        setTimeout(() => setTermsSaved(false), 2000);
+      }
+    } catch {} finally {
+      setSavingTerms(false);
+    }
+  };
+  const resetTerms = () => {
+    setTerms(DEFAULT_TERMS);
+  };
+
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [markupPercent, setMarkupPercent] = useState(effectiveMarkupPercent);
   const [invoicePaymentTerms, setInvoicePaymentTerms] = useState("net_30");
@@ -1016,6 +1060,89 @@ export default function ConsultationDetail({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Terms & Conditions */}
+      <div className="border border-slate-200 rounded-lg p-6 bg-white mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-slate-900">Terms & Conditions</h2>
+          <div className="flex items-center gap-2">
+            {termsSaved && (
+              <span className="text-xs text-emerald-600 font-medium">Saved</span>
+            )}
+            {editingTerms ? (
+              <>
+                <button
+                  onClick={resetTerms}
+                  className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1"
+                >
+                  Reset to defaults
+                </button>
+                <button
+                  onClick={() => { setTerms(savedTerms); setEditingTerms(false); }}
+                  className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveTerms}
+                  disabled={savingTerms}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
+                >
+                  {savingTerms ? "Saving..." : "Save"}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setEditingTerms(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 rounded-lg transition"
+              >
+                <Pencil className="w-3 h-3" /> Edit
+              </button>
+            )}
+          </div>
+        </div>
+
+        {editingTerms ? (
+          <div className="space-y-2">
+            {terms.map((term, idx) => (
+              <div key={idx} className="flex items-start gap-2">
+                <span className="text-slate-400 text-sm mt-2 select-none">{idx + 1}.</span>
+                <textarea
+                  value={term}
+                  onChange={(e) => updateTerm(idx, e.target.value)}
+                  rows={2}
+                  className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  placeholder="Enter a term or condition..."
+                />
+                <button
+                  onClick={() => removeTerm(idx)}
+                  disabled={terms.length <= 1}
+                  className="p-1.5 mt-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={addTerm}
+              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium mt-1"
+            >
+              + Add term
+            </button>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {terms.map((term, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                <span className="text-indigo-500 mt-0.5 select-none">•</span>
+                <span>{term}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <p className="text-[10px] text-slate-400 mt-3">These terms appear on the customer-facing PDF estimate.</p>
       </div>
 
       {/* Back to estimates link */}

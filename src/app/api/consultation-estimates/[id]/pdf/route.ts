@@ -487,13 +487,16 @@ export async function GET(
   // === TERMS & CONDITIONS ===
   y -= 10;
   sectionHeader("Terms & Conditions");
-  const terms = [
+  const DEFAULT_TERMS = [
     "This estimate is valid for 30 days from the date above.",
     "Payment terms are subject to the payment type noted. Insurance claims will be billed directly to the carrier when applicable.",
     "Any additional work beyond the scope described will require a written change order and may result in additional charges.",
     `All work performed by ${COMPANY_SHORT} will comply with applicable federal, state, and local regulations.`,
     "Customer is responsible for providing access to the work area and ensuring utilities are available unless otherwise noted.",
   ];
+  const terms: string[] = Array.isArray((d as any).termsAndConditions) && (d as any).termsAndConditions.length > 0
+    ? (d as any).termsAndConditions
+    : DEFAULT_TERMS;
   for (const term of terms) {
     const lines = wrapText(term, COL_W - 20, 8);
     checkPage(lines.length * 11 + 6);

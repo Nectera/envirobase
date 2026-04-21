@@ -122,6 +122,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.isPrimary !== undefined) data.isPrimary = body.isPrimary;
     if (body.projectId !== undefined) data.projectId = body.projectId;
     if (body.projectNumber !== undefined) data.projectNumber = body.projectNumber;
+    if (body.termsAndConditions !== undefined) data.termsAndConditions = body.termsAndConditions;
 
     const item = await prisma.consultationEstimate.update({
       where: { id: params.id },
