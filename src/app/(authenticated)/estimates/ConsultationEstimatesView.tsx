@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConsultationActions from "./ConsultationActions";
-import { Search, LinkIcon, X } from "lucide-react";
+import { Search, LinkIcon, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 interface LeadOption {
   id: string;
@@ -159,6 +159,73 @@ export default function ConsultationEstimatesView({
 }) {
   const router = useRouter();
 
+  type SortKey = "customer" | "lead" | "address" | "status" | "totalCost" | "date";
+  type SortDir = "asc" | "desc";
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [search, setSearch] = useState("");
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "date" || key === "totalCost" ? "desc" : "asc");
+    }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown size={11} className="text-slate-300 ml-1 inline" />;
+    return sortDir === "asc"
+      ? <ArrowUp size={11} className="text-indigo-500 ml-1 inline" />
+      : <ArrowDown size={11} className="text-indigo-500 ml-1 inline" />;
+  };
+
+  const sorted = useMemo(() => {
+    let items = [...consultations];
+
+    if (search) {
+      const q = search.toLowerCase();
+      items = items.filter((c: any) =>
+        (c.customerName || "").toLowerCase().includes(q) ||
+        [c.address, c.city].filter(Boolean).join(", ").toLowerCase().includes(q) ||
+        (c.lead ? `${c.lead.firstName} ${c.lead.lastName}` : "").toLowerCase().includes(q)
+      );
+    }
+
+    items.sort((a: any, b: any) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "customer":
+          cmp = (a.customerName || "").localeCompare(b.customerName || "");
+          break;
+        case "lead": {
+          const aName = a.lead ? `${a.lead.firstName} ${a.lead.lastName}` : "";
+          const bName = b.lead ? `${b.lead.firstName} ${b.lead.lastName}` : "";
+          cmp = aName.localeCompare(bName);
+          break;
+        }
+        case "address": {
+          const aAddr = [a.address, a.city].filter(Boolean).join(", ");
+          const bAddr = [b.address, b.city].filter(Boolean).join(", ");
+          cmp = aAddr.localeCompare(bAddr);
+          break;
+        }
+        case "status":
+          cmp = (a.status || "").localeCompare(b.status || "");
+          break;
+        case "totalCost":
+          cmp = (a.totalCost || 0) - (b.totalCost || 0);
+          break;
+        case "date":
+          cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return items;
+  }, [consultations, sortKey, sortDir, search]);
+
   const statusColor: Record<string, string> = {
     draft: "bg-slate-100 text-slate-700",
     costed: "bg-blue-100 text-blue-700",
@@ -168,30 +235,41 @@ export default function ConsultationEstimatesView({
 
   return (
     <div className="mb-6">
-      <h2 className="text-sm font-semibold text-slate-700 mb-3">
-        Consultation Estimates
-      </h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-slate-700">
+          Consultation Estimates
+        </h2>
+        <div className="relative">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search estimates..."
+            className="pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg w-56 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+      </div>
       <div className="bg-white rounded-lg border border-slate-200">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 rounded-t-lg">
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Customer
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase cursor-pointer select-none hover:text-indigo-600 transition" onClick={() => toggleSort("customer")}>
+                Customer <SortIcon col="customer" />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Lead
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase cursor-pointer select-none hover:text-indigo-600 transition" onClick={() => toggleSort("lead")}>
+                Lead <SortIcon col="lead" />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Address
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase cursor-pointer select-none hover:text-indigo-600 transition" onClick={() => toggleSort("address")}>
+                Address <SortIcon col="address" />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Status
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase cursor-pointer select-none hover:text-indigo-600 transition" onClick={() => toggleSort("status")}>
+                Status <SortIcon col="status" />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Total Cost
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase cursor-pointer select-none hover:text-indigo-600 transition" onClick={() => toggleSort("totalCost")}>
+                Total Cost <SortIcon col="totalCost" />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">
-                Date
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase cursor-pointer select-none hover:text-indigo-600 transition" onClick={() => toggleSort("date")}>
+                Date <SortIcon col="date" />
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase w-32">
                 Actions
@@ -199,7 +277,7 @@ export default function ConsultationEstimatesView({
             </tr>
           </thead>
           <tbody>
-            {consultations.map((c: any) => (
+            {sorted.map((c: any) => (
               <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="px-4 py-3 font-medium text-slate-800">
                   {c.customerName || "—"}
@@ -265,6 +343,11 @@ export default function ConsultationEstimatesView({
             ))}
           </tbody>
         </table>
+        {sorted.length === 0 && (
+          <div className="px-4 py-8 text-center text-slate-400 text-sm">
+            {search ? "No estimates match your search" : "No estimates found"}
+          </div>
+        )}
       </div>
     </div>
   );
