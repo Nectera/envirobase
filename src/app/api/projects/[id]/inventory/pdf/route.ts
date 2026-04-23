@@ -19,7 +19,7 @@ export async function GET(
   const [project, items, review] = await Promise.all([
     prisma.project.findFirst({
       where: { id: params.id, ...(orgId ? { organizationId: orgId } : {}) },
-      select: { id: true, name: true, address: true, city: true, state: true, zip: true, customerName: true },
+      select: { id: true, name: true, address: true, client: true },
     }),
     prisma.contentInventoryItem.findMany({
       where: { projectId: params.id },
@@ -207,11 +207,10 @@ export async function GET(
   infoR("Date:", dateDisplay);
   y -= 16;
 
-  infoL("Client:", (project as any).customerName || "—");
+  infoL("Client:", (project as any).client || "—");
   y -= 16;
 
-  const addrParts = [(project as any).address, (project as any).city, (project as any).state || "CO"].filter(Boolean);
-  const addrLine = addrParts.join(", ") + " " + ((project as any).zip || "");
+  const addrLine = (project as any).address || "";
   infoL("Address:", addrLine.trim() || "—");
   y -= 22;
 
