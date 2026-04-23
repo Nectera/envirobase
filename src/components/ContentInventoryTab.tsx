@@ -16,6 +16,7 @@ import {
   Check,
   Lock,
   Image as ImageIcon,
+  FileDown,
 } from "lucide-react";
 
 interface Photo {
@@ -74,6 +75,7 @@ export default function ContentInventoryTab({ projectId }: { projectId: string }
   const [shareCustomerEmail, setShareCustomerEmail] = useState("");
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -233,6 +235,30 @@ export default function ContentInventoryTab({ projectId }: { projectId: string }
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/inventory/pdf`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const disposition = res.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename="(.+)"/);
+        a.download = match ? match[1] : "inventory_report.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("PDF download failed:", err);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "keep":
@@ -318,13 +344,23 @@ export default function ContentInventoryTab({ projectId }: { projectId: string }
         </div>
         <div className="flex gap-2">
           {items.length > 0 && (
-            <button
-              onClick={() => setShowShareModal(true)}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-            >
-              <Send size={13} />
-              Send to Customer
-            </button>
+            <>
+              <button
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                {downloadingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+                PDF
+              </button>
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+              >
+                <Send size={13} />
+                Send to Customer
+              </button>
+            </>
           )}
           <button
             onClick={() => setShowAddForm(!showAddForm)}
