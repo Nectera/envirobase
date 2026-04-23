@@ -503,6 +503,28 @@ export default function LeadDetail({ lead, activities, linkedActivities = [], co
         </div>
       )}
 
+      {/* Lost Banner with Revive */}
+      {lead.status === "lost" && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-red-800">Lead Lost</div>
+              <div className="text-xs text-red-600 mt-0.5">
+                {lead.lostDate ? `Marked lost on ${formatDate(lead.lostDate)}` : "This lead was marked as lost."}
+                {lead.lostReason ? ` — ${lead.lostReason}` : ""}
+              </div>
+            </div>
+            <button
+              onClick={() => handleStatusChange("new")}
+              className="px-4 py-2 bg-white border border-red-300 hover:bg-red-100 text-red-700 text-sm font-medium rounded-lg transition flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Revive Lead
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Clearance Results (from linked project) */}
       {lead.status === "won" && linkedProjectClearance && (
         <div className="bg-white border border-slate-200 rounded-lg p-4 mb-4">
