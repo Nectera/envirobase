@@ -126,6 +126,19 @@ export async function POST(req: NextRequest) {
             sequenceComplete: isLastTouch,
           },
         });
+
+        // Log activity on the project
+        try {
+          await prisma.activity.create({
+            data: {
+              type: "review_request",
+              content: `Feedback survey follow-up (touch ${touchIndex + 1}/${sequence.length}) sent to ${rr.clientName || "customer"} via ${result.channel}`,
+              parentType: "project",
+              parentId: rr.projectId,
+              user: "System",
+            },
+          });
+        } catch {}
       } else {
         failed++;
         // On failure, still schedule the next touch (skip this one)

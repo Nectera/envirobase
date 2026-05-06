@@ -97,6 +97,22 @@ export async function POST(
       },
     });
 
+    // Log activity on the project
+    try {
+      const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+      await prisma.activity.create({
+        data: {
+          type: "survey_completed",
+          content: `${reviewRequest.clientName || "Customer"} completed feedback survey: ${stars} (${rating}/5)${comment ? ` — "${comment}"` : ""}`,
+          parentType: "project",
+          parentId: reviewRequest.projectId,
+          user: reviewRequest.clientName || "Customer",
+        },
+      });
+    } catch {
+      // Activity logging is non-critical
+    }
+
     // Get Google review URL if high rating
     let googleReviewUrl = "";
     if (isHighRating) {
@@ -150,6 +166,19 @@ export async function PATCH(
         where: { token: params.token },
         data: { googleReviewClicked: true },
       });
+
+      // Log activity on the project
+      try {
+        await prisma.activity.create({
+          data: {
+            type: "google_review_clicked",
+            content: `${reviewRequest.clientName || "Customer"} clicked through to leave a Google review`,
+            parentType: "project",
+            parentId: reviewRequest.projectId,
+            user: reviewRequest.clientName || "Customer",
+          },
+        });
+      } catch {}
     }
 
     return NextResponse.json({ success: true });

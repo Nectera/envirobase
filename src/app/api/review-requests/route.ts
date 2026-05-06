@@ -302,11 +302,10 @@ export async function POST(req: NextRequest) {
       await prisma.activity.create({
         data: orgData(orgId, {
           type: "review_request",
-          description: `Feedback survey (touch 1/${DRIP_SEQUENCE.length}) sent to ${name} via ${touchResult.success ? touchResult.channel : fallbackResult?.channel || "failed"}`,
+          content: `Feedback survey (touch 1/${DRIP_SEQUENCE.length}) sent to ${name} via ${touchResult.success ? touchResult.channel : fallbackResult?.channel || "failed"}`,
           parentType: "project",
           parentId: projectId,
-          userId: user.id,
-          userName: user.name || "Unknown",
+          user: user.name || "System",
         }),
       });
     } catch {
