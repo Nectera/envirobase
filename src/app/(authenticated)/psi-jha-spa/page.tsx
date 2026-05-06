@@ -8,7 +8,13 @@ export const dynamic = "force-dynamic";
 export default async function PsiJhaSpaListPage() {
   const language: Language = "en";
   const t = (key: string) => getTranslation(language, key);
-  const items = await prisma.psiJhaSpa.findMany({ include: { project: true } });
+  const rawItems = await prisma.psiJhaSpa.findMany({ include: { project: true } });
+
+  // Flatten data JSON onto each item so fields like item.supervisorName work
+  const items = rawItems.map((r: any) => ({
+    ...r,
+    ...(typeof r.data === "object" && r.data !== null ? r.data : {}),
+  }));
 
   // Group by project
   const groups = new Map<string, { project: any; items: any[] }>();

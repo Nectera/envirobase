@@ -27,8 +27,11 @@ function HazardList({ title, allItems, checked }: { title: string; allItems: { k
 }
 
 export default async function PsiJhaSpaDetailPage({ params }: { params: { id: string } }) {
-  const item = await prisma.psiJhaSpa.findUnique({ where: { id: params.id }, include: { project: true } });
-  if (!item) notFound();
+  const raw = await prisma.psiJhaSpa.findUnique({ where: { id: params.id }, include: { project: true } });
+  if (!raw) notFound();
+
+  // Flatten the data JSON onto the item so template fields like item.jobNumber work
+  const item: any = { ...raw, ...(typeof raw.data === "object" && raw.data !== null ? raw.data : {}) };
 
   function getRiskColor(r: number) {
     if (r >= 8) return "bg-red-600 text-white";
