@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireOrg } from "@/lib/org-context";
 import { prisma } from "@/lib/prisma";
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from "pdf-lib";
+import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(
@@ -274,9 +276,47 @@ export async function GET(
 
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx] as any;
+    const hasPhotos = item.photos && item.photos.length > 0;
 
-    // Each item needs at least ~70px
-    pageBreak(80);
+    // Embed all photos for this item
+    // Use sharp to convert any format (WebP, HEIC, PNG, etc.) to JPEG for pdf-lib
+    const embeddedPhotos: Array<Awaited<ReturnType<typeof pdfDoc.embedJpg>>> = [];
+    if (hasPhotos) {
+      console.log(`[INVENTORY-PDF] Item ${idx + 1}: processing ${item.photos.length} photos`);
+      for (let pi = 0; pi < item.photos.length; pi++) {
+        const photo = item.photos[pi];
+        try {
+          console.log(`[INVENTORY-PDF]   Photo ${pi + 1}/${item.photos.length}: fetching ${photo.url.substring(0, 100)}...`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+          const photoRes = await fetch(photo.url, { signal: controller.signal });
+          clearTimeout(timeout);
+          if (!photoRes.ok) {
+            console.error(`[INVENTORY-PDF]   Photo ${pi + 1} fetch failed: HTTP ${photoRes.status}`);
+            continue;
+          }
+          const photoBytes = Buffer.from(await photoRes.arrayBuffer());
+          console.log(`[INVENTORY-PDF]   Photo ${pi + 1}: ${photoBytes.length} bytes, converting to JPEG...`);
+
+          // Convert any image format to JPEG via sharp
+          const jpegBuffer = await sharp(photoBytes)
+            .resize({ width: 800, height: 800, fit: "inside", withoutEnlargement: true })
+            .jpeg({ quality: 75 })
+            .toBuffer();
+
+          console.log(`[INVENTORY-PDF]   Photo ${pi + 1}: JPEG ${jpegBuffer.length} bytes, embedding...`);
+          embeddedPhotos.push(await pdfDoc.embedJpg(jpegBuffer));
+          console.log(`[INVENTORY-PDF]   Photo ${pi + 1}: embedded OK`);
+        } catch (e) {
+          console.error(`[INVENTORY-PDF]   Photo ${pi + 1} FAILED:`, (e as any)?.message || e);
+        }
+      }
+      console.log(`[INVENTORY-PDF] Item ${idx + 1}: ${embeddedPhotos.length}/${item.photos.length} photos embedded`);
+    }
+
+    // Calculate space needed: text + first row of photos
+    const neededHeight = embeddedPhotos.length > 0 ? 170 : 80;
+    pageBreak(neededHeight);
 
     // Item number + name
     const itemLabel = item.brand && item.model
@@ -321,10 +361,43 @@ export async function GET(
       y -= 13;
     }
 
-    // Photo count
-    if (item.photos && item.photos.length > 0) {
-      txt(`${item.photos.length} photo${item.photos.length !== 1 ? "s" : ""} attached`, ML + 18, y, { s: 7.5, c: GRAY });
-      y -= 12;
+    // Embedded photos — render in rows of 5, wrapping with page breaks
+    if (embeddedPhotos.length > 0) {
+      y -= 4;
+      const thumbSize = 80;
+      const thumbGap = 8;
+      const perRow = Math.floor((CW - 18) / (thumbSize + thumbGap));
+
+      for (let pi = 0; pi < embeddedPhotos.length; pi++) {
+        // Start of a new row
+        if (pi % perRow === 0) {
+          pageBreak(thumbSize + 12);
+        }
+
+        const col = pi % perRow;
+        const px = ML + 18 + col * (thumbSize + thumbGap);
+        const img = embeddedPhotos[pi];
+        const aspect = img.width / img.height;
+        let drawW = thumbSize;
+        let drawH = thumbSize / aspect;
+        if (drawH > thumbSize) {
+          drawH = thumbSize;
+          drawW = thumbSize * aspect;
+        }
+        // Light border background
+        box(px - 1, y - thumbSize - 1, thumbSize + 2, thumbSize + 2, RULE);
+        page.drawImage(img, {
+          x: px + (thumbSize - drawW) / 2,
+          y: y - thumbSize + (thumbSize - drawH) / 2,
+          width: drawW,
+          height: drawH,
+        });
+
+        // Move y down after completing a row
+        if (col === perRow - 1 || pi === embeddedPhotos.length - 1) {
+          y -= thumbSize + 8;
+        }
+      }
     }
 
     y -= 6;
