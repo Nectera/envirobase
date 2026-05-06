@@ -46,6 +46,30 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
 
     const projectId = portal.project.id;
 
+    // Fetch content inventory review + items for this project
+    const inventoryReview = await prisma.contentInventoryReview.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    let inventoryItems: any[] = [];
+    let inventoryStats = { total: 0, pending: 0, keep: 0, dispose: 0 };
+
+    if (inventoryReview) {
+      const invItems = await prisma.contentInventoryItem.findMany({
+        where: { projectId },
+        include: { photos: { orderBy: { order: "asc" } } },
+        orderBy: { createdAt: "asc" },
+      });
+      inventoryItems = invItems;
+      inventoryStats = {
+        total: invItems.length,
+        pending: invItems.filter((i: any) => i.status === "pending").length,
+        keep: invItems.filter((i: any) => i.status === "keep").length,
+        dispose: invItems.filter((i: any) => i.status === "dispose").length,
+      };
+    }
+
     // Fetch field reports (submitted only — no drafts)
     const fieldReports = await prisma.dailyFieldReport.findMany({
       where: { projectId, status: "submitted" },
@@ -139,6 +163,28 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
         content: m.content,
         createdAt: m.createdAt,
       })),
+      inventory: inventoryReview
+        ? {
+            reviewToken: inventoryReview.token,
+            reviewStatus: inventoryReview.status,
+            completedAt: inventoryReview.completedAt,
+            items: inventoryItems.map((item: any) => ({
+              id: item.id,
+              brand: item.brand,
+              model: item.model,
+              description: item.description,
+              location: item.location,
+              status: item.status,
+              customerNote: item.customerNote,
+              photos: item.photos.map((p: any) => ({
+                id: p.id,
+                url: p.url,
+                caption: p.caption,
+              })),
+            })),
+            stats: inventoryStats,
+          }
+        : null,
     });
   } catch (error: any) {
     console.error("Portal GET error:", error);

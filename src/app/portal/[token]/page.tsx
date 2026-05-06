@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import {
   Loader2, CheckCircle2, Clock, FileText, MessageSquare, Send,
   MapPin, AlertTriangle, ChevronDown, ChevronUp, Mail, ChevronRight,
-  Download, ExternalLink,
+  Download, ExternalLink, Package, Archive, Trash2, StickyNote,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface PortalDocument {
@@ -42,6 +43,26 @@ interface PortalData {
   fieldReports: FieldReport[];
   activities: ActivityItem[];
   messages: Message[];
+  inventory: InventoryData | null;
+}
+
+interface InventoryData {
+  reviewToken: string;
+  reviewStatus: string;
+  completedAt: string | null;
+  items: InventoryItem[];
+  stats: { total: number; pending: number; keep: number; dispose: number };
+}
+
+interface InventoryItem {
+  id: string;
+  brand: string | null;
+  model: string | null;
+  description: string | null;
+  location: string | null;
+  status: string;
+  customerNote: string | null;
+  photos: { id: string; url: string; caption: string | null }[];
 }
 
 interface FieldReport {
@@ -110,11 +131,18 @@ export default function PortalPage({ params }: { params: { token: string } }) {
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"timeline" | "documents" | "reports" | "messages">("timeline");
+  const [tab, setTab] = useState<"timeline" | "documents" | "reports" | "messages" | "inventory">("timeline");
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [expandedReport, setExpandedReport] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Inventory tab state
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [decidingItem, setDecidingItem] = useState<string | null>(null);
+  const [customerNotes, setCustomerNotes] = useState<Record<string, string>>({});
+  const [completingReview, setCompletingReview] = useState(false);
+  const [inventoryMessage, setInventoryMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [photoModal, setPhotoModal] = useState<{ url: string; caption: string | null } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -161,6 +189,74 @@ export default function PortalPage({ params }: { params: { token: string } }) {
       // silent fail
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDecide = async (itemId: string, status: "keep" | "dispose") => {
+    if (!data?.inventory) return;
+    setDecidingItem(itemId);
+    setInventoryMessage(null);
+    try {
+      const note = customerNotes[itemId]?.trim() || undefined;
+      const res = await fetch(`/api/public/inventory/${data.inventory.reviewToken}/decide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, status, customerNote: note }),
+      });
+      if (res.ok) {
+        setData((prev) => {
+          if (!prev?.inventory) return prev;
+          const updatedItems = prev.inventory.items.map((item) =>
+            item.id === itemId ? { ...item, status, customerNote: note || item.customerNote } : item
+          );
+          const stats = {
+            total: updatedItems.length,
+            pending: updatedItems.filter((i) => i.status === "pending").length,
+            keep: updatedItems.filter((i) => i.status === "keep").length,
+            dispose: updatedItems.filter((i) => i.status === "dispose").length,
+          };
+          return {
+            ...prev,
+            inventory: { ...prev.inventory, items: updatedItems, stats, reviewStatus: prev.inventory.reviewStatus === "pending" ? "in_progress" : prev.inventory.reviewStatus },
+          };
+        });
+      } else {
+        const err = await res.json();
+        setInventoryMessage({ type: "error", text: err.error || "Failed to save decision" });
+      }
+    } catch {
+      setInventoryMessage({ type: "error", text: "Failed to save decision" });
+    } finally {
+      setDecidingItem(null);
+    }
+  };
+
+  const handleCompleteReview = async () => {
+    if (!data?.inventory) return;
+    setCompletingReview(true);
+    setInventoryMessage(null);
+    try {
+      const res = await fetch(`/api/public/inventory/${data.inventory.reviewToken}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        setData((prev) => {
+          if (!prev?.inventory) return prev;
+          return {
+            ...prev,
+            inventory: { ...prev.inventory, reviewStatus: "completed", completedAt: new Date().toISOString() },
+          };
+        });
+        setInventoryMessage({ type: "success", text: "Review submitted successfully! Thank you." });
+      } else {
+        const err = await res.json();
+        setInventoryMessage({ type: "error", text: err.error || "Failed to complete review" });
+      }
+    } catch {
+      setInventoryMessage({ type: "error", text: "Failed to complete review" });
+    } finally {
+      setCompletingReview(false);
     }
   };
 
@@ -265,6 +361,7 @@ export default function PortalPage({ params }: { params: { token: string } }) {
             ...(documents.length > 0 ? [{ key: "documents" as const, label: "Documents", icon: Download, count: documents.length }] : []),
             { key: "reports" as const, label: "Field Reports", icon: FileText, count: fieldReports.length },
             { key: "messages" as const, label: "Messages", icon: MessageSquare, count: messages.length },
+            ...(data.inventory && data.inventory.items.length > 0 ? [{ key: "inventory" as const, label: "Inventory", icon: Package, count: data.inventory.items.length }] : []),
           ]).map(({ key, label, icon: Icon, count }) => (
             <button
               key={key}
@@ -508,6 +605,214 @@ export default function PortalPage({ params }: { params: { token: string } }) {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Inventory Tab ── */}
+        {tab === "inventory" && data.inventory && (
+          <div className="space-y-4">
+            {/* Photo lightbox modal */}
+            {photoModal && (
+              <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setPhotoModal(null)}>
+                <div className="relative max-w-3xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+                  <img src={photoModal.url} alt={photoModal.caption || "Inventory photo"} className="max-w-full max-h-[85vh] object-contain rounded-lg" />
+                  {photoModal.caption && (
+                    <p className="text-white text-sm text-center mt-2">{photoModal.caption}</p>
+                  )}
+                  <button onClick={() => setPhotoModal(null)} className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-600 hover:text-slate-900 shadow-lg">✕</button>
+                </div>
+              </div>
+            )}
+
+            {/* Stats banner */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-800">Content Inventory</h2>
+                {data.inventory.reviewStatus === "completed" && (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Review Complete
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mb-4">
+                {data.inventory.reviewStatus === "completed"
+                  ? "Your inventory review has been submitted. Thank you!"
+                  : "Review each item below and mark whether you'd like to keep or dispose of it."}
+              </p>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="bg-slate-50 rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-slate-800">{data.inventory.stats.total}</p>
+                  <p className="text-[10px] text-slate-500 font-medium">Total</p>
+                </div>
+                <div className="bg-amber-50 rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-amber-600">{data.inventory.stats.pending}</p>
+                  <p className="text-[10px] text-amber-600 font-medium">Pending</p>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-emerald-600">{data.inventory.stats.keep}</p>
+                  <p className="text-[10px] text-emerald-600 font-medium">Keep</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-red-500">{data.inventory.stats.dispose}</p>
+                  <p className="text-[10px] text-red-500 font-medium">Dispose</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Feedback messages */}
+            {inventoryMessage && (
+              <div className={`rounded-xl px-4 py-3 text-sm ${
+                inventoryMessage.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+              }`}>
+                {inventoryMessage.text}
+              </div>
+            )}
+
+            {/* Item cards */}
+            {data.inventory.items.map((item) => {
+              const isExpanded = expandedItem === item.id;
+              const isDeciding = decidingItem === item.id;
+              const isCompleted = data.inventory!.reviewStatus === "completed";
+              const statusBadge = item.status === "keep"
+                ? { bg: "bg-emerald-100", text: "text-emerald-700", label: "Keep", icon: Archive }
+                : item.status === "dispose"
+                ? { bg: "bg-red-100", text: "text-red-600", label: "Dispose", icon: Trash2 }
+                : { bg: "bg-amber-100", text: "text-amber-700", label: "Pending", icon: Clock };
+              const StatusIcon = statusBadge.icon;
+
+              return (
+                <div key={item.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <button
+                    onClick={() => setExpandedItem(isExpanded ? null : item.id)}
+                    className="w-full px-5 py-4 flex items-center gap-4 hover:bg-slate-50 transition text-left"
+                  >
+                    {item.photos.length > 0 ? (
+                      <img src={item.photos[0].url} alt="" className="w-14 h-14 object-cover rounded-xl border border-slate-200 flex-shrink-0" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                        <Package size={20} className="text-slate-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {[item.brand, item.model].filter(Boolean).join(" ") || "Untitled Item"}
+                      </p>
+                      {item.location && (
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
+                          <MapPin size={10} className="inline mr-1" />{item.location}
+                        </p>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${statusBadge.bg} ${statusBadge.text}`}>
+                      <StatusIcon size={10} />{statusBadge.label}
+                    </span>
+                    {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-5 pb-5 border-t border-slate-50">
+                      {item.description && (
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Description</p>
+                          <p className="text-sm text-slate-700">{item.description}</p>
+                        </div>
+                      )}
+
+                      {item.photos.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-slate-500 mb-2">
+                            <ImageIcon size={10} className="inline mr-1" />Photos ({item.photos.length})
+                          </p>
+                          <div className="flex gap-2 flex-wrap">
+                            {item.photos.map((photo) => (
+                              <button
+                                key={photo.id}
+                                onClick={() => setPhotoModal({ url: photo.url, caption: photo.caption })}
+                                className="relative group"
+                              >
+                                <img
+                                  src={photo.url}
+                                  alt={photo.caption || "Item photo"}
+                                  className="w-20 h-20 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 transition"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {item.customerNote && (
+                        <div className="mt-3 bg-amber-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-amber-700 flex items-center gap-1 mb-1">
+                            <StickyNote size={10} />Your Note
+                          </p>
+                          <p className="text-sm text-amber-800">{item.customerNote}</p>
+                        </div>
+                      )}
+
+                      {!isCompleted && (
+                        <div className="mt-4 space-y-3">
+                          <div>
+                            <input
+                              type="text"
+                              placeholder="Add a note (optional)..."
+                              value={customerNotes[item.id] || ""}
+                              onChange={(e) => setCustomerNotes((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none"
+                              maxLength={500}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDecide(item.id, "keep")}
+                              disabled={isDeciding}
+                              className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
+                                item.status === "keep"
+                                  ? "bg-emerald-500 text-white"
+                                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                              } disabled:opacity-50`}
+                            >
+                              {isDeciding ? <Loader2 size={14} className="animate-spin" /> : <Archive size={14} />}
+                              Keep
+                            </button>
+                            <button
+                              onClick={() => handleDecide(item.id, "dispose")}
+                              disabled={isDeciding}
+                              className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
+                                item.status === "dispose"
+                                  ? "bg-red-500 text-white"
+                                  : "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                              } disabled:opacity-50`}
+                            >
+                              {isDeciding ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                              Dispose
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Complete review button */}
+            {data.inventory.reviewStatus !== "completed" && data.inventory.stats.pending === 0 && data.inventory.stats.total > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <p className="text-sm text-slate-600 mb-3">
+                  All items have been reviewed. Ready to submit?
+                </p>
+                <button
+                  onClick={handleCompleteReview}
+                  disabled={completingReview}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:opacity-90 disabled:bg-slate-200 text-white rounded-xl text-sm font-semibold transition"
+                  style={{ backgroundColor: completingReview ? undefined : BRAND_COLOR }}
+                >
+                  {completingReview ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                  Submit Inventory Review
+                </button>
+              </div>
+            )}
           </div>
         )}
 
