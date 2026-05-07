@@ -68,21 +68,25 @@ export async function GET(req: NextRequest) {
     }
 
     // Calculate hours saved from projects completed in this month
-    const [mY, mM] = month.split("-").map(Number);
-    const monthStartDate = new Date(Date.UTC(mY, mM - 1, 1));
-    const monthEndDate = new Date(Date.UTC(mY, mM, 1));
+    // Use estEndDate/startDate instead of updatedAt which changes on any edit
+    const monthStart = `${month}-01`;
+    const nextMonth = new Date(monthStart);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const monthEnd = nextMonth.toISOString().slice(0, 10);
 
-    // Find completed projects (status = "completed") updated in this month range
-    const completedProjects = await prisma.project.findMany({
+    // Find completed projects for this month using project dates, not updatedAt
+    const allCompletedProjects = await prisma.project.findMany({
       where: {
         ...orgWhere(orgId),
         status: "completed",
-        updatedAt: {
-          gte: monthStartDate,
-          lt: monthEndDate,
-        },
       },
-      select: { id: true, name: true, projectNumber: true },
+      select: { id: true, name: true, projectNumber: true, estEndDate: true, startDate: true, createdAt: true },
+    });
+    const completedProjects = allCompletedProjects.filter((p: any) => {
+      const projectDate = p.estEndDate || p.startDate || p.createdAt?.toISOString().slice(0, 10);
+      if (!projectDate) return false;
+      const dateStr = typeof projectDate === "string" ? projectDate.slice(0, 10) : projectDate;
+      return dateStr >= monthStart && dateStr < monthEnd;
     });
 
     const projectIds = completedProjects.map((p: any) => p.id);
@@ -223,17 +227,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Calculate pool from completed projects
-    const [pY, pM] = month.split("-").map(Number);
-    const postMonthStart = new Date(Date.UTC(pY, pM - 1, 1));
-    const postMonthEnd = new Date(Date.UTC(pY, pM, 1));
+    // Use estEndDate/startDate instead of updatedAt for month matching
+    const postMonthStart = `${month}-01`;
+    const postNextMonth = new Date(postMonthStart);
+    postNextMonth.setMonth(postNextMonth.getMonth() + 1);
+    const postMonthEnd = postNextMonth.toISOString().slice(0, 10);
 
-    const completedProjects = await prisma.project.findMany({
+    const allCompleted = await prisma.project.findMany({
       where: {
         ...orgWhere(orgId),
         status: "completed",
-        updatedAt: { gte: postMonthStart, lt: postMonthEnd },
       },
-      select: { id: true },
+      select: { id: true, estEndDate: true, startDate: true, createdAt: true },
+    });
+    const completedProjects = allCompleted.filter((p: any) => {
+      const projectDate = p.estEndDate || p.startDate || p.createdAt?.toISOString().slice(0, 10);
+      if (!projectDate) return false;
+      const dateStr = typeof projectDate === "string" ? projectDate.slice(0, 10) : projectDate;
+      return dateStr >= postMonthStart && dateStr < postMonthEnd;
     });
 
     let totalHoursSaved = 0;

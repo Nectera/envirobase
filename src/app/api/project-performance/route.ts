@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
         subContractorId: true,
         workers: {
           select: {
+            workerId: true,
             role: true,
             worker: { select: { name: true } },
           },
@@ -111,11 +112,26 @@ export async function GET(req: NextRequest) {
       select: { projectId: true, workerId: true, role: true },
     });
 
+    // Fetch all workers so we can fall back to Worker.position for supervisor lookup
+    const allWorkerIds = new Set<string>();
+    for (const pw of projectWorkers) allWorkerIds.add(pw.workerId);
+    for (const te of timeEntries) if (te.workerId) allWorkerIds.add(te.workerId);
+    const allWorkers = allWorkerIds.size > 0
+      ? await prisma.worker.findMany({
+          where: { id: { in: Array.from(allWorkerIds) } },
+          select: { id: true, name: true, position: true },
+        })
+      : [];
+    const workerById: Record<string, { name: string; position: string | null }> = {};
+    for (const w of allWorkers) workerById[w.id] = { name: w.name, position: w.position };
+
     // Build lookup: projectId → workerId → role
+    // Use ProjectWorker.role first, fall back to Worker.position
     const pwRoleMap: Record<string, Record<string, string>> = {};
     for (const pw of projectWorkers) {
       if (!pwRoleMap[pw.projectId]) pwRoleMap[pw.projectId] = {};
-      pwRoleMap[pw.projectId][pw.workerId] = pw.role || "Worker";
+      const role = pw.role || workerById[pw.workerId]?.position || "";
+      if (role) pwRoleMap[pw.projectId][pw.workerId] = role;
     }
 
     // Group time entries by project + track supervisor/technician hours
@@ -125,7 +141,7 @@ export async function GET(req: NextRequest) {
     for (const te of timeEntries) {
       if (te.projectId && te.hours) {
         hoursMap[te.projectId] = (hoursMap[te.projectId] || 0) + te.hours;
-        const role = pwRoleMap[te.projectId]?.[te.workerId] || "Worker";
+        const role = pwRoleMap[te.projectId]?.[te.workerId] || "";
         if (role === "Supervisor") {
           supHoursMap[te.projectId] = (supHoursMap[te.projectId] || 0) + te.hours;
         } else {
@@ -205,16 +221,49 @@ export async function GET(req: NextRequest) {
 
       // Post-cost data JSON may have bonus and supervisor
       const postData = estPair.postCost?.data as any;
-      const bonusEarned = postData?.bonusEarned ?? null;
+      const manualBonus = postData?.bonusEarned ?? null;
       const supervisorName = postData?.supervisor ?? null;
 
-      // Fall back to ProjectWorker supervisor, then subcontractor
+      // Auto-calculate bonus from hours saved if not manually set
+      let bonusEarned = manualBonus;
+      if (bonusEarned == null && preCost) {
+        const estH = (Number(preCost.supervisorHours) || 0) + (Number(preCost.supervisorOtHours) || 0) +
+                     (Number(preCost.technicianHours) || 0) + (Number(preCost.technicianOtHours) || 0);
+        const actH = (Number(actual.supervisorHours) || 0) + (Number(actual.supervisorOtHours) || 0) +
+                     (Number(actual.technicianHours) || 0) + (Number(actual.technicianOtHours) || 0);
+        const saved = Math.max(0, estH - actH);
+        if (saved > 0 || estH > 0) {
+          bonusEarned = Math.round(saved * 17 * 100) / 100; // $17/hr saved
+        }
+      }
+
+      // Supervisor: check post-cost data → ProjectWorker role → Worker.position → subcontractor
       const workerSupervisor = project.workers.find((w: any) => w.role === "Supervisor");
+      // Also check by Worker.position if ProjectWorker.role is null
+      const positionSupervisor = !workerSupervisor
+        ? project.workers.find((w: any) => {
+            const worker = workerById[w.workerId || ""];
+            return worker?.position === "Supervisor";
+          })
+        : null;
+      // Also check time entries — find a worker who clocked in with Supervisor position
+      let timeEntrySupervisor: string | null = null;
+      if (!workerSupervisor && !positionSupervisor) {
+        const projWorkerIds = pwRoleMap[project.id] || {};
+        for (const [wId, role] of Object.entries(projWorkerIds)) {
+          if (role === "Supervisor" && workerById[wId]) {
+            timeEntrySupervisor = workerById[wId].name;
+            break;
+          }
+        }
+      }
       const subName = (project as any).isSubbedOut && (project as any).subContractorId
-        ? subContractorMap[(project as any).subContractorId]
+        ? subContractorMap[(project as any).subContractorId] || null
         : null;
       const supervisor = supervisorName
         || (workerSupervisor ? workerSupervisor.worker.name : null)
+        || (positionSupervisor ? workerById[(positionSupervisor as any).workerId]?.name || null : null)
+        || timeEntrySupervisor
         || (subName ? `Sub: ${subName}` : null);
 
       // Region mapping from office (fall back to lead's office if project has none)
