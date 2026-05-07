@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Reply, Forward, Copy, Star, Trash2, X, Pencil, Pin, Download, Plus } from "lucide-react";
+import { Reply, Forward, Copy, Star, Trash2, X, Pencil, Pin, Download, Plus, Languages } from "lucide-react";
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥"];
 
@@ -33,6 +33,7 @@ interface ChatMessageContextMenuProps {
   onDelete: () => void;
   onReaction: (emoji: string) => void;
   onSaveAttachment: () => void;
+  onTranslate: () => void;
 }
 
 export default function ChatMessageContextMenu({
@@ -52,6 +53,7 @@ export default function ChatMessageContextMenu({
   onDelete,
   onReaction,
   onSaveAttachment,
+  onTranslate,
 }: ChatMessageContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [showAllEmojis, setShowAllEmojis] = useState(false);
@@ -190,6 +192,17 @@ export default function ChatMessageContextMenu({
             <Copy size={18} className="text-slate-400" />
             Copy
           </button>
+
+          {/* Translate — EN↔ES */}
+          {messageContent && (
+            <button
+              onClick={() => handleAction(onTranslate)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            >
+              <Languages size={18} className="text-slate-400" />
+              Translate / Traducir
+            </button>
+          )}
 
           {/* Pin / Unpin */}
           <button

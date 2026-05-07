@@ -129,6 +129,10 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
 
+  // Translation EN↔ES
+  const [translations, setTranslations] = useState<Record<string, { text: string; targetLang: string }>>({});
+  const [translatingMsgId, setTranslatingMsgId] = useState<string | null>(null);
+
   // Image lightbox
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
@@ -429,6 +433,35 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+    }
+  };
+
+  // Translate message EN↔ES (toggle)
+  const handleTranslateMessage = async () => {
+    if (!contextMenuMsgId) return;
+    const msg = messages.find((m) => m.id === contextMenuMsgId);
+    if (!msg?.content) return;
+    const msgId = contextMenuMsgId;
+    // Toggle off if already translated
+    if (translations[msgId]) {
+      setTranslations((prev) => { const next = { ...prev }; delete next[msgId]; return next; });
+      return;
+    }
+    setTranslatingMsgId(msgId);
+    try {
+      const res = await fetch("/api/chat/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: msg.content }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTranslations((prev) => ({ ...prev, [msgId]: { text: data.translated, targetLang: data.targetLang } }));
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setTranslatingMsgId(null);
     }
   };
 
@@ -1031,6 +1064,32 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
                           {renderContent(msg)}
                         </p>
                       ) : null}
+                      {/* Translation loading spinner */}
+                      {translatingMsgId === msg.id && (
+                        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-blue-500">
+                          <Loader2 size={11} className="animate-spin" />
+                          <span>Translating…</span>
+                        </div>
+                      )}
+                      {/* Inline translation */}
+                      {translations[msg.id] && (
+                        <div className="mt-1.5 pl-2.5 border-l-2 border-blue-300 rounded-sm">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[10px] font-semibold text-blue-500 uppercase">
+                              {translations[msg.id].targetLang === "es" ? "Español" : "English"}
+                            </span>
+                            <button
+                              onClick={() => setTranslations((prev) => { const next = { ...prev }; delete next[msg.id]; return next; })}
+                              className="text-[10px] text-slate-400 hover:text-slate-600"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed break-words whitespace-pre-wrap">
+                            {translations[msg.id].text}
+                          </p>
+                        </div>
+                      )}
                       {msg.fileUrl && isImage && (
                         <img
                           src={msg.fileUrl}
@@ -1647,6 +1706,7 @@ export default function ChatView({ currentUserId, currentUserName, currentUserRo
           onDelete={handleDeleteMessage}
           onReaction={handleContextMenuReaction}
           onSaveAttachment={handleSaveAttachment}
+          onTranslate={handleTranslateMessage}
         />
       )}
 
