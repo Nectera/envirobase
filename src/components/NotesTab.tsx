@@ -59,16 +59,11 @@ function getColor(key: string) {
   return COLOR_OPTIONS.find((c) => c.key === key) || COLOR_OPTIONS[0];
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function formatNoteDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+    " " +
+    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 // ── Mention Input Helper ──────────────────────────────────────────
@@ -357,7 +352,7 @@ function NoteCard({
           )}
           <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
             <span>{note.createdByName}</span>
-            <span>{timeAgo(note.createdAt)}</span>
+            <span>{formatNoteDate(note.createdAt)}</span>
             {note.visibility === "private" && (
               <span className="flex items-center gap-0.5 text-amber-500">
                 <Lock className="w-3 h-3" /> Private
@@ -444,7 +439,7 @@ function NoteCard({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 text-xs">
                     <span className="font-medium text-slate-700">{c.createdByName}</span>
-                    <span className="text-slate-400">{timeAgo(c.createdAt)}</span>
+                    <span className="text-slate-400">{formatNoteDate(c.createdAt)}</span>
                   </div>
                   <p className="text-xs text-slate-600 mt-0.5 whitespace-pre-wrap">{c.content}</p>
                 </div>
