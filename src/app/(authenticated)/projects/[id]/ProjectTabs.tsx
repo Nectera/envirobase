@@ -3070,6 +3070,8 @@ function DashboardTab({
   const [estHours, setEstHours] = useState<string>(project.estimatedLaborHours?.toString() || "");
   const [saving, setSaving] = useState(false);
   const [creatingPermitMod, setCreatingPermitMod] = useState(false);
+  const [finalizingPostCost, setFinalizingPostCost] = useState(false);
+  const [postCostStatus, setPostCostStatus] = useState(linkedPostCostEstimate?.status || "");
   const [editingEndDate, setEditingEndDate] = useState(false);
   const [newEndDate, setNewEndDate] = useState(project.estEndDate || "");
   const [editingScheduleStart, setEditingScheduleStart] = useState(false);
@@ -3727,12 +3729,37 @@ function DashboardTab({
                     <span className="text-slate-500">Total Cost</span>
                     <span className="font-semibold text-slate-800">${(linkedPostCostEstimate.totalCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                   </div>
-                  {linkedPostCostEstimate.status === "post_cost" && (
-                    <div className="mt-1.5 pt-1.5 border-t border-emerald-100">
+                  {postCostStatus === "post_cost" && (
+                    <div className="mt-1.5 pt-1.5 border-t border-emerald-100 flex items-center justify-between">
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Needs Review</span>
+                      {(userRole === "ADMIN" || userRole === "OFFICE") && (
+                        <button
+                          disabled={finalizingPostCost}
+                          onClick={async () => {
+                            setFinalizingPostCost(true);
+                            try {
+                              const res = await fetch(`/api/consultation-estimates/${linkedPostCostEstimate.id}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ status: "approved" }),
+                              });
+                              if (res.ok) {
+                                setPostCostStatus("approved");
+                              }
+                            } catch (e) {
+                              console.error("Failed to finalize post-cost:", e);
+                            } finally {
+                              setFinalizingPostCost(false);
+                            }
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                        >
+                          {finalizingPostCost ? "Saving..." : "Mark as Reviewed"}
+                        </button>
+                      )}
                     </div>
                   )}
-                  {(linkedPostCostEstimate.status === "approved" || linkedPostCostEstimate.status === "completed") && (
+                  {(postCostStatus === "approved" || postCostStatus === "completed") && (
                     <div className="mt-1.5 pt-1.5 border-t border-emerald-100">
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">Finalized</span>
                     </div>
