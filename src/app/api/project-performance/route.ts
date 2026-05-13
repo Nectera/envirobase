@@ -125,16 +125,26 @@ export async function GET(req: NextRequest) {
     const workerById: Record<string, { name: string; position: string | null }> = {};
     for (const w of allWorkers) workerById[w.id] = { name: w.name, position: w.position };
 
-    // Build lookup: projectId → workerId → role
+    // Map: projectId -> workerId -> role (normalized to lowercase)
     // Use ProjectWorker.role first, fall back to Worker.position
     const pwRoleMap: Record<string, Record<string, string>> = {};
     for (const pw of projectWorkers) {
       if (!pwRoleMap[pw.projectId]) pwRoleMap[pw.projectId] = {};
-      const role = pw.role || workerById[pw.workerId]?.position || "";
+      const role = (pw.role || workerById[pw.workerId]?.position || "").toLowerCase();
       if (role) pwRoleMap[pw.projectId][pw.workerId] = role;
     }
+    // Also map workers from time entries by their Worker.position (even without ProjectWorker records)
+    for (const te of timeEntries) {
+      if (te.projectId && te.workerId) {
+        if (!pwRoleMap[te.projectId]) pwRoleMap[te.projectId] = {};
+        if (!pwRoleMap[te.projectId][te.workerId]) {
+          const pos = (workerById[te.workerId]?.position || "").toLowerCase();
+          if (pos) pwRoleMap[te.projectId][te.workerId] = pos;
+        }
+      }
+    }
 
-    // Group time entries by project + track supervisor/technician hours
+    // Group time entries by project (total hours + supervisor/technician split)
     const hoursMap: Record<string, number> = {};
     const supHoursMap: Record<string, number> = {};
     const techHoursMap: Record<string, number> = {};
@@ -142,10 +152,29 @@ export async function GET(req: NextRequest) {
       if (te.projectId && te.hours) {
         hoursMap[te.projectId] = (hoursMap[te.projectId] || 0) + te.hours;
         const role = pwRoleMap[te.projectId]?.[te.workerId] || "";
-        if (role === "Supervisor") {
+        if (role === "supervisor") {
           supHoursMap[te.projectId] = (supHoursMap[te.projectId] || 0) + te.hours;
         } else {
+          // Worker, AMS, Inspector, or unassigned — all count as technician labor
           techHoursMap[te.projectId] = (techHoursMap[te.projectId] || 0) + te.hours;
+        }
+      }
+    }
+
+    // Fetch field reports to extract supervisor names (most reliable source)
+    const fieldReports = await prisma.dailyFieldReport.findMany({
+      where: { projectId: { in: projectIds } },
+      select: { projectId: true, data: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    // Map: projectId -> supervisor name from the most recent field report
+    const fieldReportSupervisor: Record<string, string> = {};
+    for (const fr of fieldReports) {
+      if (!fieldReportSupervisor[fr.projectId]) {
+        const frData = fr.data as any;
+        const supName = frData?.supervisorName || frData?.supervisor;
+        if (supName && typeof supName === "string" && supName.trim()) {
+          fieldReportSupervisor[fr.projectId] = supName.trim();
         }
       }
     }
@@ -237,21 +266,22 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Supervisor: check post-cost data → ProjectWorker role → Worker.position → subcontractor
-      const workerSupervisor = project.workers.find((w: any) => w.role === "Supervisor");
-      // Also check by Worker.position if ProjectWorker.role is null
+      // Supervisor: check post-cost data → ProjectWorker role → Worker.position → time entry workers → field reports → subcontractor
+      // All comparisons case-insensitive since the DB stores "Supervisor", "supervisor", etc.
+      const workerSupervisor = project.workers.find((w: any) => (w.role || "").toLowerCase() === "supervisor");
+      // Also check by Worker.position if ProjectWorker.role didn't match
       const positionSupervisor = !workerSupervisor
         ? project.workers.find((w: any) => {
             const worker = workerById[w.workerId || ""];
-            return worker?.position === "Supervisor";
+            return (worker?.position || "").toLowerCase() === "supervisor";
           })
         : null;
-      // Also check time entries — find a worker who clocked in with Supervisor position
+      // Also check workerRoleMap — workers who clocked time and have Supervisor position
       let timeEntrySupervisor: string | null = null;
       if (!workerSupervisor && !positionSupervisor) {
-        const projWorkerIds = pwRoleMap[project.id] || {};
-        for (const [wId, role] of Object.entries(projWorkerIds)) {
-          if (role === "Supervisor" && workerById[wId]) {
+        const projRoles = pwRoleMap[project.id] || {};
+        for (const [wId, role] of Object.entries(projRoles)) {
+          if (role === "supervisor" && workerById[wId]) {
             timeEntrySupervisor = workerById[wId].name;
             break;
           }
@@ -264,6 +294,7 @@ export async function GET(req: NextRequest) {
         || (workerSupervisor ? workerSupervisor.worker.name : null)
         || (positionSupervisor ? workerById[(positionSupervisor as any).workerId]?.name || null : null)
         || timeEntrySupervisor
+        || fieldReportSupervisor[project.id]
         || (subName ? `Sub: ${subName}` : null);
 
       // Region mapping from office (fall back to lead's office if project has none)
