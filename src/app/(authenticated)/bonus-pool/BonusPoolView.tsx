@@ -9,7 +9,7 @@ import {
   AlertTriangle, Award, Info, RefreshCw,
 } from "lucide-react";
 
-type Worker = { id: string; name: string; position: string };
+type Worker = { id: string; name: string; position: string; isTemp?: boolean; bonusEligible?: boolean };
 type PositionSplit = {
   pct: number;
   pool: number;
@@ -545,9 +545,11 @@ export default function BonusPoolView({
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                     >
                       <option value="">— None —</option>
-                      {workers.map((w) => (
+                      {workers
+                        .filter((w) => w.bonusEligible !== false && !w.isTemp && (w.position || "").toLowerCase() === "supervisor")
+                        .map((w) => (
                         <option key={w.id} value={w.id}>
-                          {w.name} ({w.position})
+                          {w.name}
                         </option>
                       ))}
                     </select>

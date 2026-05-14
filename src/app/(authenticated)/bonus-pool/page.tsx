@@ -14,7 +14,7 @@ export default async function BonusPoolPage() {
   // Get all workers for the high performer picker and headcount display
   const workers = await prisma.worker.findMany({
     where: { status: "active" },
-    select: { id: true, name: true, position: true, email: true },
+    select: { id: true, name: true, position: true, email: true, isTemp: true, bonusEligible: true },
   });
 
   // Match logged-in user to their worker record by email
