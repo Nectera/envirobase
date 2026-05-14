@@ -3081,7 +3081,9 @@ function DashboardTab({
   const [saving, setSaving] = useState(false);
   const [creatingPermitMod, setCreatingPermitMod] = useState(false);
   const [finalizingPostCost, setFinalizingPostCost] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const [postCostStatus, setPostCostStatus] = useState(linkedPostCostEstimate?.status || "");
+  const [postCostData, setPostCostData] = useState(linkedPostCostEstimate);
   const [editingEndDate, setEditingEndDate] = useState(false);
   const [newEndDate, setNewEndDate] = useState(project.estEndDate || "");
   const [editingScheduleStart, setEditingScheduleStart] = useState(false);
@@ -3697,25 +3699,79 @@ function DashboardTab({
             )}
 
             {/* Post-Cost */}
-            {linkedPostCostEstimate ? (
+            {postCostData ? (
               <div className="border border-emerald-200 bg-emerald-50/30 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Post-Cost (Actual)</span>
-                  <Link
-                    href={`/estimates/consultation/${linkedPostCostEstimate.id}/edit`}
-                    className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900"
-                  >
-                    Edit <ExternalLink size={9} />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {(userRole === "ADMIN" || userRole === "OFFICE") && (
+                      <button
+                        disabled={recalculating}
+                        onClick={async () => {
+                          setRecalculating(true);
+                          try {
+                            // Build worker role map from project workers + allWorkers positions
+                            const wRoles: Record<string, string> = {};
+                            for (const pw of (project.workers || [])) {
+                              if (pw.workerId && pw.role) wRoles[pw.workerId] = pw.role.toLowerCase();
+                            }
+                            for (const w of (allWorkers || [])) {
+                              if (w.id && !wRoles[w.id] && w.position) wRoles[w.id] = w.position.toLowerCase();
+                            }
+                            // Calculate hours from time entries
+                            const completed = timeEntries.filter((e: any) => e.clockOut && (e.hours != null || e.totalHours != null));
+                            const supH = Math.round(completed.filter((e: any) => wRoles[e.workerId] === "supervisor").reduce((s: number, e: any) => s + (e.hours || e.totalHours || 0), 0) * 100) / 100;
+                            const techH = Math.round(completed.filter((e: any) => wRoles[e.workerId] !== "supervisor").reduce((s: number, e: any) => s + (e.hours || e.totalHours || 0), 0) * 100) / 100;
+                            // Calculate labor cost
+                            const sRate = LABOR_RATES.supervisor.hourly + LABOR_RATES.supervisor.taxBurden;
+                            const tRate = LABOR_RATES.technician.hourly + LABOR_RATES.technician.taxBurden;
+                            const supOtH = postCostData.supervisorOtHours || 0;
+                            const techOtH = postCostData.technicianOtHours || 0;
+                            const newLaborCost = Math.round((supH * sRate + supOtH * sRate * 1.5 + techH * tRate + techOtH * tRate * 1.5) * 100) / 100;
+                            // Update the estimate
+                            const res = await fetch(`/api/consultation-estimates/${postCostData.id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                supervisorHours: supH,
+                                technicianHours: techH,
+                                laborCost: newLaborCost,
+                                laborTotal: newLaborCost,
+                                laborSupervisor: { regularHours: supH, otHours: supOtH },
+                                laborTechnician: { regularHours: techH, otHours: techOtH },
+                              }),
+                            });
+                            if (res.ok) {
+                              const updated = await res.json();
+                              setPostCostData(updated);
+                            }
+                          } catch (e) {
+                            console.error("Failed to recalculate:", e);
+                          } finally {
+                            setRecalculating(false);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                      >
+                        {recalculating ? "Recalculating..." : "Recalculate Hours"}
+                      </button>
+                    )}
+                    <Link
+                      href={`/estimates/consultation/${postCostData.id}/edit`}
+                      className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900"
+                    >
+                      Edit <ExternalLink size={9} />
+                    </Link>
+                  </div>
                 </div>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Supervisor Hours</span>
                     <span className="font-semibold text-slate-800">
-                      {linkedPostCostEstimate.supervisorHours ?? 0}h
-                      {linkedConsultationEstimate && linkedPostCostEstimate.supervisorHours !== linkedConsultationEstimate.supervisorHours && (
-                        <span className={`ml-1 text-[10px] ${(linkedPostCostEstimate.supervisorHours ?? 0) > (linkedConsultationEstimate.supervisorHours ?? 0) ? "text-red-500" : "text-emerald-600"}`}>
-                          ({(linkedPostCostEstimate.supervisorHours ?? 0) > (linkedConsultationEstimate.supervisorHours ?? 0) ? "+" : ""}{((linkedPostCostEstimate.supervisorHours ?? 0) - (linkedConsultationEstimate.supervisorHours ?? 0)).toFixed(1)})
+                      {postCostData.supervisorHours ?? 0}h
+                      {linkedConsultationEstimate && postCostData.supervisorHours !== linkedConsultationEstimate.supervisorHours && (
+                        <span className={`ml-1 text-[10px] ${(postCostData.supervisorHours ?? 0) > (linkedConsultationEstimate.supervisorHours ?? 0) ? "text-red-500" : "text-emerald-600"}`}>
+                          ({(postCostData.supervisorHours ?? 0) > (linkedConsultationEstimate.supervisorHours ?? 0) ? "+" : ""}{((postCostData.supervisorHours ?? 0) - (linkedConsultationEstimate.supervisorHours ?? 0)).toFixed(1)})
                         </span>
                       )}
                     </span>
@@ -3723,21 +3779,21 @@ function DashboardTab({
                   <div className="flex justify-between">
                     <span className="text-slate-500">Technician Hours</span>
                     <span className="font-semibold text-slate-800">
-                      {linkedPostCostEstimate.technicianHours ?? 0}h
-                      {linkedConsultationEstimate && linkedPostCostEstimate.technicianHours !== linkedConsultationEstimate.technicianHours && (
-                        <span className={`ml-1 text-[10px] ${(linkedPostCostEstimate.technicianHours ?? 0) > (linkedConsultationEstimate.technicianHours ?? 0) ? "text-red-500" : "text-emerald-600"}`}>
-                          ({(linkedPostCostEstimate.technicianHours ?? 0) > (linkedConsultationEstimate.technicianHours ?? 0) ? "+" : ""}{((linkedPostCostEstimate.technicianHours ?? 0) - (linkedConsultationEstimate.technicianHours ?? 0)).toFixed(1)})
+                      {postCostData.technicianHours ?? 0}h
+                      {linkedConsultationEstimate && postCostData.technicianHours !== linkedConsultationEstimate.technicianHours && (
+                        <span className={`ml-1 text-[10px] ${(postCostData.technicianHours ?? 0) > (linkedConsultationEstimate.technicianHours ?? 0) ? "text-red-500" : "text-emerald-600"}`}>
+                          ({(postCostData.technicianHours ?? 0) > (linkedConsultationEstimate.technicianHours ?? 0) ? "+" : ""}{((postCostData.technicianHours ?? 0) - (linkedConsultationEstimate.technicianHours ?? 0)).toFixed(1)})
                         </span>
                       )}
                     </span>
                   </div>
                   <div className="flex justify-between border-t border-emerald-100 pt-1.5">
                     <span className="text-slate-500">Labor Cost</span>
-                    <span className="font-semibold text-slate-800">${(linkedPostCostEstimate.laborCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                    <span className="font-semibold text-slate-800">${(postCostData.laborCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Total Cost</span>
-                    <span className="font-semibold text-slate-800">${(linkedPostCostEstimate.totalCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                    <span className="font-semibold text-slate-800">${(postCostData.totalCost ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                   </div>
                   {postCostStatus === "post_cost" && (
                     <div className="mt-1.5 pt-1.5 border-t border-emerald-100 flex items-center justify-between">
@@ -3748,7 +3804,7 @@ function DashboardTab({
                           onClick={async () => {
                             setFinalizingPostCost(true);
                             try {
-                              const res = await fetch(`/api/consultation-estimates/${linkedPostCostEstimate.id}`, {
+                              const res = await fetch(`/api/consultation-estimates/${postCostData.id}`, {
                                 method: "PUT",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ status: "approved" }),
