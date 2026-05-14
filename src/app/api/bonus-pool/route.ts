@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     const googleReviewBonus = config.googleReviewBonusEach || DEFAULT_GOOGLE_REVIEW_BONUS;
 
     // Get active workers for headcount (exclude commission-based positions)
-    const allWorkers = await prisma.worker.findMany({ where: { ...orgWhere(orgId), status: "active" } });
+    const allWorkers = await prisma.worker.findMany({ where: { ...orgWhere(orgId), status: "active", isTemp: false } });
     const excludedPositions = config.excludedPositions || EXCLUDED_POSITIONS;
     const workers = (allWorkers as any[]).filter(
       (w) => !excludedPositions.some((ep: string) => (w.position || "").toLowerCase() === ep.toLowerCase())
@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
     const googleReviewBonus = config.googleReviewBonusEach || DEFAULT_GOOGLE_REVIEW_BONUS;
 
     // Get active workers (exclude commission-based positions)
-    const allWorkersPost = await prisma.worker.findMany({ where: { ...orgWhere(orgId), status: "active" } });
+    const allWorkersPost = await prisma.worker.findMany({ where: { ...orgWhere(orgId), status: "active", isTemp: false } });
     const excludedPositions = config.excludedPositions || EXCLUDED_POSITIONS;
     const workersPost = (allWorkersPost as any[]).filter(
       (w) => !excludedPositions.some((ep: string) => (w.position || "").toLowerCase() === ep.toLowerCase())
