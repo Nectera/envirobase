@@ -681,12 +681,12 @@ export default function ProjectTabs({
         workerRoles[w.id] = w.position.toLowerCase();
       }
     }
-    const completedEntries = timeEntries.filter((e: any) => e.clockOut && (e.totalHours != null || e.hours != null));
+    const completedEntries = timeEntries.filter((e: any) => e.clockOut && (e.hours != null || e.totalHours != null));
     const actualSupHours = Math.round(
-      completedEntries.filter((e: any) => workerRoles[e.workerId] === "supervisor").reduce((sum: number, e: any) => sum + (e.totalHours || e.hours || 0), 0) * 100
+      completedEntries.filter((e: any) => workerRoles[e.workerId] === "supervisor").reduce((sum: number, e: any) => sum + (e.hours || e.totalHours || 0), 0) * 100
     ) / 100;
     const actualTechHours = Math.round(
-      completedEntries.filter((e: any) => workerRoles[e.workerId] !== "supervisor").reduce((sum: number, e: any) => sum + (e.totalHours || e.hours || 0), 0) * 100
+      completedEntries.filter((e: any) => workerRoles[e.workerId] !== "supervisor").reduce((sum: number, e: any) => sum + (e.hours || e.totalHours || 0), 0) * 100
     ) / 100;
 
     // 2. Create Post-Cost estimate (duplicate of original consultation estimate)
