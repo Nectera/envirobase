@@ -59,7 +59,8 @@ export async function GET(req: NextRequest) {
     const allWorkers = await prisma.worker.findMany({ where: { ...orgWhere(orgId), status: "active", isTemp: false } });
     const excludedPositions = config.excludedPositions || EXCLUDED_POSITIONS;
     const workers = (allWorkers as any[]).filter(
-      (w) => !excludedPositions.some((ep: string) => (w.position || "").toLowerCase() === ep.toLowerCase())
+      (w) => w.bonusEligible !== false &&
+        !excludedPositions.some((ep: string) => (w.position || "").toLowerCase() === ep.toLowerCase())
     );
     const headcountByPosition: Record<string, number> = {};
     for (const w of workers) {
@@ -80,9 +81,10 @@ export async function GET(req: NextRequest) {
         ...orgWhere(orgId),
         status: "completed",
       },
-      select: { id: true, name: true, projectNumber: true, estEndDate: true, startDate: true, createdAt: true },
+      select: { id: true, name: true, projectNumber: true, estEndDate: true, startDate: true, createdAt: true, bonusEligible: true },
     });
     const completedProjects = allCompletedProjects.filter((p: any) => {
+      if ((p as any).bonusEligible === false) return false;
       const projectDate = p.estEndDate || p.startDate || p.createdAt?.toISOString().slice(0, 10);
       if (!projectDate) return false;
       const dateStr = typeof projectDate === "string" ? projectDate.slice(0, 10) : projectDate;
@@ -218,7 +220,8 @@ export async function POST(req: NextRequest) {
     const allWorkersPost = await prisma.worker.findMany({ where: { ...orgWhere(orgId), status: "active", isTemp: false } });
     const excludedPositions = config.excludedPositions || EXCLUDED_POSITIONS;
     const workersPost = (allWorkersPost as any[]).filter(
-      (w) => !excludedPositions.some((ep: string) => (w.position || "").toLowerCase() === ep.toLowerCase())
+      (w) => w.bonusEligible !== false &&
+        !excludedPositions.some((ep: string) => (w.position || "").toLowerCase() === ep.toLowerCase())
     );
     const headcountByPosition: Record<string, number> = {};
     for (const w of workersPost) {
@@ -238,9 +241,10 @@ export async function POST(req: NextRequest) {
         ...orgWhere(orgId),
         status: "completed",
       },
-      select: { id: true, estEndDate: true, startDate: true, createdAt: true },
+      select: { id: true, estEndDate: true, startDate: true, createdAt: true, bonusEligible: true },
     });
     const completedProjects = allCompleted.filter((p: any) => {
+      if ((p as any).bonusEligible === false) return false;
       const projectDate = p.estEndDate || p.startDate || p.createdAt?.toISOString().slice(0, 10);
       if (!projectDate) return false;
       const dateStr = typeof projectDate === "string" ? projectDate.slice(0, 10) : projectDate;

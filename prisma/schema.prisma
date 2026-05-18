@@ -239,6 +239,9 @@ model Project {
   isSubbedOut          Boolean  @default(false) // Exclude from AI scheduling
   subContractorId      String?  // FK to Company acting as subcontractor
 
+  // Bonus pool
+  bonusEligible        Boolean  @default(true)
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

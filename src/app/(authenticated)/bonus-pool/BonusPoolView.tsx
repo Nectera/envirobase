@@ -633,8 +633,29 @@ export default function BonusPoolView({
                       <div className="text-sm font-medium text-slate-800 truncate mr-2">
                         {p.projectName}
                       </div>
-                      <div className="text-sm font-semibold text-emerald-600 flex-shrink-0">
-                        {fmt(p.bonus)}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="text-sm font-semibold text-emerald-600">
+                          {fmt(p.bonus)}
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Exclude "${p.projectName}" from the bonus pool?`)) return;
+                            try {
+                              await fetch(`/api/projects/${p.projectId}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ bonusEligible: false }),
+                              });
+                              fetchPool();
+                            } catch (e) {
+                              console.error("Failed to exclude project:", e);
+                            }
+                          }}
+                          className="text-[10px] px-1.5 py-0.5 rounded text-red-600 hover:bg-red-50 border border-red-200 transition-colors"
+                          title="Exclude from bonus pool"
+                        >
+                          Exclude
+                        </button>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-400">

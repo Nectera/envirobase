@@ -81,6 +81,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.isSubbedOut !== undefined) data.isSubbedOut = body.isSubbedOut;
     if (body.subContractorId !== undefined) data.subContractorId = body.subContractorId || null;
 
+    // Bonus pool
+    if (body.bonusEligible !== undefined) data.bonusEligible = !!body.bonusEligible;
+
     // Get current project to detect status change
     const currentProject = await prisma.project.findFirst({ where: { id: params.id, organizationId: orgId } });
     if (!currentProject) return NextResponse.json({ error: "Not found" }, { status: 404 });
